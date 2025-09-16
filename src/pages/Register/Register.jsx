@@ -3,11 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaUser, FaLock, FaEnvelope, FaPhone, FaQuestionCircle } from "react-icons/fa";
 import logo3 from './../../assets/logo3.png';
 import backgroundImg from './../../assets/background.png';
-// import { MESSAGES } from "../../constants/messages";
+import { MESSAGES } from "../../constants/messages";
 // import { decodeToken } from "../../utils/tokenUtils";
-// import { useNotification } from "../../contexts/NotificationContext";
+import { useNotification } from "../../contexts/NotificationContext";
 import { motion } from "framer-motion";
-// import { validatePhoneNumber, validateRegisterForm } from "../../utils/validationUtils";
+import { validatePhoneNumber, validateRegisterForm } from "../../utils/validationUtils";
 
 // Tách các thành phần nhỏ thành component riêng
 const Tooltip = ({ content }) => (
@@ -64,7 +64,7 @@ const Register = () => {
     confirmPassword: "",
   });
   const navigate = useNavigate();
-//   const { showNotification } = useNotification();
+  const { showNotification } = useNotification();
 
   const [form, setForm] = useState({
     UserName: "",

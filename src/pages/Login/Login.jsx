@@ -4,12 +4,12 @@ import { FaUser, FaLock } from "react-icons/fa";
 import logo3 from './../../assets/logo3.png';
 import backgroundImg from './../../assets/background.png';
 import { motion } from "framer-motion";
-// import { validateLoginForm } from "../../utils/validationUtils";
+import { validateLoginForm } from "../../utils/validationUtils";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ Email: "", PasswordHash: "" });
-//   const { showNotification } = useNotification();
+  const { showNotification } = useNotification();
   const [errors, setErrors] = useState({ email: "", passwordHash: "" });
 
   const handleAuthSuccess = (token, role) => {
