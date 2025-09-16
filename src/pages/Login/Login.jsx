@@ -5,6 +5,7 @@ import logo3 from './../../assets/logo3.png';
 import backgroundImg from './../../assets/background.png';
 import { motion } from "framer-motion";
 import { validateLoginForm } from "../../utils/validationUtils";
+import { useNotification } from "../../contexts/NotificationContext";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
