@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { FaUser, FaLock } from "react-icons/fa";
-import logo3 from './../../assets/logo3.png';
-import backgroundImg from './../../assets/background.png';
+import logo3 from "./../../assets/logo3.png";
+import backgroundImg from "./../../assets/background.png";
 import { motion } from "framer-motion";
 import { validateLoginForm } from "../../utils/validationUtils";
 import { useNotification } from "../../contexts/NotificationContext";
+import { decodeToken } from "../../utils/tokenUtils";
+import { MESSAGES } from "../../constants/messages";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -127,7 +129,10 @@ const Login = () => {
             />
 
             <div className="flex justify-between text-sm text-blue-200 font-bold">
-              <Link to="/forgetpassword" className="hover:text-cyan-300 transition-colors duration-200 hover:underline">
+              <Link
+                to="/forgetpassword"
+                className="hover:text-cyan-300 transition-colors duration-200 hover:underline"
+              >
                 Quên mật khẩu?
               </Link>
             </div>
@@ -197,9 +202,7 @@ const LoginBanner = () => (
 const LoginHeader = () => (
   <>
     <h2 className="text-2xl font-bold text-cyan-300">Đăng nhập</h2>
-    <p className="text-sm text-blue-200 mb-6">
-      Vui lòng đăng nhập để tiếp tục
-    </p>
+    <p className="text-sm text-blue-200 mb-6">Vui lòng đăng nhập để tiếp tục</p>
   </>
 );
 
@@ -237,7 +240,10 @@ const SubmitButton = ({ loading, text }) => (
 const RegisterLink = () => (
   <p className="text-sm text-center text-blue-200">
     Bạn chưa có tài khoản?{" "}
-    <Link to="/register" className="text-cyan-300 font-medium hover:underline transition-all duration-300">
+    <Link
+      to="/register"
+      className="text-cyan-300 font-medium hover:underline transition-all duration-300"
+    >
       Đăng ký ngay
     </Link>
   </p>
