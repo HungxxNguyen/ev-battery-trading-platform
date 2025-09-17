@@ -32,7 +32,7 @@ const Home = () => {
       title: "Isuzu 1 tấn đời 2017",
       price: "245.000.000 đ",
       location: "Quận Bình Tân",
-      image: "https://via.placeholder.com/200x150?text=Xe+Isuzu",
+      image: "https://tse4.mm.bing.net/th/id/OIP.7PNuD1w87IyBBEvmkJqYAQHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
       status: "Đã sử dụng"
     },
     {
@@ -40,7 +40,7 @@ const Home = () => {
       title: "VF7 GIÁ SIÊU ƯU ĐÃI - HỖ TRỢ VAY 90%",
       price: "767.000.000 đ",
       location: "Huyện Long Thành",
-      image: "https://via.placeholder.com/200x150?text=VF7",
+      image: "https://tse4.mm.bing.net/th/id/OIP.7PNuD1w87IyBBEvmkJqYAQHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
       year: "2025 • Điện • Tự động",
       status: "Mới",
       promotion: "SỞ HỮU VF7 CHỈ 15% CÒN LẠI DỄ NGÂN HÀNG LO!"
@@ -50,7 +50,7 @@ const Home = () => {
       title: "Yamaha Exciter 135 2014",
       price: "15.500.000 đ",
       location: "Quận Tân Bình",
-      image: "https://via.placeholder.com/200x150?text=Exciter",
+      image: "https://tse4.mm.bing.net/th/id/OIP.7PNuD1w87IyBBEvmkJqYAQHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
       year: "2014 • Tay côn",
       status: "Đã sử dụng"
     },
@@ -59,7 +59,7 @@ const Home = () => {
       title: "Thanh lý xe tải Jac N200 MB",
       price: "179.000.000 đ",
       location: "Quận 12",
-      image: "https://via.placeholder.com/200x150?text=Jac+N200",
+      image: "https://tse4.mm.bing.net/th/id/OIP.7PNuD1w87IyBBEvmkJqYAQHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
       description: "Thùng dài 4.4m",
       status: "Đã sử dụng"
     },
@@ -68,7 +68,7 @@ const Home = () => {
       title: "VF5 Plus ưu đãi đặc biệt",
       price: "495.000.000 đ",
       location: "Thành Phố Thủ Đức",
-      image: "https://via.placeholder.com/200x150?text=VF5+Plus",
+      image: "https://tse4.mm.bing.net/th/id/OIP.7PNuD1w87IyBBEvmkJqYAQHaFj?r=0&rs=1&pid=ImgDetMain&o=7&rm=3",
       year: "2025 • Điện • Tự động",
       status: "Mới"
     }
@@ -205,22 +205,7 @@ const Home = () => {
         </div>
       </div>
 
-      <style jsx>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      `}</style>
-    </MainLayout>
+         </MainLayout>
   );
 };
 
