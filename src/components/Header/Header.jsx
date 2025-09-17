@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo3 from './../../assets/logo3.png';
 
-export default function Header({ user = null, onLogout = () => {} }) {
+export default function Header({ user = null, onLogout = () => { } }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [keyword, setKeyword] = useState('');
@@ -72,7 +72,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
               Home
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
-            
+
             {/* Sell Dropdown */}
             <div className="relative">
               <button
@@ -92,7 +92,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
                 </div>
               )}
             </div>
-            
+
             {/* Shop Dropdown */}
             <div className="relative">
               <button
@@ -114,12 +114,12 @@ export default function Header({ user = null, onLogout = () => {} }) {
                 </div>
               )}
             </div>
-            
+
             <Link to="/about" className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 py-2 relative group">
               Giới thiệu
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
-            
+
             {user?.role === 'admin' && (
               <Link to="/reports" className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 py-2 relative group">
                 Thống kê
@@ -253,7 +253,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
             <Link to="/sell" className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2" onClick={closeMobileMenu}>Đăng tin</Link>
             <Link to="/listings" className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2" onClick={closeMobileMenu}>Mua/Bán</Link>
             <Link to="/about" className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2" onClick={closeMobileMenu}>Giới thiệu</Link>
-            
+
             {user?.role === 'admin' && (
               <Link to="/reports" className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2" onClick={closeMobileMenu}>Thống kê</Link>
             )}
