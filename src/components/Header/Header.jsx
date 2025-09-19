@@ -161,14 +161,14 @@ export default function Header({ user = null, onLogout = () => {} }) {
               {activeDropdown === "sell" && (
                 <div className="absolute left-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
                   <Link
-                    to="/sell"
+                    to="/add-listing"
                     className="block px-4 py-2 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
                     Đăng tin
                   </Link>
                   <Link
-                    to="/manage-sales"
+                    to="/manage-listing"
                     className="block px-4 py-2 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
@@ -504,11 +504,11 @@ export default function Header({ user = null, onLogout = () => {} }) {
               Home
             </Link>
             <Link
-              to="/sell"
+              to="/manage-listing"
               className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2"
               onClick={closeMobileMenu}
             >
-              Đăng tin
+              Quản lý tin đăng
             </Link>
             <Link
               to="/listings"

@@ -8,19 +8,23 @@ import ScrollToTop from "../components/ScrollToTop/ScrollToTop";
 import Home from "../pages/Home/Home";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
+import AddListing from "../pages/AddListing/AddListing";
+import ManageListing from "../pages/ManageListing/ManageListing";
 
 const AppRouter = () => {
   return (
-    <Router> 
-        <ScrollToTop />
-        <AnimatePresence mode="wait">
+    <Router>
+      <ScrollToTop />
+      <AnimatePresence mode="wait">
         <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/add-listing" element={<AddListing />} />
+          <Route path="/manage-listing" element={<ManageListing />} />
         </Routes>
-        </AnimatePresence>
+      </AnimatePresence>
     </Router>
   );
-}
+};
 export default AppRouter;
