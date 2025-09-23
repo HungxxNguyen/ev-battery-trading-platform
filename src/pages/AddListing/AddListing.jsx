@@ -475,7 +475,7 @@ const AddListing = () => {
           <div className="flex justify-end mt-8">
             <button
               type="submit"
-              className="px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200"
+              className="cursor-pointer px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200"
             >
               Submit Listing
             </button>
