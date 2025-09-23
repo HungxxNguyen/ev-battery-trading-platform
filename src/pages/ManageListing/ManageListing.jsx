@@ -21,8 +21,8 @@ const TABS = [
 const SAMPLE = [
   {
     id: 201,
-    title: "VinFast VF 8 Eco 2024",
-    price: 980000000,
+    title: "VinFast VF 8 Eco 2024 aaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    price: 980000000000,
     postedOn: "21/09/2025",
     status: "active",
     images: [
@@ -113,7 +113,7 @@ const ManageListing = () => {
             Quản lý tin đăng
           </h2>
           <Link to="/add-listing" className="w-full sm:w-auto">
-            <button className="w-full sm:w-auto px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition">
+            <button className="w-full sm:w-auto px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
               + Đăng tin
             </button>
           </Link>
@@ -128,7 +128,7 @@ const ManageListing = () => {
                 <button
                   key={t.key}
                   onClick={() => setActiveTab(t.key)}
-                  className="relative pb-2 font-bold whitespace-nowrap focus:outline-none"
+                  className="relative pb-2 font-bold whitespace-nowrap focus:outline-none cursor-pointer"
                 >
                   <span className={isActive ? "text-orange-500" : "text-black"}>
                     {t.label}{" "}
@@ -154,7 +154,7 @@ const ManageListing = () => {
             </p>
             <div className="mt-4">
               <Link to="/add-listing">
-                <button className="px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition">
+                <button className="px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
                   + Đăng tin ngay
                 </button>
               </Link>
@@ -202,7 +202,7 @@ const ManageListing = () => {
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={() => onEdit(item.id)}
-                      className="flex-1 flex items-center justify-center gap-1 p-3 bg-gray-700 hover:bg-gray-800 text-white rounded-md transition"
+                      className="flex-1 flex items-center justify-center gap-1 p-3 bg-gray-700 hover:bg-gray-800 text-white rounded-md transition cursor-pointer"
                       title="Sửa tin"
                     >
                       <span>Sửa</span>
@@ -210,7 +210,7 @@ const ManageListing = () => {
                     </button>
                     <button
                       onClick={() => onDelete(item.id)}
-                      className="flex-1 flex items-center justify-center gap-1 p-3 bg-red-600 hover:bg-red-700 text-white rounded-md transition"
+                      className="flex-1 flex items-center justify-center gap-1 p-3 bg-red-600 hover:bg-red-700 text-white rounded-md transition cursor-pointer"
                       title="Xoá tin"
                     >
                       <span>Xoá</span>
