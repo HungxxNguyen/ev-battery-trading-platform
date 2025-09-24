@@ -10,6 +10,7 @@ import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
 import AddListing from "../pages/AddListing/AddListing";
 import ManageListing from "../pages/ManageListing/ManageListing";
+import ListingDetail from "../pages/ListingDetail/ListingDetail";
 
 const AppRouter = () => {
   return (
@@ -22,6 +23,7 @@ const AppRouter = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/add-listing" element={<AddListing />} />
           <Route path="/manage-listing" element={<ManageListing />} />
+          <Route path="/listing/:id" element={<ListingDetail />} />
         </Routes>
       </AnimatePresence>
     </Router>
