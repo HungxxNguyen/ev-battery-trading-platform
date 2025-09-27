@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { FiHeart } from "react-icons/fi";
+import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
 
 // Giữ lại toàn bộ fake data nhưng đổi thumbnails -> images
@@ -58,6 +60,7 @@ const regularPosts = [
 
 const ListingDetail = () => {
   const { id } = useParams();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const post = regularPosts.find((post) => post.id === parseInt(id));
   const [currentImage, setCurrentImage] = useState(0);
 
@@ -78,6 +81,18 @@ const ListingDetail = () => {
       </MainLayout>
     );
   }
+
+  const favoriteItem = {
+    id: post.id,
+    title: post.title,
+    price: post.price,
+    location: post.location,
+    image:
+      Array.isArray(post.images) && post.images.length > 0
+        ? post.images[0]
+        : "https://placehold.co/200x140?text=Listing",
+  };
+  const favActive = isFavorite(post.id);
 
   return (
     <MainLayout>
@@ -148,7 +163,25 @@ const ListingDetail = () => {
         <div className="col-span-1 space-y-6">
           {/* Info */}
           <div className="bg-white p-6 rounded-lg shadow-md border">
-            <h1 className="text-lg font-bold mb-2">{post.title}</h1>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h1 className="text-lg font-bold text-gray-800 flex-1">
+                {post.title}
+              </h1>
+              <button
+                type="button"
+                onClick={() => toggleFavorite(favoriteItem)}
+                className={`flex items-center justify-center w-10 h-10 rounded-full border transition ${
+                  favActive
+                    ? "bg-red-50 border-red-200 text-red-500"
+                    : "bg-white border-gray-200 text-gray-400 hover:text-red-400"
+                }`}
+                aria-label="Luu tin yeu thich"
+              >
+                <FiHeart
+                  className={`w-5 h-5 ${favActive ? "fill-current" : ""}`}
+                />
+              </button>
+            </div>
             <p className="text-red-600 font-bold text-2xl mb-1">{post.price}</p>
             {post.subPrice && <p className="text-gray-500 mb-3">{post.subPrice}</p>}
 
@@ -199,3 +232,4 @@ const ListingDetail = () => {
 };
 
 export default ListingDetail;
+
