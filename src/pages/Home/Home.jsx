@@ -2,9 +2,13 @@
 import React, { useState } from "react";
 import MainLayout from "../../components/layout/MainLayout";
 import { Link } from "react-router-dom";
+import { FiHeart } from "react-icons/fi";
+import { useFavorites } from "../../contexts/FavoritesContext";
 
 const Home = () => {
-  // Fake data cho danh mục hãng xe điện
+  const { toggleFavorite, isFavorite } = useFavorites();
+
+  // Danh mục hãng xe điện
   const electricCarBrands = [
     { id: 1, name: "VinFast", icon: "⚡" },
     { id: 2, name: "Tesla", icon: "🔌" },
@@ -16,7 +20,7 @@ const Home = () => {
     { id: 8, name: "Hyundai", icon: "⚡" },
   ];
 
-  // Fake data cho danh mục hãng pin xe điện
+  // Danh mục hãng pin xe điện
   const batteryBrands = [
     { id: 101, name: "LG Energy", icon: "🔋" },
     { id: 102, name: "Panasonic", icon: "🔌" },
@@ -26,11 +30,10 @@ const Home = () => {
     { id: 106, name: "BYD Battery", icon: "🔋" },
   ];
 
-  // Fake data cho tin đăng thường - chỉ giữ lại 5 card
+  // Tin đăng demo (5 card)
   const regularPosts = [
     {
       id: 1,
-
       title: "VINFAST VF3 SẴN XE - TRẢ TRƯỚC 0-45TR NHẬN XE",
       price: "279.000.000 đ",
       location: "Phường 22, Quận Bình Thạnh, Tp Hồ Chí Minh",
@@ -81,19 +84,19 @@ const Home = () => {
     },
   ];
 
-  // State để theo dõi danh mục được chọn
+  // nếu file là .jsx (JS):
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        {/* Phần danh mục gộp - Hãng xe điện và Hãng pin */}
+        {/* Danh mục hãng xe điện & pin */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
             Danh mục hãng xe điện & pin
           </h2>
 
-          {/* Sub-title cho hãng xe điện */}
+          {/* Hãng xe điện */}
           <h3 className="text-lg font-semibold mb-3 text-blue-600">
             Hãng xe điện
           </h3>
@@ -122,7 +125,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Sub-title cho hãng pin xe điện */}
+          {/* Hãng pin xe điện */}
           <h3 className="text-lg font-semibold mb-3 text-blue-600">
             Hãng pin xe điện
           </h3>
@@ -152,62 +155,94 @@ const Home = () => {
           </div>
         </div>
 
-        {/* Phần tin đăng với nền trắng và viền rõ rệt */}
+        {/* Tin đăng mới nhất */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
             Tin đăng mới nhất
           </h2>
 
-          {/* Lưới tin đăng chính - chỉ hiển thị 5 card */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
-            {regularPosts.map((post) => (
-              <Link
-                to={`/listing/${post.id}`}
-                key={post.id}
-                className="bg-white rounded-lg overflow-hidden border border-gray-200 transition-all duration-200 hover:shadow-md"
-              >
-                <div className="h-40 bg-gray-200 overflow-hidden relative">
-                  <img
-                    src={post.image}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <span
-                    className={`absolute top-2 left-2 text-xs px-2 py-1 rounded ${
-                      post.status === "Mới"
-                        ? "bg-green-500 text-white"
-                        : "bg-blue-500 text-white"
-                    }`}
-                  >
-                    {post.status}
-                  </span>
-                </div>
-                <div className="p-3">
-                  <h3 className="font-semibold text-base mb-1 line-clamp-2 h-12">
-                    {post.title}
-                  </h3>
-                  {post.year && (
-                    <p className="text-gray-500 text-xs mb-1">{post.year}</p>
-                  )}
-                  {post.description && (
-                    <p className="text-gray-500 text-xs mb-1">
-                      {post.description}
-                    </p>
-                  )}
-                  {post.promotion && (
-                    <div className="bg-red-100 text-red-800 text-xs p-2 rounded mb-2 line-clamp-2">
-                      {post.promotion}
-                    </div>
-                  )}
-                  <p className="text-red-600 font-bold text-lg mb-1">
-                    {post.price}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <p className="text-gray-500 text-xs">{post.location}</p>
+            {regularPosts.map((post) => {
+              const favActive = isFavorite(post.id);
+              const isNew = post.status === "Mới";
+              return (
+                <Link
+                  to={`/listing/${post.id}`}
+                  key={post.id}
+                  className="bg-white rounded-lg overflow-hidden border border-gray-200 transition-all duration-200 hover:shadow-md"
+                >
+                  <div className="h-40 bg-gray-200 overflow-hidden relative">
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <span
+                      className={`absolute top-2 left-2 text-xs px-2 py-1 rounded ${
+                        isNew
+                          ? "bg-green-500 text-white"
+                          : "bg-blue-500 text-white"
+                      }`}
+                    >
+                      {post.status}
+                    </span>
+
+                    {/* Nút lưu tin */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite({
+                          id: post.id,
+                          title: post.title,
+                          price: post.price,
+                          location: post.location,
+                          image: post.image,
+                        });
+                      }}
+                      className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
+                        favActive
+                          ? "bg-white text-red-500"
+                          : "bg-white/90 text-gray-500 hover:text-red-400"
+                      }`}
+                      aria-label="Lưu tin yêu thích"
+                    >
+                      <FiHeart
+                        className={`w-5 h-5 ${favActive ? "fill-current" : ""}`}
+                      />
+                    </button>
                   </div>
-                </div>
-              </Link>
-            ))}
+
+                  <div className="p-3">
+                    <h3 className="font-semibold text-base mb-1 line-clamp-2 h-12">
+                      {post.title}
+                    </h3>
+
+                    {post.year && (
+                      <p className="text-gray-500 text-xs mb-1">{post.year}</p>
+                    )}
+                    {post.description && (
+                      <p className="text-gray-500 text-xs mb-1">
+                        {post.description}
+                      </p>
+                    )}
+                    {post.promotion && (
+                      <div className="bg-red-100 text-red-800 text-xs p-2 rounded mb-2 line-clamp-2">
+                        {post.promotion}
+                      </div>
+                    )}
+
+                    <p className="text-red-600 font-bold text-lg mb-1">
+                      {post.price}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <p className="text-gray-500 text-xs">{post.location}</p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
 
           {/* Nút xem thêm */}

@@ -1,6 +1,11 @@
 // src/pages/ManageListing.jsx
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import { motion } from "framer-motion";
 import {
@@ -64,6 +69,23 @@ const SAMPLE = [
     ],
     metrics: { rank: 91, categoryLabel: "Muc Pin thay the" },
   },
+  // HẾT HẠN để test
+  {
+    id: 205,
+    title: "Nissan Leaf 40 kWh 2019",
+    price: 435000000,
+    postedOn: "26/08/2025",
+    expiresOn: "26/09/2025",
+    status: "expired",
+    location: "Quan Binh Thanh, TP Ho Chi Minh",
+    images: [
+      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
+    ],
+    metrics: {
+      // chỉ dùng daysToDelete cho câu cảnh báo
+      daysToDelete: 28,
+    },
+  },
   {
     id: 204,
     title: "BMW i4 eDrive40 dang ky 2024",
@@ -102,19 +124,6 @@ const formatVNDate = (date) =>
       ).padStart(2, "0")}/${date.getFullYear()}`
     : "";
 
-/* ---------------- Badge “TRANG XX” ---------------- */
-const RankBadge = ({ page = 82, label = "Muc EV & Pin, …", onClick }) => (
-  <div
-    className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold cursor-pointer"
-    onClick={onClick}
-    title="Xem vị trí hiển thị"
-  >
-    <span className="tracking-wide">TRANG {page}</span>
-    <span className="text-gray-400">•</span>
-    <span className="font-normal">{label}</span>
-  </div>
-);
-
 /* ---------------- Click-outside ---------------- */
 function useOnClickOutside(ref, handler) {
   useEffect(() => {
@@ -131,7 +140,7 @@ function useOnClickOutside(ref, handler) {
   }, [ref, handler]);
 }
 
-/* ---------------- Dropdown menu ---------------- */
+/* ---------------- Dropdown menu (dùng cho tab khác, không dùng ở Hết hạn) ---------------- */
 const OptionMenu = ({ onShare, onHide }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
     <button
@@ -226,7 +235,7 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   );
 };
 
-/* ---------------- Modal “Gia hạn tin” ---------------- */
+/* ---------------- Modal “Gia hạn tin” (dùng cho cả Đăng lại) ---------------- */
 const ExtendModal = ({ open, listing, onClose, onApply }) => {
   const plans = [
     { days: 15, price: 35100, oldPrice: 39000, discount: 10 },
@@ -332,7 +341,7 @@ const ExtendModal = ({ open, listing, onClose, onApply }) => {
   );
 };
 
-/* ---------------- ListingItem (mới) ---------------- */
+/* ---------------- ListingItem ---------------- */
 const ListingItem = ({
   item,
   onNavigate,
@@ -342,10 +351,12 @@ const ListingItem = ({
   menuForId,
   setMenuForId,
   onOpenExtendModal,
+  onOpenRelist, // dùng ở Hết hạn
 }) => {
   const galleryImage = item.images?.[0];
   const metrics = item.metrics || {};
-  const pageRank = metrics.rank ?? 1;
+  const isExpired = item.status === "expired";
+  const daysToDelete = metrics.daysToDelete ?? 28;
 
   const menuRef = useRef(null);
   useOnClickOutside(menuRef, () => {
@@ -392,14 +403,6 @@ const ListingItem = ({
               {currency(item.price)}
             </p>
 
-            <div className="mt-1">
-              <RankBadge
-                page={pageRank}
-                label={metrics.categoryLabel || "Muc EV & Pin, …"}
-                onClick={() => {}}
-              />
-            </div>
-
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <FiMapPin className="text-gray-400" />
               <span>{item.location}</span>
@@ -419,62 +422,90 @@ const ListingItem = ({
                 </strong>
               </span>
             </div>
+
+            {/* Chỉ HẾT HẠN: thêm dòng cảnh báo */}
+            {isExpired && (
+              <div className="mt-3 text-sm rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-gray-700">
+                Tin đăng sẽ bị xoá khỏi hệ thống sau{" "}
+                <b className="text-red-600">{daysToDelete} ngày</b>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            <button
-              onClick={() => onOpenExtendModal(item)}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-            >
-              <FiRefreshCcw /> Gia hạn tin
-            </button>
+            {!isExpired ? (
+              <>
+                <button
+                  onClick={() => onOpenExtendModal(item)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <FiRefreshCcw /> Gia hạn tin
+                </button>
 
-            <button
-              onClick={() => onEdit(item.id)}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-            >
-              <FiEdit /> Sửa tin
-            </button>
+                <button
+                  onClick={() => onEdit(item.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  <FiEdit /> Sửa tin
+                </button>
 
-            {/* Tuỳ chọn */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() =>
-                  setMenuForId((v) => (v === item.id ? null : item.id))
-                }
-                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                aria-haspopup="menu"
-                aria-expanded={menuForId === item.id}
-              >
-                <FiMoreHorizontal /> Tuỳ chọn
-              </button>
-              {menuForId === item.id && (
-                <div className="absolute z-20 left-0 md:left-auto md:right-0">
-                  <OptionMenu
-                    onShare={() => {
-                      setMenuForId(null);
-                      alert("Chia sẻ: mở modal chia sẻ ở đây.");
-                    }}
-                    onHide={() => {
-                      setMenuForId(null);
-                      onOpenHideModal(item);
-                    }}
-                  />
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() =>
+                      setMenuForId((v) => (v === item.id ? null : item.id))
+                    }
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    aria-haspopup="menu"
+                    aria-expanded={menuForId === item.id}
+                  >
+                    <FiMoreHorizontal /> Tuỳ chọn
+                  </button>
+                  {menuForId === item.id && (
+                    <div className="absolute z-20 left-0 md:left-auto md:right-0">
+                      <OptionMenu
+                        onShare={() => {
+                          setMenuForId(null);
+                          alert("Chia sẻ: mở modal chia sẻ ở đây.");
+                        }}
+                        onHide={() => {
+                          setMenuForId(null);
+                          onOpenHideModal(item);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <button
-              onClick={() => onDelete(item.id)}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition cursor-pointer"
-            >
-              <FaRegTrashAlt /> Xoá tin
-            </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition cursor-pointer"
+                >
+                  <FaRegTrashAlt /> Xoá tin
+                </button>
 
-            <button className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer">
-              <FiZap /> Bán nhanh hơn
-            </button>
+                <button className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer">
+                  <FiZap /> Bán nhanh hơn
+                </button>
+              </>
+            ) : (
+              <>
+                {/* HẾT HẠN: chỉ còn ĐĂNG LẠI + XOÁ TIN */}
+                <button
+                  onClick={() => onOpenRelist(item)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
+                >
+                  <FiRefreshCcw /> Đăng lại
+                </button>
+
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition cursor-pointer"
+                >
+                  <FaRegTrashAlt /> Xoá tin
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -485,7 +516,24 @@ const ListingItem = ({
 /* ---------------- Page ---------------- */
 const ManageListing = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("active");
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // lấy tab từ URL, mặc định active
+  const urlTab = searchParams.get("tab") || "active";
+  const [activeTab, setActiveTab] = useState(urlTab);
+
+  // đồng bộ state <-> URL khi đổi tab
+  useEffect(() => {
+    if (!TABS.some((t) => t.key === urlTab)) {
+      setSearchParams({ tab: "active" }, { replace: true });
+      setActiveTab("active");
+    } else {
+      setActiveTab(urlTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlTab]);
+
   const [listings, setListings] = useState(SAMPLE);
 
   // dropdown + modals
@@ -500,11 +548,19 @@ const ManageListing = () => {
 
   const onDelete = (id) =>
     setListings((prev) => (prev || []).filter((x) => x.id !== id));
-  const onEdit = (id) => navigate(`/add-listing?mode=edit&id=${id}`);
+  const onEdit = (id) =>
+    navigate(`/add-listing?mode=edit&id=${id}${location.search}`);
   const onNavigate = (listing) =>
-    navigate(`/manage-listing/${listing.id}`, { state: { listing } });
+    navigate(`/manage-listing/${listing.id}${location.search}`, {
+      state: { listing },
+    });
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
+
+  // Đăng lại -> mở modal gia hạn; khi áp dụng: active + cập nhật hạn
+  const onOpenRelist = (item) => setExtendFor(item);
+
+  const setTab = (key) => setSearchParams({ tab: key });
 
   const activeLabel = TABS.find((t) => t.key === activeTab)?.label || "";
 
@@ -520,7 +576,10 @@ const ManageListing = () => {
           <h2 className="font-bold text-2xl sm:text-4xl text-gray-800">
             Quan ly tin dang
           </h2>
-          <Link to="/add-listing" className="w-full sm:w-auto">
+          <Link
+            to={`/add-listing${location.search}`}
+            className="w-full sm:w-auto"
+          >
             <button className="w-full sm:w-auto px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
               + Dang tin
             </button>
@@ -535,7 +594,7 @@ const ManageListing = () => {
               return (
                 <button
                   key={t.key}
-                  onClick={() => setActiveTab(t.key)}
+                  onClick={() => setTab(t.key)}
                   className="relative pb-2 font-bold whitespace-nowrap focus:outline-none cursor-pointer"
                 >
                   <span
@@ -559,7 +618,7 @@ const ManageListing = () => {
               Ban chua co tin o muc <b>{activeLabel}</b>.
             </p>
             <div className="mt-4">
-              <Link to="/add-listing">
+              <Link to={`/add-listing${location.search}`}>
                 <button className="px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
                   + Dang tin ngay
                 </button>
@@ -579,6 +638,7 @@ const ManageListing = () => {
                 menuForId={menuForId}
                 setMenuForId={setMenuForId}
                 onOpenExtendModal={setExtendFor}
+                onOpenRelist={onOpenRelist}
               />
             ))}
           </div>
@@ -598,32 +658,35 @@ const ManageListing = () => {
               )
             );
           }
-          console.log("Ẩn tin:", hideFor?.id, "Lý do:", reason);
           setHideFor(null);
         }}
       />
 
-      {/* Modal Gia hạn */}
+      {/* Modal Gia hạn / Đăng lại */}
       <ExtendModal
         open={!!extendFor}
         listing={extendFor}
         onClose={() => setExtendFor(null)}
         onApply={(plan) => {
           if (extendFor) {
-            const base = parseVNDate(extendFor.expiresOn) || new Date();
-            const next = new Date(base);
-            next.setDate(base.getDate() + (plan?.days || 0));
-            const nextStr = formatVNDate(next);
-            setListings((prev) =>
-              (prev || []).map((x) =>
-                x.id === extendFor.id
-                  ? { ...x, expiresOn: nextStr, status: "active" }
-                  : x
-              )
-            );
+            const baseDateObj =
+              parseVNDate(extendFor.expiresOn) || new Date();
+            const baseDateStr = formatVNDate(baseDateObj);
+            const nextDateObj = new Date(baseDateObj);
+            nextDateObj.setDate(baseDateObj.getDate() + (plan?.days || 0));
+            const nextDateStr = formatVNDate(nextDateObj);
+            navigate("/payment", {
+              state: {
+                listing: extendFor,
+                plan,
+                renewal: {
+                  baseDateStr,
+                  nextDateStr,
+                },
+              },
+            });
           }
           setExtendFor(null);
-          alert(`Đã áp dụng gói ${plan.days} ngày.`);
         }}
       />
     </MainLayout>
