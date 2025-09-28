@@ -12,6 +12,7 @@ import AddListing from "../pages/AddListing/AddListing";
 import ManageListing from "../pages/ManageListing/ManageListing";
 import ManageDetail from "../pages/ManageDetail/ManageDetail";
 import ListingDetail from "../pages/ListingDetail/ListingDetail";
+import Category from "../pages/Category/Category";
 import Payment from "../pages/Payment/Payment";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
@@ -30,6 +31,7 @@ const AppRouter = () => {
           <Route path="/manage-listing" element={<ManageListing />} />
           <Route path="/manage-listing/:id" element={<ManageDetail />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
+          <Route path="/category/:categoryId" element={<Category />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/favorites" element={<Favorites />} />
