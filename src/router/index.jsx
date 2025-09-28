@@ -35,7 +35,7 @@ const AppRouter = () => {
           <Route path="/payment" element={<Payment />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/favorites" element={<Favorites />} />
-          <Route path="/notifications" element={<Notifications />}
+          <Route path="/notifications" element={<Notifications />} />
         </Routes>
       </AnimatePresence>
     </Router>
