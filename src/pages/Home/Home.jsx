@@ -30,7 +30,6 @@ const Home = () => {
   const regularPosts = [
     {
       id: 1,
-
       title: "VINFAST VF3 SẴN XE - TRẢ TRƯỚC 0-45TR NHẬN XE",
       price: "279.000.000 đ",
       location: "Phường 22, Quận Bình Thạnh, Tp Hồ Chí Minh",
@@ -81,84 +80,67 @@ const Home = () => {
     },
   ];
 
-  // State để theo dõi danh mục được chọn
   const [selectedCategory, setSelectedCategory] = useState(null);
+
+  // Danh mục chính (giờ có 4 mục)
+  const mainCategories = [
+    {
+      id: "car",
+      title: "Xe ô tô điện",
+      image: "https://cdn-icons-png.flaticon.com/512/3202/3202926.png",
+    },
+    {
+      id: "bike",
+      title: "Xe máy điện",
+      image:
+        "https://tse2.mm.bing.net/th/id/OIP.IY8TgrPvqIlkJaQZ9OqAUwHaFx?w=860&h=670&rs=1&pid=ImgDetMain&o=7&rm=3",
+    },
+    {
+      id: "battery",
+      title: "Pin xe điện",
+      image:
+        "https://img.freepik.com/premium-vector/battery-icon_1076610-15185.jpg",
+    },
+    {
+      id: "other",
+      title: "Các phương tiện khác",
+      image: "https://cdn-icons-png.flaticon.com/512/743/743922.png",
+    },
+  ];
 
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">
-        {/* Phần danh mục gộp - Hãng xe điện và Hãng pin */}
+        {/* Danh mục sản phẩm */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
-            Danh mục hãng xe điện & pin
+            Danh mục sản phẩm
           </h2>
-
-          {/* Sub-title cho hãng xe điện */}
-          <h3 className="text-lg font-semibold mb-3 text-blue-600">
-            Hãng xe điện
-          </h3>
-          <div className="flex justify-center mb-6">
-            <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar max-w-full">
-              {electricCarBrands.map((brand) => (
-                <button
-                  key={brand.id}
-                  className={`flex flex-col items-center justify-center w-24 h-24 flex-shrink-0 rounded-lg transition-all duration-300 ${
-                    selectedCategory === brand.id
-                      ? "bg-blue-100 border-2 border-blue-400"
-                      : "bg-green-50 border border-green-200 hover:bg-green-100"
-                  }`}
-                  onClick={() =>
-                    setSelectedCategory(
-                      selectedCategory === brand.id ? null : brand.id
-                    )
-                  }
-                >
-                  <span className="text-2xl mb-1">{brand.icon}</span>
-                  <span className="text-xs text-center px-1 font-medium">
-                    {brand.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sub-title cho hãng pin xe điện */}
-          <h3 className="text-lg font-semibold mb-3 text-blue-600">
-            Hãng pin xe điện
-          </h3>
-          <div className="flex justify-center">
-            <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar max-w-full">
-              {batteryBrands.map((brand) => (
-                <button
-                  key={brand.id}
-                  className={`flex flex-col items-center justify-center w-24 h-24 flex-shrink-0 rounded-lg transition-all duration-300 ${
-                    selectedCategory === brand.id
-                      ? "bg-blue-100 border-2 border-blue-400"
-                      : "bg-yellow-50 border border-yellow-200 hover:bg-yellow-100"
-                  }`}
-                  onClick={() =>
-                    setSelectedCategory(
-                      selectedCategory === brand.id ? null : brand.id
-                    )
-                  }
-                >
-                  <span className="text-2xl mb-1">{brand.icon}</span>
-                  <span className="text-xs text-center px-1 font-medium">
-                    {brand.name}
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-4">
+            {mainCategories.map((cat) => (
+              <Link
+                to={`/category/${cat.id}`}
+                key={cat.id}
+                className="flex-1 flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 transition-all"
+              >
+                <img
+                  src={cat.image}
+                  alt={cat.title}
+                  className="w-14 h-14 mb-2"
+                />
+                <span className="text-sm font-medium text-center">
+                  {cat.title}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
 
-        {/* Phần tin đăng với nền trắng và viền rõ rệt */}
+        {/* Tin đăng mới nhất */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
             Tin đăng mới nhất
           </h2>
-
-          {/* Lưới tin đăng chính - chỉ hiển thị 5 card */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
             {regularPosts.map((post) => (
               <Link
@@ -212,9 +194,12 @@ const Home = () => {
 
           {/* Nút xem thêm */}
           <div className="text-center mt-8">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors duration-200">
-              Xem thêm 79.571 tin đăng
-            </button>
+            <Link
+              to="/category" // 👉 chỉ sang /category (không kèm slug)
+              className="px-6 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors duration-200 inline-block"
+            >
+              Xem thêm tin đăng
+            </Link>
           </div>
         </div>
       </div>

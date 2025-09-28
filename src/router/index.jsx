@@ -12,6 +12,7 @@ import AddListing from "../pages/AddListing/AddListing";
 import ManageListing from "../pages/ManageListing/ManageListing";
 import ManageDetail from "../pages/ManageDetail/ManageDetail";
 import ListingDetail from "../pages/ListingDetail/ListingDetail";
+import Category from "../pages/Category/Category";
 
 const AppRouter = () => {
   return (
@@ -26,6 +27,7 @@ const AppRouter = () => {
           <Route path="/manage-listing" element={<ManageListing />} />
           <Route path="/manage-listing/:id" element={<ManageDetail />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
+          <Route path="/category/:categoryId" element={<Category />} />
         </Routes>
       </AnimatePresence>
     </Router>
