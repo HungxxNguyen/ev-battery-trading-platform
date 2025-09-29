@@ -12,17 +12,15 @@ export default function Header({ user = null, onLogout = () => {} }) {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const mobileRef = useRef(null);
-  // Thêm refs cho từng dropdown
   const sellDropdownRef = useRef(null);
   const shopDropdownRef = useRef(null);
   const userDropdownRef = useRef(null);
-  const adminDropdownRef = useRef(null);
-  const guestDropdownRef = useRef(null);
 
   const { favorites } = useFavorites();
   const favoritesCount = favorites.length;
   const chatUnread = 3;
   const notificationsUnread = 3;
+
   const formatCount = (count) => (count > 9 ? "9+" : `${count}`);
   const iconButtonClass =
     "relative p-2.5 rounded-full bg-gray-800/70 hover:bg-gray-700 text-cyan-100 transition-all duration-300";
@@ -32,11 +30,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
   const toggleDropdown = (dropdown) => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
   };
-
-  const closeAllDropdowns = () => {
-    setActiveDropdown(null);
-  };
-
+  const closeAllDropdowns = () => setActiveDropdown(null);
   const closeMobileMenu = () => {
     setMobileOpen(false);
     closeAllDropdowns();
@@ -44,47 +38,18 @@ export default function Header({ user = null, onLogout = () => {} }) {
 
   const handleClickOutside = useCallback(
     (event) => {
-      // Kiểm tra xem click có phải ở ngoài dropdown không
-      const isOutsideDropdown = (dropdownRef) => {
-        return (
-          dropdownRef.current && !dropdownRef.current.contains(event.target)
-        );
-      };
+      const isOutside = (ref) =>
+        ref.current && !ref.current.contains(event.target);
 
-      // Đóng dropdown nếu click ra ngoài
       if (activeDropdown) {
-        switch (activeDropdown) {
-          case "sell":
-            if (isOutsideDropdown(sellDropdownRef)) {
-              closeAllDropdowns();
-            }
-            break;
-          case "shop":
-            if (isOutsideDropdown(shopDropdownRef)) {
-              closeAllDropdowns();
-            }
-            break;
-          case "user":
-            if (isOutsideDropdown(userDropdownRef)) {
-              closeAllDropdowns();
-            }
-            break;
-          case "admin":
-            if (isOutsideDropdown(adminDropdownRef)) {
-              closeAllDropdowns();
-            }
-            break;
-          case "guest":
-            if (isOutsideDropdown(guestDropdownRef)) {
-              closeAllDropdowns();
-            }
-            break;
-          default:
-            break;
-        }
+        if (activeDropdown === "sell" && isOutside(sellDropdownRef))
+          closeAllDropdowns();
+        if (activeDropdown === "shop" && isOutside(shopDropdownRef))
+          closeAllDropdowns();
+        if (activeDropdown === "user" && isOutside(userDropdownRef))
+          closeAllDropdowns();
       }
 
-      // Đóng mobile menu nếu click ra ngoài
       if (
         mobileOpen &&
         mobileRef.current &&
@@ -100,25 +65,20 @@ export default function Header({ user = null, onLogout = () => {} }) {
 
   useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [handleClickOutside]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (keyword.trim()) {
-      navigate(`/search/${keyword}`);
-    } else {
-      navigate("/");
-    }
+    if (keyword.trim()) navigate(`/search/${keyword}`);
+    else navigate("/");
   };
 
   return (
     <header className="bg-gradient-to-r from-gray-900 to-blue-900 text-white shadow-lg shadow-blue-500/30 sticky top-0 z-50">
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          {/* Logo / Brand - Increased size and spacing */}
+          {/* Logo / Brand */}
           <Link to="/" className="flex items-center gap-4 group flex-shrink-0">
             <img
               src={logo3}
@@ -135,7 +95,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
             </div>
           </Link>
 
-          {/* Desktop Navigation - Better spacing */}
+          {/* Desktop Navigation */}
           <nav
             className="hidden lg:flex items-center space-x-8 ml-12"
             ref={dropdownRef}
@@ -148,7 +108,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
 
-            {/* Sell Dropdown */}
+            {/* Sell */}
             <div className="relative" ref={sellDropdownRef}>
               <button
                 onClick={() => toggleDropdown("sell")}
@@ -168,7 +128,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
               </button>
               {activeDropdown === "sell" && (
                 <div className="absolute left-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
@@ -190,7 +150,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
               )}
             </div>
 
-            {/* Shop Dropdown */}
+            {/* Shop */}
             <div className="relative" ref={shopDropdownRef}>
               <button
                 onClick={() => toggleDropdown("shop")}
@@ -210,7 +170,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300" />
               </button>
               {activeDropdown === "shop" && (
                 <div className="absolute left-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
@@ -253,19 +213,9 @@ export default function Header({ user = null, onLogout = () => {} }) {
               Giới thiệu
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
-
-            {user?.role === "admin" && (
-              <Link
-                to="/reports"
-                className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 py-2 relative group whitespace-nowrap"
-              >
-                Thống kê
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-            )}
           </nav>
 
-          {/* Search Form - Better proportions */}
+          {/* Search */}
           <form
             onSubmit={handleSearch}
             className="hidden lg:flex items-center mx-8 flex-1 max-w-md"
@@ -294,9 +244,8 @@ export default function Header({ user = null, onLogout = () => {} }) {
             </div>
           </form>
 
-          {/* Right Actions: Icons and User - Better spacing */}
+          {/* Right actions (no admin) */}
           <div className="hidden lg:flex items-center gap-6">
-            {/* Icon buttons group */}
             <div className="flex items-center gap-3">
               <Link to="/chat" className={iconButtonClass} aria-label="Mo chat">
                 <FiMessageCircle className="w-5 h-5" />
@@ -336,38 +285,59 @@ export default function Header({ user = null, onLogout = () => {} }) {
               </Link>
             </div>
 
-            {/* Divider */}
-            <div className="h-8 w-px bg-cyan-500/20"></div>
+            <div className="h-8 w-px bg-cyan-500/20" />
 
-            {/* User section */}
-            {user ? (
-              <div className="flex items-center gap-3">
-                {/* User Dropdown */}
-                <div className="relative" ref={userDropdownRef}>
-                  <button
-                    onClick={() => toggleDropdown("user")}
-                    className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
-                  >
+            {/* User dropdown - hiển thị cho cả đã đăng nhập và chưa đăng nhập */}
+            <div className="relative" ref={userDropdownRef}>
+              <button
+                onClick={() => toggleDropdown("user")}
+                className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
+              >
+                {user ? (
+                  <>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
                       {user.name.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-sm font-medium">{user.name}</span>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                  {activeDropdown === "user" && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
+                  </>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-cyan-600 flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                    <span className="text-sm font-medium">Tài khoản</span>
+                  </>
+                )}
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {activeDropdown === "user" && (
+                <div className="absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
+                  {user ? (
+                    <>
                       <Link
                         to="/profile"
                         className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
@@ -392,142 +362,32 @@ export default function Header({ user = null, onLogout = () => {} }) {
                       >
                         Đăng xuất
                       </button>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        to="/login"
+                        className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
+                        onClick={closeAllDropdowns}
+                      >
+                        Đăng nhập
+                      </Link>
+                      <Link
+                        to="/register"
+                        className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
+                        onClick={closeAllDropdowns}
+                      >
+                        Đăng ký
+                      </Link>
+                    </>
                   )}
                 </div>
-
-                {/* Admin Dropdown if applicable */}
-                {user.role === "admin" && (
-                  <div className="relative" ref={adminDropdownRef}>
-                    <button
-                      onClick={() => toggleDropdown("admin")}
-                      className="bg-gradient-to-r from-cyan-700 to-cyan-600 hover:from-cyan-600 hover:to-cyan-500 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 flex items-center shadow-md shadow-cyan-500/30"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                        />
-                      </svg>
-                      Admin
-                      <svg
-                        className="w-4 h-4 ml-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-                    {activeDropdown === "admin" && (
-                      <div className="absolute right-0 mt-2 w-56 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
-                        <Link
-                          to="/admin/users"
-                          className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                          onClick={closeAllDropdowns}
-                        >
-                          Quản lý người dùng
-                        </Link>
-                        <Link
-                          to="/admin/listings"
-                          className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                          onClick={closeAllDropdowns}
-                        >
-                          Quản lý tin đăng
-                        </Link>
-                        <Link
-                          to="/admin/transactions"
-                          className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                          onClick={closeAllDropdowns}
-                        >
-                          Quản lý giao dịch
-                        </Link>
-                        <Link
-                          to="/admin/reports"
-                          className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                          onClick={closeAllDropdowns}
-                        >
-                          Báo cáo & Thống kê
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Guest Dropdown
-              <div className="relative" ref={guestDropdownRef}>
-                <button
-                  onClick={() => toggleDropdown("guest")}
-                  className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-cyan-600 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-medium">Tài khoản</span>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-                {activeDropdown === "guest" && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
-                    <Link
-                      to="/login"
-                      className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                      onClick={closeAllDropdowns}
-                    >
-                      Đăng nhập
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
-                      onClick={closeAllDropdowns}
-                    >
-                      Đăng ký
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Tablet Menu Button (md screens) */}
+          {/* Tablet compact icons + burger */}
           <div className="hidden md:flex lg:hidden items-center gap-4">
-            {/* Show only icons on tablet */}
             <div className="flex items-center gap-2">
               <Link
                 to="/chat"
@@ -578,7 +438,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
             </button>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile burger */}
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -669,16 +529,6 @@ export default function Header({ user = null, onLogout = () => {} }) {
               Giới thiệu
             </Link>
 
-            {user?.role === "admin" && (
-              <Link
-                to="/reports"
-                className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2"
-                onClick={closeMobileMenu}
-              >
-                Thống kê
-              </Link>
-            )}
-
             <div className="pt-2 space-y-2 border-t border-cyan-500/30">
               {user ? (
                 <>
@@ -699,39 +549,6 @@ export default function Header({ user = null, onLogout = () => {} }) {
                   >
                     Lịch sử giao dịch
                   </Link>
-                  {user.role === "admin" && (
-                    <>
-                      <div className="text-sm text-cyan-300 pt-4 pb-2">
-                        Quản trị
-                      </div>
-                      <Link
-                        to="/admin/users"
-                        className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2 pl-4"
-                        onClick={closeMobileMenu}
-                      >
-                        Quản lý người dùng
-                      </Link>
-                      <Link
-                        to="/admin/listings"
-                        className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2 pl-4"
-                        onClick={closeMobileMenu}
-                      >
-                        Quản lý tin đăng
-                      </Link>
-                      <Link
-                        to="/admin/transactions"
-                        className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2 pl-4"
-                        onClick={closeMobileMenu}
-                      ></Link>
-                      <Link
-                        to="/admin/reports"
-                        className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2 pl-4"
-                        onClick={closeMobileMenu}
-                      >
-                        Báo cáo & Thống kê
-                      </Link>
-                    </>
-                  )}
                   <button
                     onClick={() => {
                       onLogout();

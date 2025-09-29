@@ -17,6 +17,7 @@ import Payment from "../pages/Payment/Payment";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
 import Notifications from "../pages/Notifications/Notifications";
+import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 
 const AppRouter = () => {
   return (
@@ -36,6 +37,7 @@ const AppRouter = () => {
           <Route path="/chat" element={<Chat />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/forgetpassword" element={<ForgetPassword />} />
         </Routes>
       </AnimatePresence>
     </Router>
