@@ -336,7 +336,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
               </button>
               {activeDropdown === "user" && (
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
-                  {user ? (
+                  {!user ? (
                     <>
                       <Link
                         to="/profile"
