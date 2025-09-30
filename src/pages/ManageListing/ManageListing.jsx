@@ -14,6 +14,7 @@ import {
   FiMoreHorizontal,
   FiRefreshCcw,
   FiZap,
+  FiEye, // ⟵ thêm icon con mắt
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
 
@@ -82,7 +83,6 @@ const SAMPLE = [
       "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
     ],
     metrics: {
-      // chỉ dùng daysToDelete cho câu cảnh báo
       daysToDelete: 28,
     },
   },
@@ -140,7 +140,7 @@ function useOnClickOutside(ref, handler) {
   }, [ref, handler]);
 }
 
-/* ---------------- Dropdown menu (dùng cho tab khác, không dùng ở Hết hạn) ---------------- */
+/* ---------------- Dropdown menu ---------------- */
 const OptionMenu = ({ onShare, onHide }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
     <button
@@ -235,7 +235,7 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   );
 };
 
-/* ---------------- Modal “Gia hạn tin” (dùng cho cả Đăng lại) ---------------- */
+/* ---------------- Modal “Gia hạn tin” ---------------- */
 const ExtendModal = ({ open, listing, onClose, onApply }) => {
   const plans = [
     { days: 15, price: 35100, oldPrice: 39000, discount: 10 },
@@ -352,10 +352,12 @@ const ListingItem = ({
   setMenuForId,
   onOpenExtendModal,
   onOpenRelist, // dùng ở Hết hạn
+  onUnhide, // ⟵ dùng ở ĐÃ ẨN
 }) => {
   const galleryImage = item.images?.[0];
   const metrics = item.metrics || {};
   const isExpired = item.status === "expired";
+  const isHidden = item.status === "hidden";
   const daysToDelete = metrics.daysToDelete ?? 28;
 
   const menuRef = useRef(null);
@@ -423,7 +425,7 @@ const ListingItem = ({
               </span>
             </div>
 
-            {/* Chỉ HẾT HẠN: thêm dòng cảnh báo */}
+            {/* HẾT HẠN: có cảnh báo xoá; ĐÃ ẨN: KHÔNG hiển thị cảnh báo */}
             {isExpired && (
               <div className="mt-3 text-sm rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-gray-700">
                 Tin đăng sẽ bị xoá khỏi hệ thống sau{" "}
@@ -434,7 +436,8 @@ const ListingItem = ({
 
           {/* Actions */}
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            {!isExpired ? (
+            {/* ACTIVE/PENDING/...: đầy đủ; HẾT HẠN hoặc ĐÃ ẨN: chỉ 2 nút */}
+            {!(isExpired || isHidden) ? (
               <>
                 <button
                   onClick={() => onOpenExtendModal(item)}
@@ -490,13 +493,23 @@ const ListingItem = ({
               </>
             ) : (
               <>
-                {/* HẾT HẠN: chỉ còn ĐĂNG LẠI + XOÁ TIN */}
-                <button
-                  onClick={() => onOpenRelist(item)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
-                >
-                  <FiRefreshCcw /> Đăng lại
-                </button>
+                {/* HẾT HẠN: Đăng lại; ĐÃ ẨN: Hiện tin lại */}
+                {isExpired ? (
+                  <button
+                    onClick={() => onOpenRelist(item)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
+                  >
+                    <FiRefreshCcw /> Đăng lại
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onUnhide?.(item)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
+                    title="Hiện tin lại"
+                  >
+                    <FiEye /> Hiện tin lại
+                  </button>
+                )}
 
                 <button
                   onClick={() => onDelete(item.id)}
@@ -557,8 +570,16 @@ const ManageListing = () => {
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
 
-  // Đăng lại -> mở modal gia hạn; khi áp dụng: active + cập nhật hạn
+  // Đăng lại -> mở modal gia hạn; khi áp dụng: active + cập nhật hạn (xử lý ở onApply)
   const onOpenRelist = (item) => setExtendFor(item);
+
+  // ĐÃ ẨN -> Hiện tin lại: chuyển trạng thái về active
+  const onUnhide = (item) =>
+    setListings((prev) =>
+      (prev || []).map((x) =>
+        x.id === item.id ? { ...x, status: "active" } : x
+      )
+    );
 
   const setTab = (key) => setSearchParams({ tab: key });
 
@@ -639,6 +660,7 @@ const ManageListing = () => {
                 setMenuForId={setMenuForId}
                 onOpenExtendModal={setExtendFor}
                 onOpenRelist={onOpenRelist}
+                onUnhide={onUnhide} // ⟵ truyền handler cho ĐÃ ẨN
               />
             ))}
           </div>
@@ -669,8 +691,7 @@ const ManageListing = () => {
         onClose={() => setExtendFor(null)}
         onApply={(plan) => {
           if (extendFor) {
-            const baseDateObj =
-              parseVNDate(extendFor.expiresOn) || new Date();
+            const baseDateObj = parseVNDate(extendFor.expiresOn) || new Date();
             const baseDateStr = formatVNDate(baseDateObj);
             const nextDateObj = new Date(baseDateObj);
             nextDateObj.setDate(baseDateObj.getDate() + (plan?.days || 0));
