@@ -14,20 +14,24 @@ import {
   FiMoreHorizontal,
   FiRefreshCcw,
   FiZap,
-  FiEye, // ⟵ thêm icon con mắt
+  FiEye,
+  FiEyeOff,
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
 
-/* ---------------- Tabs ---------------- */
+/* ---------------- Tabs (VIỆT HOÁ) ---------------- */
 const TABS = [
-  { key: "active", label: "DANG HIEN THI" },
-  { key: "expired", label: "HET HAN" },
-  { key: "rejected", label: "BI TU CHOI" },
-  { key: "payment", label: "CAN THANH TOAN" },
-  { key: "draft", label: "TIN NHAP" },
-  { key: "pending", label: "CHO DUYET" },
-  { key: "hidden", label: "DA AN" },
+  { key: "active", label: "ĐANG HIỂN THỊ" },
+  { key: "expired", label: "HẾT HẠN" },
+  { key: "rejected", label: "BỊ TỪ CHỐI" },
+  { key: "payment", label: "CẦN THANH TOÁN" },
+  // { key: "draft", label: "TIN NHÁP" }, // ⟵ BỎ HOÀN TOÀN
+  { key: "pending", label: "CHỜ DUYỆT" },
+  { key: "hidden", label: "ĐÃ ẨN" },
 ];
+
+/* Quy ước số bài/1 trang để tính "TRANG X" từ metrics.rank */
+const ITEMS_PER_PAGE = 20;
 
 /* ---------------- Sample listings ---------------- */
 const SAMPLE = [
@@ -38,11 +42,12 @@ const SAMPLE = [
     postedOn: "26/08/2025",
     expiresOn: "26/09/2025",
     status: "active",
-    location: "Phuong Thao Dien (Thu Duc), TP Ho Chi Minh",
+    category: "Ô tô điện",
+    location: "Phường Thảo Điền (Thủ Đức), TP Hồ Chí Minh",
     images: [
       "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80",
     ],
-    metrics: { rank: 82, categoryLabel: "Muc EV & Pin, …" },
+    metrics: { rank: 82, categoryLabel: "Mục EV & Pin, …" },
   },
   {
     id: 202,
@@ -51,26 +56,29 @@ const SAMPLE = [
     postedOn: "20/09/2025",
     expiresOn: "20/10/2025",
     status: "active",
-    location: "Quan Thu Duc, TP Ho Chi Minh",
+    category: "Ô tô điện",
+    location: "TP Thủ Đức, TP Hồ Chí Minh",
     images: [
       "https://images.unsplash.com/photo-1519581356744-44c5b5f3c47b?auto=format&fit=crop&w=1200&q=80",
     ],
-    metrics: { rank: 76, categoryLabel: "Muc EV & Pin" },
+    metrics: { rank: 76, categoryLabel: "Mục EV & Pin" },
   },
   {
     id: 203,
-    title: "Bo pin solid-state dung luong cao",
+    title: "Bộ pin solid-state dung lượng cao",
     price: 245000000,
     postedOn: "19/09/2025",
     expiresOn: "04/10/2025",
     status: "pending",
-    location: "Quan Cau Giay, Ha Noi",
+    category: "Pin rời",
+    location: "Quận Cầu Giấy, Hà Nội",
     images: [
       "https://images.unsplash.com/photo-1617813489478-0e96bde477c0?auto=format&fit=crop&w=1200&q=80",
     ],
-    metrics: { rank: 91, categoryLabel: "Muc Pin thay the" },
+    metrics: { rank: 91, categoryLabel: "Mục Pin thay thế" },
   },
-  // HẾT HẠN để test
+
+  // HẾT HẠN
   {
     id: 205,
     title: "Nissan Leaf 40 kWh 2019",
@@ -78,26 +86,88 @@ const SAMPLE = [
     postedOn: "26/08/2025",
     expiresOn: "26/09/2025",
     status: "expired",
-    location: "Quan Binh Thanh, TP Ho Chi Minh",
+    category: "Ô tô điện",
+    location: "Quận Bình Thạnh, TP Hồ Chí Minh",
     images: [
       "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
     ],
-    metrics: {
-      daysToDelete: 28,
-    },
+    metrics: { daysToDelete: 28 },
   },
+
+  // ĐÃ ẨN
   {
     id: 204,
-    title: "BMW i4 eDrive40 dang ky 2024",
+    title: "BMW i4 eDrive40 đăng ký 2024",
     price: 2200000000,
     postedOn: "18/09/2025",
     expiresOn: "18/10/2025",
     status: "hidden",
-    location: "Quan 7, TP Ho Chi Minh",
+    category: "Ô tô điện",
+    location: "Quận 7, TP Hồ Chí Minh",
     images: [
       "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
     ],
-    metrics: { rank: 105, categoryLabel: "Muc Xe dien" },
+    metrics: { rank: 105, categoryLabel: "Mục Xe điện" },
+  },
+
+  /* ----------- CẦN THANH TOÁN ----------- */
+  {
+    id: 206,
+    title: "Kia EV6 GT-Line 2022",
+    price: 1250000000,
+    postedOn: "28/09/2025",
+    expiresOn: "28/10/2025",
+    status: "payment",
+    category: "Ô tô điện",
+    location: "Quận Thanh Xuân, Hà Nội",
+    images: [
+      "https://images.unsplash.com/photo-1627454824205-5b4a0d8b2f2e?auto=format&fit=crop&w=1200&q=80",
+    ],
+    metrics: { invoiceId: "INV-2025-000186" },
+  },
+  {
+    id: 207,
+    title: "Pin LFP 60 kWh (bộ tháo xe)",
+    price: 320000000,
+    postedOn: "01/10/2025",
+    expiresOn: "31/10/2025",
+    status: "payment",
+    category: "Pin rời",
+    location: "Quận Hải Châu, Đà Nẵng",
+    images: [
+      "https://images.unsplash.com/photo-1617813536586-62bf6a6bfb38?auto=format&fit=crop&w=1200&q=80",
+    ],
+    metrics: { invoiceId: "INV-2025-000223" },
+  },
+
+  /* ----------- BỊ TỪ CHỐI ----------- */
+  {
+    id: 208,
+    title: "VinFast VF e34 2021 - bản tiêu chuẩn",
+    price: 390000000,
+    status: "rejected",
+    category: "Ô tô điện",
+    location: "Quận Gò Vấp, TP Hồ Chí Minh",
+    images: [
+      "https://images.unsplash.com/photo-1593941707874-ef25b8b63b45?auto=format&fit=crop&w=1200&q=80",
+    ],
+    metrics: {
+      reason: "Ảnh mờ/không rõ biển số; thiếu giấy tờ đăng ký.",
+    },
+  },
+  {
+    id: 209,
+    title: "Xe máy điện Dat Bike Weaver++ 2023",
+    price: 24000000,
+    status: "rejected",
+    category: "Xe 2 bánh điện",
+    location: "Thành phố Đà Nẵng",
+    images: [
+      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
+    ],
+    metrics: {
+      reason: "Mô tả chưa rõ tình trạng pin/số km đã đi.",
+    },
   },
 ];
 
@@ -155,7 +225,9 @@ const OptionMenu = ({ onShare, onHide }) => (
       onClick={onHide}
       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
     >
-      <span className="text-lg">🙈</span>
+      <span className="text-lg">
+        <FiEyeOff />
+      </span>
       <span>Đã bán / Ẩn tin</span>
     </button>
   </div>
@@ -179,12 +251,12 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
     <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-lg rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between px-4 py-3 rounded-t-lg bg-yellow-400/90">
-          <div className="font-semibold text-gray-900 truncate">
+        <div className="flex items-center justify-between px-4 py-3 rounded-t-lg bg-gradient-to-r from-gray-900 to-blue-900">
+          <div className="font-semibold text-white truncate">
             Ẩn tin {title}
           </div>
           <button
-            className="px-2 text-gray-800 text-lg leading-none cursor-pointer"
+            className="px-2 text-white text-lg leading-none cursor-pointer"
             onClick={onClose}
           >
             ×
@@ -201,7 +273,7 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
                 <input
                   type="radio"
                   name="hide_reason"
-                  className="w-4 h-4 text-green-600 border-gray-300"
+                  className="w-4 h-4 text-blue-600 border-gray-300"
                   value={r}
                   checked={reason === r}
                   onChange={(e) => setReason(e.target.value)}
@@ -221,7 +293,7 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
               className={`px-4 py-2 rounded-md font-semibold text-white ${
                 reason
                   ? "bg-gray-700 hover:bg-gray-800 cursor-pointer"
-                  : "bg-gray-300 cursor-not-allowed"
+                  : "bg-gray-400 cursor-not-allowed"
               }`}
               disabled={!reason}
               onClick={() => onConfirm(reason)}
@@ -293,7 +365,7 @@ const ExtendModal = ({ open, listing, onClose, onApply }) => {
                     <span
                       className={`inline-flex h-5 w-5 rounded-full border ${
                         active
-                          ? "border-green-600 bg-green-600 ring-2 ring-green-200"
+                          ? "border-green-600 bg-blue-600 ring-2 ring-green-200"
                           : "border-gray-300"
                       }`}
                     />
@@ -329,7 +401,7 @@ const ExtendModal = ({ open, listing, onClose, onApply }) => {
           </p>
           <div className="mt-4">
             <button
-              className="w-full px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer"
+              className="w-full px-4 py-3 bg-blue-600 hover:bg-cyan-600 text-white rounded-md font-semibold transition cursor-pointer"
               onClick={() => onApply(selected)}
             >
               Áp dụng
@@ -351,19 +423,38 @@ const ListingItem = ({
   menuForId,
   setMenuForId,
   onOpenExtendModal,
-  onOpenRelist, // dùng ở Hết hạn
-  onUnhide, // ⟵ dùng ở ĐÃ ẨN
+  onOpenRelist,
+  onUnhide,
+  onPayAgain,
 }) => {
   const galleryImage = item.images?.[0];
   const metrics = item.metrics || {};
   const isExpired = item.status === "expired";
   const isHidden = item.status === "hidden";
+  const isPending = item.status === "pending";
+  const isRejected = item.status === "rejected";
+  const isPayment = item.status === "payment";
+  const isActive = item.status === "active";
+  const canViewDetail = isActive; // chỉ ACTIVE mới cho xem chi tiết
   const daysToDelete = metrics.daysToDelete ?? 28;
+
+  const pageFromRank =
+    isActive && metrics.rank
+      ? Math.max(1, Math.ceil(Number(metrics.rank) / ITEMS_PER_PAGE))
+      : null;
 
   const menuRef = useRef(null);
   useOnClickOutside(menuRef, () => {
     if (menuForId === item.id) setMenuForId(null);
   });
+
+  // style nút
+  const btnBase =
+    "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
+  const btnOutline = "border border-gray-300 text-gray-700 hover:bg-gray-50";
+  const btnDangerOutline = "border border-red-200 text-red-600 hover:bg-red-50";
+  const btnPrimary = "bg-green-600 hover:bg-green-500 text-white font-semibold";
+  const btnDisabled = "bg-gray-200 text-gray-500 cursor-not-allowed opacity-70";
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -372,9 +463,18 @@ const ListingItem = ({
         <div className="flex md:flex-col items-start gap-3 md:w-[200px]">
           <button
             type="button"
-            onClick={() => onNavigate(item)}
-            className="w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 hover:border-green-500 transition cursor-pointer"
-            title="Xem chi tiết tin"
+            onClick={() => canViewDetail && onNavigate(item)}
+            disabled={!canViewDetail}
+            className={`w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition ${
+              canViewDetail
+                ? "hover:border-green-500 cursor-pointer"
+                : "cursor-not-allowed opacity-70"
+            }`}
+            title={
+              canViewDetail
+                ? "Xem chi tiết tin"
+                : "Chỉ xem chi tiết với tin ở mục ĐANG HIỂN THỊ"
+            }
           >
             {galleryImage ? (
               <img
@@ -390,13 +490,22 @@ const ListingItem = ({
           </button>
         </div>
 
-        {/* RIGHT: content + actions */}
+        {/* RIGHT */}
         <div className="flex-1">
           <div className="flex flex-col gap-1">
             <button
-              onClick={() => onNavigate(item)}
-              className="text-left text-lg md:text-xl font-semibold text-gray-800 hover:text-green-600 transition cursor-pointer"
-              title="Xem chi tiết tin"
+              onClick={() => canViewDetail && onNavigate(item)}
+              disabled={!canViewDetail}
+              className={`text-left text-lg md:text-xl font-semibold transition ${
+                canViewDetail
+                  ? "text-gray-800 hover:text-blue-600 cursor-pointer"
+                  : "text-gray-500 cursor-not-allowed"
+              }`}
+              title={
+                canViewDetail
+                  ? "Xem chi tiết tin"
+                  : "Chỉ xem chi tiết với tin ở mục ĐANG HIỂN THỊ"
+              }
             >
               {item.title}
             </button>
@@ -405,27 +514,46 @@ const ListingItem = ({
               {currency(item.price)}
             </p>
 
+            {/* TRANG & MỤC (dưới giá) */}
+            <div className="text-xs md:text-sm text-gray-600">
+              {pageFromRank ? (
+                <span className="uppercase tracking-wide font-semibold text-gray-800">
+                  TRANG {pageFromRank}
+                </span>
+              ) : null}
+              {pageFromRank ? (
+                <span className="mx-1 text-gray-400">:</span>
+              ) : (
+                ""
+              )}
+              <span>
+                Mục <b>{item.category || "Khác"}</b>
+              </span>
+            </div>
+
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
               <FiMapPin className="text-gray-400" />
               <span>{item.location}</span>
             </div>
 
-            <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
-              <span>
-                Ngày đăng tin:{" "}
-                <strong className="font-medium text-gray-700">
-                  {item.postedOn}
-                </strong>
-              </span>
-              <span>
-                Ngày hết hạn:{" "}
-                <strong className="font-medium text-gray-700">
-                  {item.expiresOn}
-                </strong>
-              </span>
-            </div>
+            {/* Ẩn ngày đăng & hết hạn ở trạng thái REJECTED */}
+            {!isRejected && (
+              <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
+                <span>
+                  Ngày đăng tin:{" "}
+                  <strong className="font-medium text-gray-700">
+                    {item.postedOn}
+                  </strong>
+                </span>
+                <span>
+                  Ngày hết hạn:{" "}
+                  <strong className="font-medium text-gray-700">
+                    {item.expiresOn}
+                  </strong>
+                </span>
+              </div>
+            )}
 
-            {/* HẾT HẠN: có cảnh báo xoá; ĐÃ ẨN: KHÔNG hiển thị cảnh báo */}
             {isExpired && (
               <div className="mt-3 text-sm rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-gray-700">
                 Tin đăng sẽ bị xoá khỏi hệ thống sau{" "}
@@ -436,35 +564,103 @@ const ListingItem = ({
 
           {/* Actions */}
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            {/* ACTIVE/PENDING/...: đầy đủ; HẾT HẠN hoặc ĐÃ ẨN: chỉ 2 nút */}
-            {!(isExpired || isHidden) ? (
+            {/* HẾT HẠN & ĐÃ ẨN */}
+            {isExpired ? (
               <>
                 <button
-                  onClick={() => onOpenExtendModal(item)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  onClick={() => onOpenRelist(item)}
+                  className={`${btnBase} ${btnPrimary}`}
+                >
+                  <FiRefreshCcw /> Đăng lại
+                </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className={`${btnBase} ${btnDangerOutline}`}
+                >
+                  <FaRegTrashAlt /> Xoá tin
+                </button>
+              </>
+            ) : isHidden ? (
+              <>
+                <button
+                  onClick={() => onUnhide?.(item)}
+                  className={`${btnBase} ${btnPrimary}`}
+                  title="Hiện tin lại"
+                >
+                  <FiEye /> Hiện tin lại
+                </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className={`${btnBase} ${btnDangerOutline}`}
+                >
+                  <FaRegTrashAlt /> Xoá tin
+                </button>
+              </>
+            ) : isRejected ? (
+              <>
+                <button
+                  onClick={() => onEdit(item.id)}
+                  className={`${btnBase} ${btnPrimary}`}
+                  title="Sửa lại tin để gửi duyệt"
+                >
+                  <FiEdit /> Sửa lại tin
+                </button>
+              </>
+            ) : isPayment ? (
+              <>
+                <button
+                  onClick={() => onPayAgain(item)}
+                  className={`${btnBase} ${btnPrimary}`}
+                >
+                  <FiZap /> Thanh toán lại
+                </button>
+                <button
+                  onClick={() => onDelete(item.id)}
+                  className={`${btnBase} ${btnDangerOutline}`}
+                >
+                  <FaRegTrashAlt /> Xoá tin
+                </button>
+              </>
+            ) : (
+              /* ACTIVE / PENDING */
+              <>
+                <button
+                  disabled={isPending}
+                  onClick={() => !isPending && onOpenExtendModal(item)}
+                  className={`${btnBase} ${
+                    isPending ? btnDisabled : btnOutline
+                  }`}
                 >
                   <FiRefreshCcw /> Gia hạn tin
                 </button>
 
                 <button
-                  onClick={() => onEdit(item.id)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                  disabled={isPending}
+                  onClick={() => !isPending && onEdit(item.id)}
+                  className={`${btnBase} ${
+                    isPending ? btnDisabled : btnOutline
+                  }`}
                 >
                   <FiEdit /> Sửa tin
                 </button>
 
                 <div className="relative" ref={menuRef}>
                   <button
-                    onClick={() =>
-                      setMenuForId((v) => (v === item.id ? null : item.id))
-                    }
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                    disabled={isPending}
+                    onClick={() => {
+                      if (isPending) return;
+                      setMenuForId((v) => (v === item.id ? null : item.id));
+                    }}
+                    className={`${btnBase} ${
+                      isPending ? btnDisabled : btnOutline
+                    }`}
                     aria-haspopup="menu"
-                    aria-expanded={menuForId === item.id}
+                    aria-expanded={!isPending && menuForId === item.id}
                   >
                     <FiMoreHorizontal /> Tuỳ chọn
                   </button>
-                  {menuForId === item.id && (
+
+                  {!isPending && menuForId === item.id && (
                     <div className="absolute z-20 left-0 md:left-auto md:right-0">
                       <OptionMenu
                         onShare={() => {
@@ -481,41 +677,25 @@ const ListingItem = ({
                 </div>
 
                 <button
-                  onClick={() => onDelete(item.id)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition cursor-pointer"
+                  disabled={isPending}
+                  onClick={() => !isPending && onDelete(item.id)}
+                  className={`${btnBase} ${
+                    isPending ? btnDisabled : btnDangerOutline
+                  }`}
                 >
                   <FaRegTrashAlt /> Xoá tin
                 </button>
-
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer">
-                  <FiZap /> Bán nhanh hơn
-                </button>
-              </>
-            ) : (
-              <>
-                {/* HẾT HẠN: Đăng lại; ĐÃ ẨN: Hiện tin lại */}
-                {isExpired ? (
-                  <button
-                    onClick={() => onOpenRelist(item)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
-                  >
-                    <FiRefreshCcw /> Đăng lại
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => onUnhide?.(item)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-semibold transition cursor-pointer"
-                    title="Hiện tin lại"
-                  >
-                    <FiEye /> Hiện tin lại
-                  </button>
-                )}
 
                 <button
-                  onClick={() => onDelete(item.id)}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition cursor-pointer"
+                  disabled={isPending}
+                  onClick={() => {
+                    /* mở gói đẩy tin */
+                  }}
+                  className={`${btnBase} ${
+                    isPending ? btnDisabled : btnPrimary
+                  }`}
                 >
-                  <FaRegTrashAlt /> Xoá tin
+                  <FiZap /> Bán nhanh hơn
                 </button>
               </>
             )}
@@ -563,23 +743,31 @@ const ManageListing = () => {
     setListings((prev) => (prev || []).filter((x) => x.id !== id));
   const onEdit = (id) =>
     navigate(`/add-listing?mode=edit&id=${id}${location.search}`);
-  const onNavigate = (listing) =>
+  const onNavigate = (listing) => {
+    // CHỈ ACTIVE mới cho xem chi tiết
+    if (listing?.status !== "active") return;
     navigate(`/manage-listing/${listing.id}${location.search}`, {
       state: { listing },
     });
+  };
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
 
   // Đăng lại -> mở modal gia hạn; khi áp dụng: active + cập nhật hạn (xử lý ở onApply)
   const onOpenRelist = (item) => setExtendFor(item);
 
-  // ĐÃ ẨN -> Hiện tin lại: chuyển trạng thái về active
+  // ĐÃ ẨN -> Hiện tin lại
   const onUnhide = (item) =>
     setListings((prev) =>
       (prev || []).map((x) =>
         x.id === item.id ? { ...x, status: "active" } : x
       )
     );
+
+  // CẦN THANH TOÁN -> Thanh toán lại
+  const onPayAgain = (item) => {
+    navigate("/payment", { state: { listing: item, retry: true } });
+  };
 
   const setTab = (key) => setSearchParams({ tab: key });
 
@@ -595,14 +783,14 @@ const ManageListing = () => {
       >
         <div className="flex flex-col sm:flex-row justify-between items-center mb-5 gap-3">
           <h2 className="font-bold text-2xl sm:text-4xl text-gray-800">
-            Quan ly tin dang
+            Quản lý tin đăng
           </h2>
           <Link
             to={`/add-listing${location.search}`}
             className="w-full sm:w-auto"
           >
             <button className="w-full sm:w-auto px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
-              + Dang tin
+              + Đăng tin
             </button>
           </Link>
         </div>
@@ -619,12 +807,12 @@ const ManageListing = () => {
                   className="relative pb-2 font-bold whitespace-nowrap focus:outline-none cursor-pointer"
                 >
                   <span
-                    className={isActive ? "text-orange-500" : "text-gray-700"}
+                    className={isActive ? "text-blue-600" : "text-gray-700"}
                   >
                     {t.label} ( {getCountForTab(t.key)} )
                   </span>
                   {isActive && (
-                    <span className="absolute left-0 -bottom-[3px] h-1 w-full bg-orange-500 rounded-full" />
+                    <span className="absolute left-0 -bottom-[3px] h-1 w-full bg-blue-600 rounded-full" />
                   )}
                 </button>
               );
@@ -636,12 +824,12 @@ const ManageListing = () => {
         {filtered.length === 0 ? (
           <div className="mt-10 rounded-xl border border-gray-200 p-8 bg-white text-center">
             <p className="text-gray-600">
-              Ban chua co tin o muc <b>{activeLabel}</b>.
+              Bạn chưa có tin ở mục <b>{activeLabel}</b>.
             </p>
             <div className="mt-4">
               <Link to={`/add-listing${location.search}`}>
                 <button className="px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-md font-semibold transition cursor-pointer">
-                  + Dang tin ngay
+                  + Đăng tin ngay
                 </button>
               </Link>
             </div>
@@ -660,7 +848,8 @@ const ManageListing = () => {
                 setMenuForId={setMenuForId}
                 onOpenExtendModal={setExtendFor}
                 onOpenRelist={onOpenRelist}
-                onUnhide={onUnhide} // ⟵ truyền handler cho ĐÃ ẨN
+                onUnhide={onUnhide}
+                onPayAgain={onPayAgain}
               />
             ))}
           </div>
@@ -700,10 +889,7 @@ const ManageListing = () => {
               state: {
                 listing: extendFor,
                 plan,
-                renewal: {
-                  baseDateStr,
-                  nextDateStr,
-                },
+                renewal: { baseDateStr, nextDateStr },
               },
             });
           }
