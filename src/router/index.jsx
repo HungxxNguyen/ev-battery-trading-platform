@@ -21,6 +21,7 @@ import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
+import Transaction from "../pages/Transaction/Transaction";
 
 const AppRouter = () => {
   return (
@@ -44,6 +45,7 @@ const AppRouter = () => {
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<ProfileTab />} />
+          <Route path="/transactions" element={<Transaction />} />
         </Routes>
       </AnimatePresence>
     </Router>
