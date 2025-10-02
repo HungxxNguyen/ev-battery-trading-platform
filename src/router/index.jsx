@@ -20,6 +20,7 @@ import Notifications from "../pages/Notifications/Notifications";
 import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
+import ProfileTab from "../pages/Profile/ProfileTab";
 
 const AppRouter = () => {
   return (
@@ -42,6 +43,7 @@ const AppRouter = () => {
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
+          <Route path="/profile" element={<ProfileTab />} />
         </Routes>
       </AnimatePresence>
     </Router>
