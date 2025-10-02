@@ -1,35 +1,14 @@
-// import { useState } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
-// import './App.css'
-// import 
-
-// function App() {
-//   const [count, setCount] = useState(0)
-
-//   return (
-//     <>
-      
-//     </>
-//   )
-// }
-
-// export default App
-
-
 // src/App.jsx
 import "./index.css";
 import AppRouter from "./router";
+import { AuthProvider } from "./contexts/AuthContext";
 
 function App() {
   return (
-
-        <AppRouter />
- 
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
 }
 
 export default App;
-
-
-

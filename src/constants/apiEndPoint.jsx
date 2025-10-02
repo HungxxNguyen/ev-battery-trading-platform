@@ -18,3 +18,9 @@ export const API_ENDPOINTS_AUTH = {
 export const API_ENDPOINTS_LISTING = {
   GET_LISTING: "/api/Product/GetProducts",
 };
+
+// Các endpoint cho user
+export const API_ENDPOINTS_USER = {
+  GET_USER: "/api/User/GetCurrentUser",
+  UPDATE_INFORMATION_USER: "/api/User/UpdateInfoUser",
+};
