@@ -6,7 +6,7 @@ export const API_ENDPOINTS_AUTH = {
   REGISTER: "/api/Auth/user/register/user",
   VERIFY_EMAIL: "/api/Auth/user/otp/verify",
   LOGOUT: "/auth/logout",
-  CHANGE_PASSWORD: "/auth/change-password",
+  CHANGE_PASSWORD: "/api/Auth/user/password/change",
   FORGOT_PASSWORD: "/api/Auth/user/password/forgot",
   RESET_PASSWORD: "/api/Auth/user/password/reset",
   // Thêm các endpoint khác

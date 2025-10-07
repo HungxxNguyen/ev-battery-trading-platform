@@ -11,12 +11,11 @@ import { useFavorites } from "../../contexts/FavoritesContext";
 import logo3 from "./../../assets/logo3.png";
 import { AuthContext } from "../../contexts/AuthContext";
 
-export default function Header({ onLogout = () => {} }) {
+export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [keyword, setKeyword] = useState("");
-  const { user, isAuthenticated, logout } = useContext(AuthContext);
-  console.log(user);
+  const { user, isAuthenticated, logout, loading } = useContext(AuthContext);
 
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
@@ -29,6 +28,11 @@ export default function Header({ onLogout = () => {} }) {
   const favoritesCount = favorites.length;
   const chatUnread = 3;
   const notificationsUnread = 3;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const formatCount = (count) => (count > 9 ? "9+" : `${count}`);
   const iconButtonClass =
@@ -82,6 +86,19 @@ export default function Header({ onLogout = () => {} }) {
     if (keyword.trim()) navigate(`/search/${keyword}`);
     else navigate("/");
   };
+
+  // Hiển thị loading hoặc không render gì khi đang loading
+  if (loading) {
+    return (
+      <header className="bg-gradient-to-r from-gray-900 to-blue-900 text-white shadow-lg shadow-blue-500/30 sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-6 lg:px-8">
+          <div className="flex justify-between items-center h-20">
+            <div className="text-cyan-300">Loading...</div>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="bg-gradient-to-r from-gray-900 to-blue-900 text-white shadow-lg shadow-blue-500/30 sticky top-0 z-50">
@@ -302,10 +319,10 @@ export default function Header({ onLogout = () => {} }) {
                 onClick={() => toggleDropdown("user")}
                 className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
               >
-                {isAuthenticated ? (
+                {isAuthenticated && user ? (
                   <>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                      {user.userName}
+                      {user.userName.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-sm font-medium">{user.userName}</span>
                   </>
@@ -364,7 +381,7 @@ export default function Header({ onLogout = () => {} }) {
                       <hr className="my-2 border-cyan-500/20" />
                       <button
                         onClick={() => {
-                          onLogout();
+                          handleLogout();
                           closeAllDropdowns();
                         }}
                         className="block w-full text-left px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
