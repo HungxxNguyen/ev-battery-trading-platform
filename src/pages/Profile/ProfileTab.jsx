@@ -1,5 +1,5 @@
 // src/pages/Profile/components/ProfileTab.jsx
-import { useState, useRef, useContext } from "react";
+import { useState, useRef, useContext, useEffect } from "react";
 import { AuthContext } from "../../contexts/AuthContext";
 import userService from "../../services/apis/userApi";
 import { useNotification } from "../../contexts/NotificationContext";
@@ -7,7 +7,96 @@ import authService from "../../services/apis/authApi";
 import { useNavigate } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 
-const MOCK_MODE = true; // <-- Chưa có API: để true. Có API thì đổi về false.
+/* ====================== NEW: small UI helpers ====================== */
+const Spinner = ({ className = "h-5 w-5" }) => (
+  <svg
+    className={`animate-spin ${className}`}
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    role="status"
+    aria-label="loading"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    />
+  </svg>
+);
+
+const LoadingOverlay = ({ show, label = "Đang xử lý..." }) => {
+  if (!show) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-[1px] flex items-center justify-center"
+      aria-live="assertive"
+      aria-busy="true"
+    >
+      <div className="bg-white rounded-xl shadow-xl px-6 py-5 flex items-center gap-3">
+        <Spinner />
+        <span className="font-medium text-gray-800">{label}</span>
+      </div>
+    </div>
+  );
+};
+
+const ProfileSkeleton = () => (
+  <div className="max-w-4xl mx-auto">
+    <div className="bg-white rounded-xl shadow-sm p-6 mb-6 animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <div className="h-6 w-48 bg-gray-200 rounded" />
+          <div className="h-6 w-24 bg-gray-200 rounded-full" />
+        </div>
+        <div className="h-9 w-36 bg-gray-200 rounded-md" />
+      </div>
+    </div>
+
+    <div className="bg-white rounded-xl shadow-sm p-6 mb-6 animate-pulse">
+      <div className="flex flex-col items-center">
+        <div className="w-32 h-32 rounded-full bg-gray-200" />
+        <div className="h-5 w-40 bg-gray-200 rounded mt-4" />
+        <div className="h-4 w-56 bg-gray-200 rounded mt-2" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 gap-6">
+      <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse">
+        <div className="h-5 w-44 bg-gray-200 rounded mb-4" />
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="py-3 border-b border-gray-100">
+              <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
+              <div className="h-4 w-64 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse">
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-5 w-36 bg-gray-200 rounded" />
+          <div className="h-9 w-32 bg-gray-200 rounded" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-10 w-full bg-gray-100 rounded" />
+          <div className="h-10 w-full bg-gray-100 rounded" />
+          <div className="h-10 w-full bg-gray-100 rounded" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+/* ================================================================== */
 
 const defaultUser = {
   id: "demo-user-1",
@@ -30,10 +119,24 @@ const ProfileTab = () => {
   const navigate = useNavigate();
   const { showNotification } = useNotification();
 
-  const safeUser = userFromCtx ?? defaultUser;
+  // ===== NEW: Page-level loading =====
+  const [pageLoading, setPageLoading] = useState(true);
+  const initialTimerRef = useRef(null);
+
+  const [safeUser, setSafeUser] = useState(defaultUser);
+
+  useEffect(() => {
+    // Khi context đổi, đồng bộ và kết thúc skeleton sau 300ms (đỡ nháy)
+    setSafeUser(userFromCtx || defaultUser);
+    if (initialTimerRef.current) clearTimeout(initialTimerRef.current);
+    initialTimerRef.current = setTimeout(() => setPageLoading(false), 300);
+    return () => {
+      if (initialTimerRef.current) clearTimeout(initialTimerRef.current);
+    };
+  }, [userFromCtx]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // dùng cho overlay
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -46,15 +149,14 @@ const ProfileTab = () => {
   const [passwordError, setPasswordError] = useState(null);
   const [passwordSuccess, setPasswordSuccess] = useState(null);
 
-  // --------- FORM DATA ---------
   const [formData, setFormData] = useState({
     ...safeUser,
     userName: safeUser.userName || "Nguyễn Văn A",
     email: safeUser.email || "user@example.com",
-    phone: safeUser.phoneNumber || "Chưa cập nhật",
+    phoneNumber: safeUser.phoneNumber || "Chưa cập nhật",
     address: safeUser.address || "Chưa cập nhật",
     gender: safeUser.gender || "other",
-    birthday: safeUser.dateOfBirth || "Chưa cập nhật",
+    dateOfBirth: safeUser.dateOfBirth || "Chưa cập nhật",
     thumbnail:
       safeUser.thumbnail ||
       "https://th.bing.com/th/id/OIP.PwEh4SGekpMaWT2d5GWw0wHaHt?rs=1&pid=ImgDetMain",
@@ -63,7 +165,22 @@ const ProfileTab = () => {
   const [avatarPreview, setAvatarPreview] = useState(safeUser.avatar || "");
   const fileInputRef = useRef(null);
 
-  // --------- Handlers ---------
+  useEffect(() => {
+    setFormData({
+      ...safeUser,
+      userName: safeUser.userName || "Nguyễn Văn A",
+      email: safeUser.email || "user@example.com",
+      phoneNumber: safeUser.phoneNumber || "Chưa cập nhật",
+      address: safeUser.address || "Chưa cập nhật",
+      gender: safeUser.gender || "other",
+      dateOfBirth: safeUser.dateOfBirth || "Chưa cập nhật",
+      thumbnail:
+        safeUser.thumbnail ||
+        "https://th.bing.com/th/id/OIP.PwEh4SGekpMaWT2d5GWw0wHaHt?rs=1&pid=ImgDetMain",
+    });
+    setAvatarPreview(safeUser.avatar || "");
+  }, [safeUser]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -81,7 +198,6 @@ const ProfileTab = () => {
     }
   };
 
-  // Hiển thị DD-MM-YYYY
   const formatBirthdayForDisplay = (birthday) => {
     if (!birthday || birthday === "Chưa cập nhật") return "Chưa cập nhật";
     const date = new Date(birthday);
@@ -92,15 +208,15 @@ const ProfileTab = () => {
     return `${dd}-${mm}-${yy}`;
   };
 
-  // Gửi API MM-DD-YYYY
+  // Định dạng ngày sinh cho API (yyyy-mm-dd)
   const formatBirthdayForAPI = (birthday) => {
     if (!birthday || birthday === "Chưa cập nhật") return null;
     const date = new Date(birthday);
     if (isNaN(date)) return null;
+    const yyyy = date.getFullYear();
     const mm = `${date.getMonth() + 1}`.padStart(2, "0");
     const dd = `${date.getDate()}`.padStart(2, "0");
-    const yy = date.getFullYear();
-    return `${mm}-${dd}-${yy}`;
+    return `${yyyy}-${mm}-${dd}`;
   };
 
   const handleSubmit = async () => {
@@ -108,31 +224,42 @@ const ProfileTab = () => {
     setError(null);
     setSuccess(null);
     try {
-      if (MOCK_MODE) {
-        await new Promise((r) => setTimeout(r, 600));
-        setSuccess("Cập nhật thông tin thành công! (mock)");
-        setIsUpdate(true);
-        setIsEditing(false);
-        showNotification("Cập nhật thông tin thành công!", "success");
-        return;
-      }
-
       const updateData = new FormData();
+
+      // Chỉ gửi các field mà API yêu cầu
       updateData.append("Id", safeUser.id);
       updateData.append("UserName", formData.userName);
       updateData.append("Email", formData.email);
-      updateData.append("DateOfBirth", formatBirthdayForAPI(formData.birthday));
-      updateData.append("PhoneNumber", formData.phone);
-      // updateData.append("Address", formData.address || "");
-      // updateData.append("Gender", formData.gender || "other");
+      updateData.append(
+        "PhoneNumber",
+        formData.phoneNumber === "Chưa cập nhật" ? "" : formData.phoneNumber
+      );
+
+      // Xử lý ngày sinh
+      const formattedDateOfBirth = formatBirthdayForAPI(formData.dateOfBirth);
+      if (formattedDateOfBirth) {
+        updateData.append("DateOfBirth", formattedDateOfBirth);
+      } else {
+        updateData.append("DateOfBirth", "");
+      }
+
+      // Xử lý ảnh đại diện
       if (formData.thumbnailFile) {
         updateData.append("Thumbnail", formData.thumbnailFile);
+      } else if (formData.thumbnail && !formData.thumbnail.startsWith("http")) {
+        // Nếu có thumbnail nhưng không phải là URL (có thể là base64 hoặc path)
+        // Tạo Blob từ thumbnail nếu cần
+        // Ở đây giả sử thumbnailFile đã được xử lý ở trên
+      }
+
+      console.log("Sending update data:");
+      for (let [key, value] of updateData.entries()) {
+        console.log(key, value);
       }
 
       const response = await userService.updateUser(updateData);
 
       if (response.success) {
-        setSuccess("Cập nhật thông tin thành công!");
         setIsUpdate(true);
         setIsEditing(false);
         showNotification("Cập nhật thông tin thành công!", "success");
@@ -182,15 +309,6 @@ const ProfileTab = () => {
     setPasswordSuccess(null);
 
     try {
-      if (MOCK_MODE) {
-        await new Promise((r) => setTimeout(r, 600));
-        setPasswordSuccess("Đổi mật khẩu thành công! (mock)");
-        setIsChangingPassword(false);
-        showNotification("Đổi mật khẩu thành công!", "success");
-        // Không logout/navigate trong mock để tiện demo
-        return;
-      }
-
       const fd = new FormData();
       fd.append("OldPassword", passwordData.oldPassword);
       fd.append("NewPassword", passwordData.newPassword);
@@ -212,7 +330,6 @@ const ProfileTab = () => {
         throw new Error(response.error || "Có lỗi xảy ra khi đổi mật khẩu");
       }
     } catch (err) {
-      setPasswordError(err.message || "Có lỗi xảy ra khi kết nối với server");
       showNotification(
         err.message || "Có lỗi xảy ra khi kết nối với server",
         "error"
@@ -230,8 +347,20 @@ const ProfileTab = () => {
     </div>
   );
 
+  /* =============== Render =============== */
+  if (pageLoading) {
+    return (
+      <MainLayout>
+        <ProfileSkeleton />
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
+      {/* NEW: full-screen overlay when isLoading */}
+      <LoadingOverlay show={isLoading} label="Đang xử lý..." />
+
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -253,11 +382,15 @@ const ProfileTab = () => {
               }`}
               disabled={isLoading}
             >
-              {isLoading
-                ? "Đang xử lý..."
-                : isEditing
-                ? "Hủy chỉnh sửa"
-                : "Chỉnh sửa hồ sơ"}
+              {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Spinner className="h-4 w-4" /> Đang xử lý...
+                </span>
+              ) : isEditing ? (
+                "Hủy chỉnh sửa"
+              ) : (
+                "Chỉnh sửa hồ sơ"
+              )}
             </button>
           </div>
         </div>
@@ -308,6 +441,7 @@ const ProfileTab = () => {
               onChange={handleAvatarChange}
               accept="image/*"
               className="hidden"
+              disabled={isLoading}
             />
             <h3 className="mt-4 text-xl font-semibold text-gray-800">
               {formData.userName || "Nguyễn Văn A"}
@@ -336,10 +470,10 @@ const ProfileTab = () => {
                   label="Email"
                   value={formData.email || "user@example.com"}
                 />
-                <InfoField label="Số điện thoại" value={formData.phone} />
+                <InfoField label="Số điện thoại" value={formData.phoneNumber} />
                 <InfoField
                   label="Ngày sinh"
-                  value={formatBirthdayForDisplay(formData.birthday)}
+                  value={formatBirthdayForDisplay(formData.dateOfBirth)}
                 />
                 <InfoField
                   label="Giới tính"
@@ -369,6 +503,7 @@ const ProfileTab = () => {
                       ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       : "bg-blue-600 text-white hover:bg-blue-700"
                   }`}
+                  disabled={isLoading}
                 >
                   {isChangingPassword ? "Hủy" : "Đổi mật khẩu"}
                 </button>
@@ -400,6 +535,7 @@ const ProfileTab = () => {
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Nhập mật khẩu cũ"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div>
@@ -414,6 +550,7 @@ const ProfileTab = () => {
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Nhập mật khẩu mới"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -428,6 +565,7 @@ const ProfileTab = () => {
                         className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Nhập lại mật khẩu mới"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -453,31 +591,12 @@ const ProfileTab = () => {
                     <button
                       type="button"
                       onClick={handlePasswordSubmit}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
+                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center cursor-pointer disabled:opacity-70"
                       disabled={isLoading}
                     >
                       {isLoading ? (
                         <>
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
+                          <Spinner className="h-4 w-4 mr-2" />
                           Đang xử lý...
                         </>
                       ) : (
@@ -488,7 +607,7 @@ const ProfileTab = () => {
                 </div>
               ) : (
                 <p className="text-gray-600 text-sm">
-                  Bấm “Đổi mật khẩu” để thay đổi mật khẩu của bạn.
+                  Bấm "Đổi mật khẩu" để thay đổi mật khẩu của bạn.
                 </p>
               )}
             </div>
@@ -510,6 +629,7 @@ const ProfileTab = () => {
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -530,18 +650,20 @@ const ProfileTab = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Địa chỉ
+                    Số điện thoại
                   </label>
                   <input
-                    type="text"
-                    name="address"
+                    type="tel"
+                    name="phoneNumber"
                     value={
-                      formData.address === "Chưa cập nhật"
+                      formData.phoneNumber === "Chưa cập nhật"
                         ? ""
-                        : formData.address
+                        : formData.phoneNumber
                     }
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    pattern="[0-9]{10,11}"
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -550,34 +672,20 @@ const ProfileTab = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Số điện thoại
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={
-                      formData.phone === "Chưa cập nhật" ? "" : formData.phone
-                    }
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
-                    pattern="[0-9]{10,11}"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Ngày sinh
                   </label>
                   <input
                     type="date"
-                    name="birthday"
+                    name="dateOfBirth"
                     value={
-                      formData.birthday === "Chưa cập nhật"
+                      formData.dateOfBirth === "Chưa cập nhật"
                         ? ""
-                        : formData.birthday?.split("T")[0] || formData.birthday
+                        : formData.dateOfBirth?.split("T")[0] ||
+                          formData.dateOfBirth
                     }
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -590,11 +698,30 @@ const ProfileTab = () => {
                     value={formData.gender || "other"}
                     onChange={handleChange}
                     className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    disabled={isLoading}
                   >
                     <option value="male">Nam</option>
                     <option value="female">Nữ</option>
                     <option value="other">Khác</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Địa chỉ
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={
+                      formData.address === "Chưa cập nhật"
+                        ? ""
+                        : formData.address
+                    }
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
+                    disabled={isLoading}
+                  />
                 </div>
               </div>
 
@@ -611,31 +738,12 @@ const ProfileTab = () => {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center cursor-pointer"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center cursor-pointer disabled:opacity-70"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <Spinner className="h-4 w-4 mr-2" />
                       Đang lưu...
                     </>
                   ) : (

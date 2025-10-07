@@ -23,9 +23,10 @@ export const AuthProvider = ({ children }) => {
             const response = await userService.getCurrentUser();
             if (response.success) {
               setUser(response.data.data); // Cập nhật user từ API
-              console.log("Data: ", response.data.data);
             } else {
               console.error("Failed to fetch user data:", response.error);
+              setLoading(false);
+              return;
             }
           } catch (error) {
             console.error("Error fetching user data:", error);
