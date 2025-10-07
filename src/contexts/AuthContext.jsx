@@ -19,6 +19,17 @@ export const AuthProvider = ({ children }) => {
           // Lưu role vào localStorage
           localStorage.setItem("role", tokenInfo.role);
           setIsAuthenticated(true);
+          try {
+            const response = await userService.getCurrentUser();
+            if (response.success) {
+              setUser(response.data.data); // Cập nhật user từ API
+              console.log("Data: ", response.data.data);
+            } else {
+              console.error("Failed to fetch user data:", response.error);
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
+          }
         } else {
           localStorage.removeItem("token");
           localStorage.removeItem("role"); // Xóa role nếu token hết hạn

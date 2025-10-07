@@ -8,6 +8,7 @@ import { validateLoginForm } from "../../utils/validationUtils";
 import { useNotification } from "../../contexts/NotificationContext";
 import { decodeToken } from "../../utils/tokenUtils";
 import { MESSAGES } from "../../constants/messages";
+import authService from "../../services/apis/authApi";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -22,8 +23,6 @@ const Login = () => {
 
     const redirectPaths = {
       Admin: "/admin",
-      Staff: "/staff",
-      Artisan: "/profile-user/profile",
       default: "/",
     };
 

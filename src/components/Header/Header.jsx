@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useContext,
+} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiBell, FiHeart, FiMessageCircle } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import logo3 from "./../../assets/logo3.png";
+import { AuthContext } from "../../contexts/AuthContext";
 
-export default function Header({ user = null, onLogout = () => {} }) {
+export default function Header({ onLogout = () => {} }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [keyword, setKeyword] = useState("");
+  const { user, isAuthenticated, logout } = useContext(AuthContext);
+  console.log(user);
 
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
@@ -293,12 +302,12 @@ export default function Header({ user = null, onLogout = () => {} }) {
                 onClick={() => toggleDropdown("user")}
                 className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
               >
-                {user ? (
+                {isAuthenticated ? (
                   <>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.userName}
                     </div>
-                    <span className="text-sm font-medium">{user.name}</span>
+                    <span className="text-sm font-medium">{user.userName}</span>
                   </>
                 ) : (
                   <>
@@ -336,7 +345,7 @@ export default function Header({ user = null, onLogout = () => {} }) {
               </button>
               {activeDropdown === "user" && (
                 <div className="absolute right-0 mt-2 w-48 bg-gray-800/95 backdrop-blur-md rounded-xl shadow-lg shadow-cyan-500/20 py-2 border border-cyan-500/30 z-50">
-                  {!user ? (
+                  {user ? (
                     <>
                       <Link
                         to="/profile"

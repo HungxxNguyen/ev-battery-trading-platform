@@ -10,7 +10,7 @@ export default defineConfig({
 
   // Cấu hình server dev
   server: {
-    port: 5176, // Cổng mặc định
+    port: 5173, // Cổng mặc định
     host: 'localhost', // Hostname
     strictPort: true,
     open: true, // Tự động mở trình duyệt
