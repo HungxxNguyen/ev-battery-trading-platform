@@ -3,9 +3,7 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 // Các endpoint cho xác thực
 export const API_ENDPOINTS_AUTH = {
   LOGIN: "/api/Auth/user/login",
-  GOOGLE_LOGIN: "/api/Auth/google-login",
   REGISTER: "/api/Auth/user/register/user",
-  REGISTER_GOOGLE: "/api/Auth/register-google",
   VERIFY_EMAIL: "/api/Auth/user/otp/verify",
   LOGOUT: "/auth/logout",
   CHANGE_PASSWORD: "/auth/change-password",
