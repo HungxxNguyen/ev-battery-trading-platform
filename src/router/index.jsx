@@ -22,6 +22,7 @@ import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
 import Transaction from "../pages/Transaction/Transaction";
+import Admin from "../pages/Admin/Admin";
 
 const AppRouter = () => {
   return (
@@ -46,6 +47,7 @@ const AppRouter = () => {
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<ProfileTab />} />
           <Route path="/transactions" element={<Transaction />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </AnimatePresence>
     </Router>
