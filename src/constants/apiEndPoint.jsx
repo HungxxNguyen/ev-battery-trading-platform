@@ -9,6 +9,7 @@ export const API_ENDPOINTS_AUTH = {
   CHANGE_PASSWORD: "/api/Auth/user/password/change",
   FORGOT_PASSWORD: "/api/Auth/user/password/forgot",
   RESET_PASSWORD: "/api/Auth/user/password/reset",
+  RESEND_OTP: (email) => `/api/Auth/user/otp/resend?email=${email}`,
   // Thêm các endpoint khác
 };
 
@@ -21,4 +22,8 @@ export const API_ENDPOINTS_LISTING = {
 export const API_ENDPOINTS_USER = {
   GET_USER: "/api/User/GetCurrentUser",
   UPDATE_INFORMATION_USER: "/api/User/UpdateInfoUser",
+};
+
+export const API_ENDPOINTS_BRAND = {
+  GET_BRANDS: "/api/Brand/GetAll",
 };
