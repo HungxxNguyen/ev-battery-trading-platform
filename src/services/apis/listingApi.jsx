@@ -7,6 +7,14 @@ const listingService = {
       method: "get",
     });
   },
+
+  async createListing(data) {
+    return await performApiRequest(API_ENDPOINTS_LISTING.CREATE_LISTING, {
+      method: "post",
+      data,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 };
 
 export default listingService;
