@@ -18,7 +18,9 @@ import {
 } from "react-icons/fa";
 import { Camera } from "lucide-react";
 import MainLayout from "../../components/layout/MainLayout";
-import brandService from "../../services/apis/brandapi"; // OK
+import brandService from "../../services/apis/brandapi";
+import listingService from "../../services/apis/listingApi"; // <— import service listing
+import { useNotification } from "../../contexts/NotificationContext";
 
 /** =========================================================
  *  API-Compatible schema (multipart/form-data)
@@ -273,6 +275,7 @@ const AddListing = () => {
   const [brands, setBrands] = useState([]);
   const [brandsLoading, setBrandsLoading] = useState(false);
   const [brandsError, setBrandsError] = useState("");
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     let mounted = true;
@@ -339,44 +342,93 @@ const AddListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    try {
-      const fd = new FormData();
 
-      // Append primitive fields exactly as API expects
-      FIELDS.forEach((f) => {
-        if (f.name === "Description") return; // handled below to preserve newlines
-        const v = formData[f.name];
-        if (v !== undefined && v !== null && v !== "") {
-          fd.append(f.name, String(v));
+    try {
+      // Tạo FormData object
+      const formDataToSend = new FormData();
+
+      // Thêm các trường dữ liệu từ formData vào FormData
+      Object.keys(formData).forEach((key) => {
+        const value = formData[key];
+
+        // Xử lý các trường đặc biệt
+        if (key === "Price" && value) {
+          // Đảm bảo Price là số (theo curl mẫu có giá trị rất lớn)
+          formDataToSend.append(key, parseFloat(value) || 0);
+        } else if (key === "BrandId" && value) {
+          // BrandId là GUID
+          formDataToSend.append(key, value);
+        } else if (value !== null && value !== undefined && value !== "") {
+          // Các trường khác
+          formDataToSend.append(key, value);
+        } else {
+          // Gửi giá trị mặc định cho các trường required nhưng không có giá trị
+          if (key === "Size") formDataToSend.append(key, "0");
+          else if (key === "BatteryCapacity") formDataToSend.append(key, "0");
+          else if (key === "ActualOperatingRange")
+            formDataToSend.append(key, "0");
+          else if (key === "YearOfManufacture") formDataToSend.append(key, "0");
+          else if (key === "Mass") formDataToSend.append(key, "0");
+          else if (key === "Odo") formDataToSend.append(key, "0");
+          else if (key === "ChargingTime") formDataToSend.append(key, "0");
+          else formDataToSend.append(key, "");
         }
       });
 
-      // Description (allow long text)
-      if (formData.Description) fd.append("Description", formData.Description);
+      // Đảm bảo các trường required có giá trị mặc định
+      const requiredDefaults = {
+        Size: "0",
+        BrandId: formData.BrandId || "",
+        Color: formData.Color || "string",
+        BatteryCapacity: "0",
+        Price: formData.Price ? parseFloat(formData.Price) : "0",
+        Model: formData.Model || "string",
+        ActualOperatingRange: "0",
+        Area: formData.Area || "string",
+        YearOfManufacture: "0",
+        Mass: "0",
+        ListingStatus: formData.ListingStatus || "New",
+        Title: formData.Title || "string",
+        Odo: "0",
+        Description: formData.Description || "string",
+        ChargingTime: "0",
+        Category: formData.Category || "ElectricCar",
+      };
 
-      // Images: append one key per file => ListingImages
-      selectedImages.forEach((file) => fd.append("ListingImages", file));
-
-      const res = await fetch(
-        "https://localhost:7290/api/Listing/CreateListing",
-        {
-          method: "POST",
-          body: fd,
+      // Thêm các trường required nếu chưa có
+      Object.keys(requiredDefaults).forEach((key) => {
+        if (!formDataToSend.has(key)) {
+          formDataToSend.append(key, requiredDefaults[key]);
         }
-      );
+      });
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Request failed with ${res.status}`);
+      // Thêm ảnh vào FormData
+      selectedImages.forEach((image, index) => {
+        formDataToSend.append("ListingImages", image); // Sử dụng cùng tên field
+      });
+
+      // Log dữ liệu để debug (có thể xóa sau)
+      console.log("FormData contents:");
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(key, value);
       }
 
-      console.log("CreateListing success");
-      alert("Đăng tin thành công!");
+      // Gọi API
+      const response = await listingService.createListing(formDataToSend);
+
+      // Xử lý response thành công
+      console.log("Create listing success:", response);
+      showNotification("Đăng tin thành công!", "success");
+
+      // Reset form sau khi submit thành công
       setFormData({});
       setSelectedImages([]);
     } catch (err) {
-      console.error(err);
-      alert(`Không thể đăng tin: ${err.message}`);
+      console.error("Create listing error:", err);
+      showNotification(
+        `Không thể đăng tin: ${err.message || "Có lỗi xảy ra"}`,
+        "error"
+      );
     } finally {
       setSubmitting(false);
     }

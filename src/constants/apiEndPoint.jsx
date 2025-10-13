@@ -15,7 +15,8 @@ export const API_ENDPOINTS_AUTH = {
 
 // Các endpoint cho sản phẩm
 export const API_ENDPOINTS_LISTING = {
-  GET_LISTING: "/api/Product/GetProducts",
+  GET_LISTING: "/api/Listing/CreateListing",
+  CREATE_LISTING: "/api/Listing/CreateListing",
 };
 
 // Các endpoint cho user
