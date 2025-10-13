@@ -1,9 +1,26 @@
 import { useMemo, useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/Card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/Card/card";
 import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "../../components/Table/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/Tabs/tabs";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "../../components/Table/table";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "../../components/Tabs/tabs";
 import {
   LayoutDashboard,
   ClipboardCheck,
@@ -30,6 +47,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import logo3 from "./../../assets/logo3.png";
 
 /* ------------------------------------------------------------------ */
 /* Mock data & helpers                                                */
@@ -267,7 +285,7 @@ export default function Admin() {
 
       {/* Header (đÃ bỏ nút Tạo gói) */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-slate-900 via-blue-900 to-blue-700 text-white shadow flex items-center px-4 z-40">
-        <img src="../../assets/logo3.png" alt="VoltX Exchange" className="h-8 w-auto mr-2" />
+        <img src={logo3} alt="VoltX Exchange" className="h-8 w-auto mr-2" />
         <div className="flex flex-col leading-tight">
           <span className="text-base font-semibold">VoltX Exchange Admin</span>
           <span className="text-xs text-white/70">
@@ -289,7 +307,10 @@ export default function Admin() {
           <ReviewPage
             selectedId={selectedListingId}
             onBackToDashboard={() => setSelectedListingId(null)}
-            status={(selectedListingId && listingStatus[selectedListingId]) || "pending"}
+            status={
+              (selectedListingId && listingStatus[selectedListingId]) ||
+              "pending"
+            }
             onApprove={() =>
               selectedListingId &&
               setListingStatus({
@@ -341,7 +362,9 @@ function SideItem({ icon, label, active, onClick, title }) {
       title={title}
       aria-label={title}
       className={`cursor-pointer w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition ${
-        active ? "bg-muted font-medium" : "hover:bg-muted/60 text-muted-foreground"
+        active
+          ? "bg-muted font-medium"
+          : "hover:bg-muted/60 text-muted-foreground"
       }`}
     >
       {icon}
@@ -367,10 +390,14 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
         {kpis.map((k, i) => (
           <div
             key={i}
-            className={`${KPI_COLORS[i % KPI_COLORS.length]} text-white rounded-xl shadow-lg p-5`}
+            className={`${
+              KPI_COLORS[i % KPI_COLORS.length]
+            } text-white rounded-xl shadow-lg p-5`}
           >
             <div className="text-sm opacity-90">{k.label}</div>
-            <div className="text-3xl font-extrabold mt-2">{formatKpiValue(k)}</div>
+            <div className="text-3xl font-extrabold mt-2">
+              {formatKpiValue(k)}
+            </div>
             <div className="text-xs opacity-90 mt-2">{k.sub}</div>
           </div>
         ))}
@@ -391,7 +418,13 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
                   formatter={(v) => `${v} triệu ₫`}
                   labelFormatter={(l) => `Ngày ${l}`}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  dot={false}
+                />
               </LineChart>
             </ResponsiveContainer>
             <p className="text-xs text-muted-foreground mt-3">
@@ -421,7 +454,13 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie dataKey="value" data={planMix} innerRadius={50} outerRadius={80} paddingAngle={4}>
+                <Pie
+                  dataKey="value"
+                  data={planMix}
+                  innerRadius={50}
+                  outerRadius={80}
+                  paddingAngle={4}
+                >
                   {planMix.map((_, idx) => (
                     <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                   ))}
@@ -446,25 +485,39 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
                 <TableRow>
                   <TableHead className="w-[120px]">Mã</TableHead>
                   <TableHead>Tiêu đề</TableHead>
-                  <TableHead className="hidden md:table-cell">Danh mục</TableHead>
-                  <TableHead className="hidden lg:table-cell">Người bán</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Danh mục
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Người bán
+                  </TableHead>
                   <TableHead className="text-right">Giá</TableHead>
-                  <TableHead className="hidden sm:table-cell">Tạo lúc</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Tạo lúc
+                  </TableHead>
                   <TableHead>Trạng thái</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pendingPosts
-                  .filter((p) => (listingStatus[p.id] || "pending") === "pending")
+                  .filter(
+                    (p) => (listingStatus[p.id] || "pending") === "pending"
+                  )
                   .map((p) => {
                     const st = listingStatus[p.id] || "pending";
                     const badge =
                       st === "pending" ? (
-                        <Badge className="bg-slate-100 text-slate-700 hover:!bg-slate-100">Đang chờ</Badge>
+                        <Badge className="bg-slate-100 text-slate-700 hover:!bg-slate-100">
+                          Đang chờ
+                        </Badge>
                       ) : st === "approved" ? (
-                        <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Đã duyệt</Badge>
+                        <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">
+                          Đã duyệt
+                        </Badge>
                       ) : (
-                        <Badge className="bg-red-600 text-white hover:bg-red-700">Đã từ chối</Badge>
+                        <Badge className="bg-red-600 text-white hover:bg-red-700">
+                          Đã từ chối
+                        </Badge>
                       );
                     return (
                       <TableRow
@@ -473,12 +526,24 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
                         onClick={() => onSelectListing(p.id)}
                         title="Xem & duyệt bài"
                       >
-                        <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                        <TableCell className="font-medium underline text-primary">{p.title}</TableCell>
-                        <TableCell className="hidden md:table-cell">{p.category}</TableCell>
-                        <TableCell className="hidden lg:table-cell">{p.seller}</TableCell>
-                        <TableCell className="text-right">{currency(p.price)}</TableCell>
-                        <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{p.createdAt}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {p.id}
+                        </TableCell>
+                        <TableCell className="font-medium underline text-primary">
+                          {p.title}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {p.category}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {p.seller}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {currency(p.price)}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                          {p.createdAt}
+                        </TableCell>
                         <TableCell>{badge}</TableCell>
                       </TableRow>
                     );
@@ -495,16 +560,25 @@ function DashboardPage({ onSelectListing, onSelectTicket, listingStatus }) {
           <CardContent>
             <div className="space-y-3">
               {openTickets.map((t) => (
-                <div key={t.id} className="p-3 rounded-xl border hover:bg-muted/40 transition">
+                <div
+                  key={t.id}
+                  className="p-3 rounded-xl border hover:bg-muted/40 transition"
+                >
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-medium">{t.subject}</p>
-                      <p className="text-xs text-muted-foreground mt-1">#{t.id} • {t.user}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        #{t.id} • {t.user}
+                      </p>
                     </div>
-                    <Badge variant="secondary" className="uppercase">{t.tag}</Badge>
+                    <Badge variant="secondary" className="uppercase">
+                      {t.tag}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs mt-2">
-                    <span className="text-muted-foreground">SLA: {t.sla || "—"}</span>
+                    <span className="text-muted-foreground">
+                      SLA: {t.sla || "—"}
+                    </span>
                     <Button
                       className="cursor-pointer bg-black text-white hover:bg-neutral-800 px-3 py-1 text-xs rounded-lg"
                       onClick={() => onSelectTicket(t.id)}
@@ -562,10 +636,16 @@ function ReviewPage({
                 <TableRow>
                   <TableHead className="w-[120px]">Mã</TableHead>
                   <TableHead>Tiêu đề</TableHead>
-                  <TableHead className="hidden md:table-cell">Danh mục</TableHead>
-                  <TableHead className="hidden lg:table-cell">Người bán</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Danh mục
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">
+                    Người bán
+                  </TableHead>
                   <TableHead className="text-right">Giá</TableHead>
-                  <TableHead className="hidden sm:table-cell">Tạo lúc</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Tạo lúc
+                  </TableHead>
                   <TableHead>Trạng thái</TableHead>
                 </TableRow>
               </TableHeader>
@@ -574,11 +654,17 @@ function ReviewPage({
                   const realStatus = listingStatus[p.id] || "pending";
                   const badge =
                     realStatus === "pending" ? (
-                      <Badge className="bg-slate-100 text-slate-700 hover:!bg-slate-100">Đang chờ</Badge>
+                      <Badge className="bg-slate-100 text-slate-700 hover:!bg-slate-100">
+                        Đang chờ
+                      </Badge>
                     ) : realStatus === "approved" ? (
-                      <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">Đã duyệt</Badge>
+                      <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">
+                        Đã duyệt
+                      </Badge>
                     ) : (
-                      <Badge className="bg-red-600 text-white hover:bg-red-700">Đã từ chối</Badge>
+                      <Badge className="bg-red-600 text-white hover:bg-red-700">
+                        Đã từ chối
+                      </Badge>
                     );
                   return (
                     <TableRow
@@ -587,12 +673,24 @@ function ReviewPage({
                       onClick={() => onSelectListing(p.id)}
                       title="Mở chi tiết bài đăng"
                     >
-                      <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                      <TableCell className="font-medium underline text-primary">{p.title}</TableCell>
-                      <TableCell className="hidden md:table-cell">{p.category}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{p.seller}</TableCell>
-                      <TableCell className="text-right">{currency(p.price)}</TableCell>
-                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{p.createdAt}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {p.id}
+                      </TableCell>
+                      <TableCell className="font-medium underline text-primary">
+                        {p.title}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {p.category}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {p.seller}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {currency(p.price)}
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                        {p.createdAt}
+                      </TableCell>
                       <TableCell>{badge}</TableCell>
                     </TableRow>
                   );
@@ -630,7 +728,11 @@ function ReviewPage({
                 : "bg-slate-100 text-slate-700 hover:!bg-slate-100"
             }
           >
-            {st === "approved" ? "Đã duyệt" : st === "rejected" ? "Đã từ chối" : "Đang chờ"}
+            {st === "approved"
+              ? "Đã duyệt"
+              : st === "rejected"
+              ? "Đã từ chối"
+              : "Đang chờ"}
           </Badge>
 
           {!disabled && (
@@ -658,24 +760,54 @@ function ReviewPage({
 
       <Tabs defaultValue="info">
         <TabsList className="flex items-center justify-start gap-0 bg-transparent border-b pb-2">
-          <TabsTrigger value="info" className="cursor-pointer px-4 py-2">Bài đăng</TabsTrigger>
-          <span aria-hidden className="mx-2 h-6 w-px bg-gray-200 dark:bg-gray-700" />
-          <TabsTrigger value="images" className="cursor-pointer px-4 py-2">Hình ảnh hàng hóa</TabsTrigger>
-          <span aria-hidden className="mx-2 h-6 w-px bg-gray-200 dark:bg-gray-700" />
-          <TabsTrigger value="docs" className="cursor-pointer px-4 py-2">Giấy tờ / Chứng từ</TabsTrigger>
+          <TabsTrigger value="info" className="cursor-pointer px-4 py-2">
+            Bài đăng
+          </TabsTrigger>
+          <span
+            aria-hidden
+            className="mx-2 h-6 w-px bg-gray-200 dark:bg-gray-700"
+          />
+          <TabsTrigger value="images" className="cursor-pointer px-4 py-2">
+            Hình ảnh hàng hóa
+          </TabsTrigger>
+          <span
+            aria-hidden
+            className="mx-2 h-6 w-px bg-gray-200 dark:bg-gray-700"
+          />
+          <TabsTrigger value="docs" className="cursor-pointer px-4 py-2">
+            Giấy tờ / Chứng từ
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="p-4 space-y-1">
-          <p><strong>Mã:</strong> {detail.id}</p>
-          <p><strong>Tiêu đề:</strong> {detail.title}</p>
-          <p><strong>Người bán:</strong> {detail.seller.name}</p>
-          <p><strong>Giá:</strong> {currency(detail.price)}</p>
-          <p><strong>Danh mục:</strong> {detail.category}</p>
+          <p>
+            <strong>Mã:</strong> {detail.id}
+          </p>
+          <p>
+            <strong>Tiêu đề:</strong> {detail.title}
+          </p>
+          <p>
+            <strong>Người bán:</strong> {detail.seller.name}
+          </p>
+          <p>
+            <strong>Giá:</strong> {currency(detail.price)}
+          </p>
+          <p>
+            <strong>Danh mục:</strong> {detail.category}
+          </p>
         </TabsContent>
 
-        <TabsContent value="images" className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+        <TabsContent
+          value="images"
+          className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2"
+        >
           {detail.images.map((img, i) => (
-            <img key={i} src={img} alt="Ảnh hàng hóa" className="rounded-lg border" />
+            <img
+              key={i}
+              src={img}
+              alt="Ảnh hàng hóa"
+              className="rounded-lg border"
+            />
           ))}
         </TabsContent>
 
@@ -698,7 +830,10 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
   const [messagesByTicket, setMessagesByTicket] = useState({});
   const [input, setInput] = useState("");
 
-  const ticket = useMemo(() => tickets.find((t) => t.id === selectedId), [tickets, selectedId]);
+  const ticket = useMemo(
+    () => tickets.find((t) => t.id === selectedId),
+    [tickets, selectedId]
+  );
   const isClosed = ticket?.status === "closed";
 
   useEffect(() => {
@@ -710,14 +845,25 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
     const trimmed = text.trim();
     if (!trimmed) return;
     const seedMsgs = [
-      { author: "User", text: `Xin chào, tôi gặp sự cố khi ${ticket.subject.toLowerCase()}.`, ts: Date.now() - 60_000 },
-      { author: "Admin", text: "Chào bạn, vui lòng mô tả chi tiết để mình kiểm tra nhé.", ts: Date.now() - 30_000 },
+      {
+        author: "User",
+        text: `Xin chào, tôi gặp sự cố khi ${ticket.subject.toLowerCase()}.`,
+        ts: Date.now() - 60_000,
+      },
+      {
+        author: "Admin",
+        text: "Chào bạn, vui lòng mô tả chi tiết để mình kiểm tra nhé.",
+        ts: Date.now() - 30_000,
+      },
     ];
     setMessagesByTicket((prev) => {
       const prevMsgs = prev[ticket.id] ?? seedMsgs;
       return {
         ...prev,
-        [ticket.id]: [...prevMsgs, { author: "Admin", text: trimmed, ts: Date.now() }],
+        [ticket.id]: [
+          ...prevMsgs,
+          { author: "Admin", text: trimmed, ts: Date.now() },
+        ],
       };
     });
     setInput("");
@@ -736,7 +882,9 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
 
   const markDone = () => {
     if (!ticket) return;
-    setTickets((prev) => prev.map((t) => (t.id === ticket.id ? { ...t, status: "closed" } : t)));
+    setTickets((prev) =>
+      prev.map((t) => (t.id === ticket.id ? { ...t, status: "closed" } : t))
+    );
     onBack();
   };
 
@@ -753,7 +901,9 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
                 <TableRow>
                   <TableHead className="w-[120px]">Mã</TableHead>
                   <TableHead>Chủ đề</TableHead>
-                  <TableHead className="hidden md:table-cell">Người dùng</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    Người dùng
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Tag</TableHead>
                   <TableHead className="hidden md:table-cell">SLA</TableHead>
                   <TableHead>Trạng thái</TableHead>
@@ -768,15 +918,27 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
                     title="Mở ticket để chat"
                   >
                     <TableCell className="font-mono text-xs">{t.id}</TableCell>
-                    <TableCell className="font-medium underline text-primary">{t.subject}</TableCell>
-                    <TableCell className="hidden md:table-cell">{t.user}</TableCell>
-                    <TableCell className="hidden lg:table-cell uppercase">{t.tag}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{t.status === "open" ? t.sla || "—" : "—"}</TableCell>
+                    <TableCell className="font-medium underline text-primary">
+                      {t.subject}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {t.user}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell uppercase">
+                      {t.tag}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                      {t.status === "open" ? t.sla || "—" : "—"}
+                    </TableCell>
                     <TableCell>
                       {t.status === "open" ? (
-                        <Badge className="bg-amber-100 text-amber-700 hover:!bg-amber-100">Đang mở</Badge>
+                        <Badge className="bg-amber-100 text-amber-700 hover:!bg-amber-100">
+                          Đang mở
+                        </Badge>
                       ) : (
-                        <Badge className="bg-emerald-100 text-emerald-700 hover:!bg-emerald-100">Đã xử lý</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-700 hover:!bg-emerald-100">
+                          Đã xử lý
+                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -791,8 +953,16 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
 
   if (!ticket) return null;
   const seedMsgs = [
-    { author: "User", text: `Xin chào, tôi gặp sự cố khi ${ticket.subject.toLowerCase()}.`, ts: Date.now() - 60_000 },
-    { author: "Admin", text: "Chào bạn, vui lòng mô tả chi tiết để mình kiểm tra nhé.", ts: Date.now() - 30_000 },
+    {
+      author: "User",
+      text: `Xin chào, tôi gặp sự cố khi ${ticket.subject.toLowerCase()}.`,
+      ts: Date.now() - 60_000,
+    },
+    {
+      author: "Admin",
+      text: "Chào bạn, vui lòng mô tả chi tiết để mình kiểm tra nhé.",
+      ts: Date.now() - 30_000,
+    },
   ];
   const msgs = messagesByTicket[ticket.id] ?? seedMsgs;
 
@@ -829,13 +999,21 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Khách hàng: <span className="font-medium text-foreground">{ticket.user}</span> • {ticket.status === "open" ? `SLA còn lại: ${ticket.sla}` : "Đã xử lý"}
+            Khách hàng:{" "}
+            <span className="font-medium text-foreground">{ticket.user}</span> •{" "}
+            {ticket.status === "open"
+              ? `SLA còn lại: ${ticket.sla}`
+              : "Đã xử lý"}
           </p>
 
-          <div id="chat-scroll" className="border rounded-lg p-3 h-64 overflow-y-auto bg-muted/30 text-sm">
+          <div
+            id="chat-scroll"
+            className="border rounded-lg p-3 h-64 overflow-y-auto bg-muted/30 text-sm"
+          >
             {msgs.map((m, i) => (
               <p key={i} className={m.author === "Admin" ? "text-right" : ""}>
-                <strong>{m.author === "Admin" ? "Admin" : ticket.user}:</strong> {m.text}
+                <strong>{m.author === "Admin" ? "Admin" : ticket.user}:</strong>{" "}
+                {m.text}
               </p>
             ))}
           </div>
@@ -843,8 +1021,14 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder={isClosed ? "Ticket đã xử lý - không thể gửi thêm" : "Nhập tin nhắn..."}
-              className={`flex-1 border rounded-lg px-3 py-2 text-sm ${isClosed ? "bg-muted cursor-not-allowed opacity-60" : ""}`}
+              placeholder={
+                isClosed
+                  ? "Ticket đã xử lý - không thể gửi thêm"
+                  : "Nhập tin nhắn..."
+              }
+              className={`flex-1 border rounded-lg px-3 py-2 text-sm ${
+                isClosed ? "bg-muted cursor-not-allowed opacity-60" : ""
+              }`}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
@@ -854,7 +1038,9 @@ function SupportPage({ selectedId, onSelectTicket, onBack }) {
               title="Gửi tin nhắn"
               onClick={() => appendMessage(input)}
               disabled={isClosed}
-              className={`cursor-pointer px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed ${isClosed ? "opacity-50 cursor-not-allowed" : ""}`}
+              className={`cursor-pointer px-4 py-2 rounded-lg font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isClosed ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               Gửi
             </Button>
@@ -914,10 +1100,18 @@ function SettingsPage({ profile, onSave }) {
         <CardContent className="space-y-3">
           {!editing ? (
             <>
-              <p><strong>Tên:</strong> {profile.name}</p>
-              <p><strong>Email:</strong> {profile.email}</p>
-              <p><strong>SĐT:</strong> {profile.phone}</p>
-              <p><strong>Vai trò:</strong> {profile.role}</p>
+              <p>
+                <strong>Tên:</strong> {profile.name}
+              </p>
+              <p>
+                <strong>Email:</strong> {profile.email}
+              </p>
+              <p>
+                <strong>SĐT:</strong> {profile.phone}
+              </p>
+              <p>
+                <strong>Vai trò:</strong> {profile.role}
+              </p>
               <Button
                 className="bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 cursor-pointer transition-all duration-200"
                 title="Chỉnh sửa thông tin"
@@ -943,12 +1137,17 @@ function SettingsPage({ profile, onSave }) {
                   <input
                     className="w-full border rounded-lg px-3 py-2"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
                     placeholder="you@voltx.vn"
                   />
                 </div>
                 <div>
-                  <p><span className="text-sm font-medium">SĐT:</span> {formatPhone(form.phone || "")}</p>
+                  <p>
+                    <span className="text-sm font-medium">SĐT:</span>{" "}
+                    {formatPhone(form.phone || "")}
+                  </p>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -961,7 +1160,9 @@ function SettingsPage({ profile, onSave }) {
                     placeholder="0333 031 583"
                     className="w-full border rounded-lg px-3 py-2 focus:ring focus:ring-blue-300"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Định dạng: 4-3-3 (10 số). Ví dụ: 0333 031 583</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Định dạng: 4-3-3 (10 số). Ví dụ: 0333 031 583
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm">Vai trò</label>
@@ -1016,7 +1217,11 @@ function PlansPage({ plans, setPlans, openForm, setOpenForm }) {
   const onSave = () => {
     if (!name.trim() || days <= 0 || price < 0) return;
     if (editingId) {
-      setPlans((prev) => prev.map((p) => (p.id === editingId ? { ...p, name: name.trim(), days, price } : p)));
+      setPlans((prev) =>
+        prev.map((p) =>
+          p.id === editingId ? { ...p, name: name.trim(), days, price } : p
+        )
+      );
     } else {
       const id = `pln_${Math.random().toString(36).slice(2, 7)}`;
       setPlans((prev) => [...prev, { id, name: name.trim(), days, price }]);
@@ -1148,7 +1353,9 @@ function PlansPage({ plans, setPlans, openForm, setOpenForm }) {
                   <TableCell className="font-mono text-xs">{p.id}</TableCell>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.days}</TableCell>
-                  <TableCell className="text-right">{currency(p.price)}</TableCell>
+                  <TableCell className="text-right">
+                    {currency(p.price)}
+                  </TableCell>
                   <TableCell className="flex gap-2">
                     <Button
                       variant="outline"
@@ -1182,16 +1389,52 @@ function PlansPage({ plans, setPlans, openForm, setOpenForm }) {
 /* Lightweight runtime checks ("tests")                                */
 /* ------------------------------------------------------------------ */
 if (typeof window !== "undefined") {
-  console.assert(Array.isArray(kpis) && kpis.length === 4, "KPIs should have 4 items");
-  console.assert(pendingPosts.every((p) => p.id && p.title), "Pending posts must have id & title");
-  console.assert(allTickets.every((t) => t.id && t.subject), "Tickets must have id & subject");
-  console.assert(currency(1000).endsWith("₫"), "Currency formatter should output VND symbol");
-  console.assert(initialListingStatuses["lst_001"] === "pending", "lst_001 should be pending");
-  console.assert(initialListingStatuses["lst_002"] === "rejected", "lst_002 should be rejected");
-  console.assert(initialListingStatuses["lst_003"] === "approved", "lst_003 should be approved");
-  console.assert(revenueData.length === 30, "Revenue data should have 30 points");
-  console.assert(typeof SupportPage === "function", "SupportPage should be defined");
-  console.assert(allTickets.some((t) => t.status === "closed"), "There should be at least one closed ticket");
-  console.assert(openTickets.every((ot) => allTickets.some((t) => t.id === ot.id)), "openTickets subset");
-  console.assert(openTickets.every((ot) => ot.status === "open"), "openTickets all open");
+  console.assert(
+    Array.isArray(kpis) && kpis.length === 4,
+    "KPIs should have 4 items"
+  );
+  console.assert(
+    pendingPosts.every((p) => p.id && p.title),
+    "Pending posts must have id & title"
+  );
+  console.assert(
+    allTickets.every((t) => t.id && t.subject),
+    "Tickets must have id & subject"
+  );
+  console.assert(
+    currency(1000).endsWith("₫"),
+    "Currency formatter should output VND symbol"
+  );
+  console.assert(
+    initialListingStatuses["lst_001"] === "pending",
+    "lst_001 should be pending"
+  );
+  console.assert(
+    initialListingStatuses["lst_002"] === "rejected",
+    "lst_002 should be rejected"
+  );
+  console.assert(
+    initialListingStatuses["lst_003"] === "approved",
+    "lst_003 should be approved"
+  );
+  console.assert(
+    revenueData.length === 30,
+    "Revenue data should have 30 points"
+  );
+  console.assert(
+    typeof SupportPage === "function",
+    "SupportPage should be defined"
+  );
+  console.assert(
+    allTickets.some((t) => t.status === "closed"),
+    "There should be at least one closed ticket"
+  );
+  console.assert(
+    openTickets.every((ot) => allTickets.some((t) => t.id === ot.id)),
+    "openTickets subset"
+  );
+  console.assert(
+    openTickets.every((ot) => ot.status === "open"),
+    "openTickets all open"
+  );
 }
