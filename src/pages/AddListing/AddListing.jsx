@@ -1,6 +1,7 @@
 // src/pages/AddListing/AddListing.jsx
 import React, { useState, useEffect } from "react"; // <— thêm useEffect
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   FaClipboardList,
   FaMoneyBillAlt,
@@ -263,6 +264,120 @@ const fieldComponents = {
   textarea: (p) => <TextAreaField {...p} />,
 };
 
+const PlanSelectionModal = ({ open, onClose, onConfirm, loading }) => {
+  const plans = [
+    { days: 15, price: 35100, oldPrice: 39000, discount: 10 },
+    { days: 10, price: 26000, oldPrice: null, discount: 0 },
+    { days: 30, price: 62400, oldPrice: 78000, discount: 20 },
+    { days: 60, price: 117000, oldPrice: 156000, discount: 25 },
+  ];
+  const [selected, setSelected] = useState(plans[0]);
+
+  useEffect(() => {
+    if (!open) setSelected(plans[0]);
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => !loading && onClose()}
+      />
+      <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-2xl rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between px-5 py-3 border-b">
+          <div className="font-semibold text-gray-800">Chọn gói đăng tin</div>
+          <button
+            type="button"
+            className="px-2 text-gray-600 text-xl leading-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={onClose}
+            disabled={loading}
+          >
+            x
+          </button>
+        </div>
+        <div className="p-5">
+          <div className="font-semibold text-gray-800 mb-3">
+            Chọn thời gian hiển thị tin
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {plans.map((plan) => {
+              const active = selected?.days === plan.days;
+              return (
+                <button
+                  key={`plan-${plan.days}`}
+                  type="button"
+                  onClick={() => setSelected(plan)}
+                  className={`relative text-left rounded-lg border px-4 py-4 cursor-pointer transition ${
+                    active
+                      ? "border-green-600 bg-green-50 ring-1 ring-green-200"
+                      : "border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  {plan.discount > 0 && (
+                    <span className="absolute -top-2 -right-2 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">
+                      -{plan.discount}%
+                    </span>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-flex h-5 w-5 rounded-full border ${
+                        active
+                          ? "border-green-600 bg-blue-600 ring-2 ring-green-200"
+                          : "border-gray-300"
+                      }`}
+                    />
+                    <div>
+                      <div className="font-semibold text-gray-800">
+                        {plan.days} ngày
+                      </div>
+                      <div className="text-gray-500">
+                        {plan.oldPrice ? (
+                          <>
+                            <span className="line-through mr-2">
+                              {Number(plan.oldPrice).toLocaleString("vi-VN")} đ
+                            </span>
+                            <span className="font-medium text-gray-800">
+                              {Number(plan.price).toLocaleString("vi-VN")} đ
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-medium text-gray-800">
+                            {Number(plan.price).toLocaleString("vi-VN")} đ
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 font-medium cursor-pointer hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Quay lại
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md font-semibold text-white bg-blue-600 hover:bg-cyan-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => onConfirm(selected)}
+              disabled={loading}
+            >
+              {loading ? "Đang xử lý..." : "Tiếp tục thanh toán"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* =========================================================
  * MAIN
  * ======================================================= */
@@ -270,12 +385,16 @@ const AddListing = () => {
   const [formData, setFormData] = useState({});
   const [selectedImages, setSelectedImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [pendingSubmission, setPendingSubmission] = useState(null);
+  const [planProcessing, setPlanProcessing] = useState(false);
 
   // 👉 State cho Brand dropdown
   const [brands, setBrands] = useState([]);
   const [brandsLoading, setBrandsLoading] = useState(false);
   const [brandsError, setBrandsError] = useState("");
   const { showNotification } = useNotification();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -339,101 +458,164 @@ const AddListing = () => {
   const removeImage = (index) =>
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
 
-  const handleSubmit = async (e) => {
+  const prepareSubmissionPayload = () => {
+    const formDataToSend = new FormData();
+
+    Object.keys(formData || {}).forEach((key) => {
+      const value = formData[key];
+
+      if (key === "Price" && value) {
+        formDataToSend.append(key, parseFloat(value) || 0);
+      } else if (key === "BrandId" && value) {
+        formDataToSend.append(key, value);
+      } else if (value !== null && value !== undefined && value !== "") {
+        formDataToSend.append(key, value);
+      } else {
+        if (key === "Size") formDataToSend.append(key, "0");
+        else if (key === "BatteryCapacity") formDataToSend.append(key, "0");
+        else if (key === "ActualOperatingRange")
+          formDataToSend.append(key, "0");
+        else if (key === "YearOfManufacture") formDataToSend.append(key, "0");
+        else if (key === "Mass") formDataToSend.append(key, "0");
+        else if (key === "Odo") formDataToSend.append(key, "0");
+        else if (key === "ChargingTime") formDataToSend.append(key, "0");
+        else formDataToSend.append(key, "");
+      }
+    });
+
+    const requiredDefaults = {
+      Size: "0",
+      BrandId: formData.BrandId || "",
+      Color: formData.Color || "string",
+      BatteryCapacity: "0",
+      Price: formData.Price ? parseFloat(formData.Price) : "0",
+      Model: formData.Model || "string",
+      ActualOperatingRange: "0",
+      Area: formData.Area || "string",
+      YearOfManufacture: "0",
+      Mass: "0",
+      ListingStatus: formData.ListingStatus || "New",
+      Title: formData.Title || "string",
+      Odo: "0",
+      Description: formData.Description || "string",
+      ChargingTime: "0",
+      Category: formData.Category || "ElectricCar",
+    };
+
+    Object.keys(requiredDefaults).forEach((key) => {
+      if (!formDataToSend.has(key)) {
+        formDataToSend.append(key, requiredDefaults[key]);
+      }
+    });
+
+    selectedImages.forEach((image) => {
+      formDataToSend.append("ListingImages", image);
+    });
+
+    const summary = {
+      title: formData.Title || "Tin moi",
+      price: formData.Price ? parseFloat(formData.Price) : 0,
+      category: formData.Category || "ElectricCar",
+    };
+
+    return { formDataToSend, summary };
+  };
+
+  const handlePlanModalClose = () => {
+    if (planProcessing) return;
+    setPlanModalOpen(false);
+    setPendingSubmission(null);
+    setSubmitting(false);
+  };
+
+  const handlePlanConfirm = async (plan) => {
+    if (!plan || !pendingSubmission) return;
+    setPlanProcessing(true);
+    setSubmitting(true);
+
+    try {
+      const response = await listingService.createListing(
+        pendingSubmission.formDataToSend
+      );
+
+      if (!response?.success) {
+        throw new Error(response?.error || "Kh?ng th? dang tin");
+      }
+
+      const rawListing = response?.data?.data ?? response?.data ?? {};
+      const listingForPayment = {
+        id:
+          rawListing?.id ??
+          rawListing?.Id ??
+          rawListing?.listingId ??
+          rawListing?.ListingId ??
+          null,
+        title:
+          rawListing?.title ??
+          rawListing?.Title ??
+          pendingSubmission.summary.title,
+        price:
+          rawListing?.price ??
+          rawListing?.Price ??
+          pendingSubmission.summary.price,
+        category:
+          rawListing?.category ??
+          rawListing?.Category ??
+          pendingSubmission.summary.category,
+        images: Array.isArray(rawListing?.images ?? rawListing?.Images)
+          ? rawListing?.images ?? rawListing?.Images
+          : [],
+      };
+
+      setPlanModalOpen(false);
+      setPendingSubmission(null);
+      setFormData({});
+      setSelectedImages([]);
+
+      showNotification(
+        "Đăng tin thành công. Vui lòng hoàn tất thanh toán",
+        "success"
+      );
+
+      navigate("/payment", {
+        state: {
+          origin: "new-listing",
+          listing: listingForPayment,
+          plan,
+        },
+      });
+    } catch (err) {
+      console.error("Create listing error:", err);
+      showNotification(
+        `Không thể đăng tin: ${err?.message || "Có lỗi xảy ra"}`,
+        "error"
+      );
+    } finally {
+      setPlanProcessing(false);
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      // Tạo FormData object
-      const formDataToSend = new FormData();
-
-      // Thêm các trường dữ liệu từ formData vào FormData
-      Object.keys(formData).forEach((key) => {
-        const value = formData[key];
-
-        // Xử lý các trường đặc biệt
-        if (key === "Price" && value) {
-          // Đảm bảo Price là số (theo curl mẫu có giá trị rất lớn)
-          formDataToSend.append(key, parseFloat(value) || 0);
-        } else if (key === "BrandId" && value) {
-          // BrandId là GUID
-          formDataToSend.append(key, value);
-        } else if (value !== null && value !== undefined && value !== "") {
-          // Các trường khác
-          formDataToSend.append(key, value);
-        } else {
-          // Gửi giá trị mặc định cho các trường required nhưng không có giá trị
-          if (key === "Size") formDataToSend.append(key, "0");
-          else if (key === "BatteryCapacity") formDataToSend.append(key, "0");
-          else if (key === "ActualOperatingRange")
-            formDataToSend.append(key, "0");
-          else if (key === "YearOfManufacture") formDataToSend.append(key, "0");
-          else if (key === "Mass") formDataToSend.append(key, "0");
-          else if (key === "Odo") formDataToSend.append(key, "0");
-          else if (key === "ChargingTime") formDataToSend.append(key, "0");
-          else formDataToSend.append(key, "");
-        }
-      });
-
-      // Đảm bảo các trường required có giá trị mặc định
-      const requiredDefaults = {
-        Size: "0",
-        BrandId: formData.BrandId || "",
-        Color: formData.Color || "string",
-        BatteryCapacity: "0",
-        Price: formData.Price ? parseFloat(formData.Price) : "0",
-        Model: formData.Model || "string",
-        ActualOperatingRange: "0",
-        Area: formData.Area || "string",
-        YearOfManufacture: "0",
-        Mass: "0",
-        ListingStatus: formData.ListingStatus || "New",
-        Title: formData.Title || "string",
-        Odo: "0",
-        Description: formData.Description || "string",
-        ChargingTime: "0",
-        Category: formData.Category || "ElectricCar",
-      };
-
-      // Thêm các trường required nếu chưa có
-      Object.keys(requiredDefaults).forEach((key) => {
-        if (!formDataToSend.has(key)) {
-          formDataToSend.append(key, requiredDefaults[key]);
-        }
-      });
-
-      // Thêm ảnh vào FormData
-      selectedImages.forEach((image, index) => {
-        formDataToSend.append("ListingImages", image); // Sử dụng cùng tên field
-      });
-
-      // Log dữ liệu để debug (có thể xóa sau)
-      console.log("FormData contents:");
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(key, value);
-      }
-
-      // Gọi API
-      const response = await listingService.createListing(formDataToSend);
-
-      // Xử lý response thành công
-      console.log("Create listing success:", response);
-      showNotification("Đăng tin thành công!", "success");
-
-      // Reset form sau khi submit thành công
-      setFormData({});
-      setSelectedImages([]);
+      const payload = prepareSubmissionPayload();
+      setPendingSubmission(payload);
+      setPlanModalOpen(true);
     } catch (err) {
-      console.error("Create listing error:", err);
+      console.error("Prepare listing error:", err);
       showNotification(
-        `Không thể đăng tin: ${err.message || "Có lỗi xảy ra"}`,
+        `Không thể khởi tạo dữ liệu đăng tin: ${
+          err?.message || "Có lỗi xảy ra"
+        }`,
         "error"
       );
     } finally {
       setSubmitting(false);
     }
   };
-
   return (
     <MainLayout>
       <motion.div
@@ -556,6 +738,12 @@ const AddListing = () => {
           </div>
         </form>
       </motion.div>
+      <PlanSelectionModal
+        open={planModalOpen}
+        onClose={handlePlanModalClose}
+        onConfirm={handlePlanConfirm}
+        loading={planProcessing}
+      />
     </MainLayout>
   );
 };
