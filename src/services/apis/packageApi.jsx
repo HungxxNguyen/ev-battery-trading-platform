@@ -18,5 +18,11 @@ const packageService = {
       data,
     });
   },
+  async updatePackage(data) {
+    return await performApiRequest(API_ENDPOINTS_PACKAGE.UPDATE_PACKAGE, {
+      method: "put",
+      data,
+    });
+  },
 };
 export default packageService;
