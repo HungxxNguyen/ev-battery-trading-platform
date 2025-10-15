@@ -30,6 +30,10 @@ export const API_ENDPOINTS_USER = {
 
 export const API_ENDPOINTS_BRAND = {
   GET_BRANDS: "/api/Brand/GetAll",
+  GET_BY_ID: (id) => `/api/Brand/GetById/id?id=${id}`,
+  CREATE: "/api/Brand/Create",
+  UPDATE: "/api/Brand/Update",
+  DELETE: (id) => `/api/Brand/Delete/id?id=${id}`,
 };
 
 export const API_ENDPOINTS_PACKAGE = {
