@@ -574,6 +574,24 @@ const AddListing = () => {
     );
   }, [formData?.Category]);
 
+  // Clear irrelevant fields when Category changes
+  useEffect(() => {
+    const category = formData?.Category;
+    if (!category) return;
+    setFormData((prev) => {
+      const next = { ...prev };
+      if (category === "ElectricCar" || category === "ElectricMotorbike") {
+        delete next.Size;
+        delete next.Mass;
+      }
+      if (category === "RemovableBattery") {
+        delete next.Color;
+        delete next.Odo;
+      }
+      return next;
+    });
+  }, [formData?.Category]);
+
   return (
     <MainLayout>
       <motion.div
@@ -591,6 +609,17 @@ const AddListing = () => {
           {/* Main Fields Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {MAIN_FIELDS.map((item) => {
+              // Conditional visibility based on selected Category
+              const category = formData?.Category;
+              const isVehicle =
+                category === "ElectricCar" || category === "ElectricMotorbike";
+              const isBattery = category === "RemovableBattery";
+
+              // Hide Size & Mass for vehicles; hide Color & Odo for battery
+              const hiddenForVehicle = isVehicle && (item.name === "Size" || item.name === "Mass");
+              const hiddenForBattery = isBattery && (item.name === "Color" || item.name === "Odo");
+              if (hiddenForVehicle || hiddenForBattery) return null;
+
               const isBrand = item.name === "BrandId";
               const effectiveItem = isBrand
                 ? {
