@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import packageService from "../../../services/apis/packageApi";
 
-const ChoosePackage = ({ open, onClose, onConfirm, loading }) => {
+const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
   const [plans, setPlans] = useState([]);
   const [selected, setSelected] = useState(null);
   const [packageLoading, setPackageLoading] = useState(false);
@@ -16,7 +16,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading }) => {
     return typeMap[packageType] || packageType;
   };
 
-  // Fetch packages from API
+  // Fetch packages from API and filter by selected category
   useEffect(() => {
     const fetchPackages = async () => {
       setPackageLoading(true);
@@ -31,20 +31,22 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading }) => {
             name: pkg.name,
             packageType: pkg.packageType,
             translatedPackageType: translatePackageType(pkg.packageType),
-            // For oldPrice and discount, you might need to adjust based on your business logic
-            oldPrice: null, // You can modify this based on your discount logic
-            discount: 0, // You can modify this based on your discount logic
+            oldPrice: null,
+            discount: 0,
             description: pkg.description,
             status: pkg.status,
           }));
-          setPlans(transformedPlans);
-          if (transformedPlans.length > 0) {
-            setSelected(transformedPlans[0]);
-          }
+
+          // Filter by selected category if provided
+          const filtered = category
+            ? transformedPlans.filter((p) => p.packageType === category)
+            : [];
+
+          setPlans(filtered);
+          setSelected(filtered.length > 0 ? filtered[0] : null);
         }
       } catch (error) {
         console.error("Error fetching packages:", error);
-        // You might want to show an error message to the user
       } finally {
         setPackageLoading(false);
       }
@@ -53,7 +55,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading }) => {
     if (open) {
       fetchPackages();
     }
-  }, [open]);
+  }, [open, category]);
 
   useEffect(() => {
     if (!open) {
@@ -70,6 +72,31 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading }) => {
   };
 
   if (!open) return null;
+
+  // When category not selected, guide user to choose category first
+  if (open && !category && !packageLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-2xl rounded-lg bg-white shadow-xl">
+          <div className="flex items-center justify-between px-5 py-3 border-b">
+            <div className="font-semibold text-gray-800">Chọn gói đăng tin</div>
+            <button
+              type="button"
+              className="px-2 text-gray-600 text-xl leading-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={onClose}
+              disabled={loading}
+            >
+              x
+            </button>
+          </div>
+          <div className="p-5 text-center">
+            <div className="text-gray-600">Vui lòng chọn danh mục trước</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (packageLoading) {
     return (
