@@ -9,16 +9,31 @@ export const API_ENDPOINTS_AUTH = {
   CHANGE_PASSWORD: "/api/Auth/user/password/change",
   FORGOT_PASSWORD: "/api/Auth/user/password/forgot",
   RESET_PASSWORD: "/api/Auth/user/password/reset",
+  RESEND_OTP: (email) => `/api/Auth/user/otp/resend?email=${email}`,
   // Thêm các endpoint khác
 };
 
 // Các endpoint cho sản phẩm
 export const API_ENDPOINTS_LISTING = {
-  GET_LISTING: "/api/Product/GetProducts",
+  GET_ALL: "/api/Listing/GetAll",
+  GET_DETAIL: "/api/Listing/GetDetail",
+  CREATE_LISTING: "/api/Listing/CreateListing",
 };
 
 // Các endpoint cho user
 export const API_ENDPOINTS_USER = {
   GET_USER: "/api/User/GetCurrentUser",
   UPDATE_INFORMATION_USER: "/api/User/UpdateInfoUser",
+};
+
+export const API_ENDPOINTS_BRAND = {
+  GET_BRANDS: "/api/Brand/GetAll",
+};
+
+export const API_ENDPOINTS_PACKAGE = {
+  GET_ALL: "/api/Package/GetAll",
+  GET_BY_ID: (id) => `/api/Package/GetById?id=${id}`,
+  CREATE_PACKAGE: "/api/Package/Create",
+  UPDATE_PACKAGE: "/api/Package/UpdatePackage",
+  DELETE_PACKAGE: (id) => `/api/Package/Delete/id?id=${id}`,
 };

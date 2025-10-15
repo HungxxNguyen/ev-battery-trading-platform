@@ -30,7 +30,10 @@ import PlansPage from "../pages/Admin/PlansPage.jsx";
 import SettingsPage from "../pages/Admin/SettingsPage.jsx";
 import BrandPage from "../pages/Admin/BrandPage.jsx";
 import UsersModeration from "../pages/Admin/UsersModeration.jsx";
+import Forbidden from "../pages/Forbidden/Forbidden";
 
+// ==================== Routes ====================
+import ProtectedRoute from "./ProtectedRoute";
 const AppRouter = () => {
   return (
     <Router>
@@ -40,20 +43,68 @@ const AppRouter = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/add-listing" element={<AddListing />} />
-          <Route path="/manage-listing" element={<ManageListing />} />
-          <Route path="/manage-listing/:id" element={<ManageDetail />} />
+          <Route
+            path="/add-listing"
+            element={
+              <ProtectedRoute>
+                <AddListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-listing"
+            element={
+              <ProtectedRoute>
+                <ManageListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-listing/:id"
+            element={
+              <ProtectedRoute>
+                <ManageDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/category/:categoryId" element={<Category />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/notifications" element={<Notifications />} />
+          <Route
+            path="/payment"
+            element={
+              <ProtectedRoute>
+                <Payment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
-          <Route path="/profile" element={<ProfileTab />} />
-          <Route path="/transactions" element={<Transaction />} />
+
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="review" element={<ReviewPage />} />
@@ -63,6 +114,23 @@ const AppRouter = () => {
             <Route path="brands" element={<BrandPage />} />
             <Route path="users" element={<UsersModeration />} />
           </Route>
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileTab />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedRoute>
+                <Transaction />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/forbidden" element={<Forbidden />} />
         </Routes>
       </AnimatePresence>
     </Router>

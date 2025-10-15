@@ -1,175 +1,353 @@
-import React, { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+// src/pages/ListingDetail/ListingDetail.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { FiHeart } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
+import listingService from "../../services/apis/listingApi";
 
-// Giữ lại toàn bộ fake data nhưng đổi thumbnails -> images
-const regularPosts = [
-  {
-    id: 1,
-    title: "VINFAST VF3 SẴN XE - TRẢ TRƯỚC 0-45TR NHẬN XE",
-    price: "279.000.000 đ",
-    subPrice: "Trả góp từ 2,92 triệu/tháng",
-    location: "Phường 22, Quận Bình Thạnh, Tp Hồ Chí Minh",
-    images: [
-      "https://vinfastoto3s.com/wp-content/uploads/2024/04/vinfast-vf-3-03042024.png",
-      "https://vinfast-tiengiang.vn/wp-content/uploads/2025/03/vinfast-vf3-240510-c8.jpg",
-      "https://bonbanhmientrung.com/uploads/post/1172941951320.png" ,
-      "https://vinfastvietnam.com.vn/wp-content/uploads/2023/09/Hong-Phan-min.png",
+const FALLBACK_IMAGE = "https://placehold.co/1200x800?text=Listing";
+const FALLBACK_AVATAR = "https://placehold.co/160x160?text=User";
 
-    ],
-    status: "Mới",
-    description: [
-      "Giảm ngay 4% giá bán – tiết kiệm 11.960.000 VND",
-      "Tặng 2 năm bảo hiểm thân xe (hoặc quy đổi 6.500.000 VND tiền mặt)",
-      "Đổi xe xăng sang xe điện – giảm thêm 5.000.000 VND",
-      "Tặng 6.000.000 điểm Vinclub khi đăng kí ở Sài Gòn",
-      "Hỗ trợ lãi suất ưu đãi 3 năm 6.5%/năm",
-    ],
-    year: "2025 • Điện • Tự động",
-    seller: "09844****",
-    sellerName: "VinFast Miền Nam",
-    sellerRating: "5 đã bán • 4 đang bán",
-    sellerResponse: "78%",
-    postedAt: "Đăng 7 ngày trước",
-    active: "Hoạt động 11 giờ trước",
-  },
-  {
-    id: 2,
-    title: "Isuzu 1 tấn đời 2017",
-    price: "245.000.000 đ",
-    location: "Quận Bình Tân",
-    images: [
-      "https://via.placeholder.com/600x400.png?text=Isuzu+Main",
-      "https://via.placeholder.com/600x400.png?text=Isuzu+1",
-      "https://via.placeholder.com/600x400.png?text=Isuzu+2",
-    ],
-    status: "Đã sử dụng",
-    description: ["Xe tải Isuzu 1 tấn, đời 2017, tình trạng tốt, phù hợp cho vận chuyển hàng hóa nội thành."],
-    year: "2017",
-    seller: "01234****",
-    sellerName: "Nguyen Van A",
-    sellerRating: "4.5 (25 Đánh giá) • 2 đang bán",
-    sellerResponse: "90%",
-    postedAt: "Đăng 20 ngày trước",
-    active: "Hoạt động 2 ngày trước",
-  },
-  // Các post còn lại giữ nguyên, chỉ thay thumbnails thành images
-];
+const formatCurrency = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "Lien he";
+  }
+
+  try {
+    return `${new Intl.NumberFormat("vi-VN").format(Number(value))} VND`;
+  } catch {
+    return `${value} VND`;
+  }
+};
+
+const formatListingStatus = (status) => {
+  if (!status) return "Khong ro";
+  const mapping = {
+    New: "Moi",
+    Used: "Da su dung",
+  };
+  return mapping[status] || status;
+};
 
 const ListingDetail = () => {
   const { id } = useParams();
+  const location = useLocation();
+  const locationListing = location.state?.listing;
   const { toggleFavorite, isFavorite } = useFavorites();
-  const post = regularPosts.find((post) => post.id === parseInt(id));
+
+  const [listing, setListing] = useState(locationListing ?? null);
+  const [loading, setLoading] = useState(!locationListing);
+  const [error, setError] = useState("");
   const [currentImage, setCurrentImage] = useState(0);
 
-  if (!post) {
-    return (
-      <MainLayout>
-        <div className="container mx-auto px-4 py-6">
-          <div className="bg-white p-6 rounded-lg shadow-md border text-center">
-            <h2 className="text-xl font-bold">Không tìm thấy bài đăng</h2>
-            <Link
-              to="/"
-              className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded-md"
-            >
-              Quay lại Trang Chủ
-            </Link>
-          </div>
-        </div>
-      </MainLayout>
+  useEffect(() => {
+    if (locationListing && String(locationListing.id) === String(id)) {
+      setListing(locationListing);
+      setLoading(false);
+      setError("");
+    }
+  }, [id, locationListing]);
+
+  useEffect(() => {
+    if (locationListing && String(locationListing.id) === String(id)) {
+      return;
+    }
+
+    let active = true;
+
+    const fetchDetail = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await listingService.getListingDetail(id);
+
+        if (!active) {
+          return;
+        }
+
+        if (response.success) {
+          const payload = response.data;
+          const detail =
+            payload?.data &&
+            typeof payload.data === "object" &&
+            !Array.isArray(payload.data)
+              ? payload.data
+              : Array.isArray(payload)
+              ? payload[0] ?? null
+              : payload && typeof payload === "object"
+              ? payload
+              : null;
+          if (detail) {
+            setListing(detail);
+          } else {
+            setListing(null);
+            setError("Khong tim thay thong tin tin dang");
+          }
+        } else {
+          setListing(null);
+          setError(response.error || "Khong the tai chi tiet tin dang");
+        }
+      } catch (fetchError) {
+        if (!active) {
+          return;
+        }
+        setListing(null);
+        setError(fetchError.message || "Khong the tai chi tiet tin dang");
+      } finally {
+        if (active) {
+          setLoading(false);
+          setCurrentImage(0);
+        }
+      }
+    };
+
+    fetchDetail();
+
+    return () => {
+      active = false;
+    };
+  }, [id, locationListing]);
+
+  useEffect(() => {
+    setCurrentImage(0);
+  }, [listing?.id]);
+
+  const images = useMemo(() => {
+    const fromListing =
+      listing?.listingImages
+        ?.map((img) => img?.imageUrl)
+        .filter(Boolean) ?? [];
+    return fromListing.length > 0 ? fromListing : [FALLBACK_IMAGE];
+  }, [listing]);
+
+  useEffect(() => {
+    if (currentImage >= images.length) {
+      setCurrentImage(0);
+    }
+  }, [images, currentImage]);
+
+  const handlePrevImage = () => {
+    setCurrentImage((prev) =>
+      prev === 0 ? images.length - 1 : prev - 1
     );
-  }
-
-  const favoriteItem = {
-    id: post.id,
-    title: post.title,
-    price: post.price,
-    location: post.location,
-    image:
-      Array.isArray(post.images) && post.images.length > 0
-        ? post.images[0]
-        : "https://placehold.co/200x140?text=Listing",
   };
-  const favActive = isFavorite(post.id);
 
-  return (
-    <MainLayout>
-      <div className="container mx-auto px-4 py-6 grid grid-cols-3 gap-6">
-        {/* LEFT CONTENT */}
-        <div className="col-span-2">
-          {/* Image Gallery */}
-          <div className="bg-white p-5 rounded-lg shadow-md border mb-6 relative">
-            {/* Nút mũi tên trái */}
-            <button
-              onClick={() =>
-                setCurrentImage((prev) =>
-                  prev === 0 ? post.images.length - 1 : prev - 1
-                )
-              }
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-800 bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-            >
-              ❮
-            </button>
+  const handleNextImage = () => {
+    setCurrentImage((prev) =>
+      prev === images.length - 1 ? 0 : prev + 1
+    );
+  };
 
-            {/* Ảnh chính */}
-            <img
-              src={post.images[currentImage]}
-              alt={post.title}
-              className="w-full h-96 object-cover rounded-lg mb-4"
-            />
+  const favoriteItem = listing
+    ? {
+        id: listing.id,
+        title: listing.title,
+        price: listing.price,
+        location: listing.area,
+        image: images[0],
+      }
+    : null;
 
-            {/* Nút mũi tên phải */}
-            <button
-              onClick={() =>
-                setCurrentImage((prev) =>
-                  prev === post.images.length - 1 ? 0 : prev + 1
-                )
-              }
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800 bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75"
-            >
-              ❯
-            </button>
+  const favActive = favoriteItem ? isFavorite(favoriteItem.id) : false;
 
-            {/* Thumbnail */}
-            <div className="flex gap-2 overflow-x-auto">
-              {post.images.map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`thumb-${idx}`}
-                  onClick={() => setCurrentImage(idx)}
-                  className={`w-24 h-20 object-cover rounded-md border cursor-pointer ${
-                    currentImage === idx ? "border-2 border-blue-500" : ""
-                  }`}
-                />
+  const specItems = useMemo(
+    () => [
+      { label: "Danh muc", value: listing?.category },
+      { label: "Thuong hieu", value: listing?.brand?.name },
+      { label: "Model", value: listing?.model },
+      {
+        label: "Nam san xuat",
+        value: listing?.yearOfManufacture
+          ? String(listing.yearOfManufacture)
+          : null,
+      },
+      {
+        label: "Trang thai",
+        value: formatListingStatus(listing?.listingStatus),
+      },
+      { label: "Mau sac", value: listing?.color },
+      {
+        label: "Odo",
+        value: listing?.odo ? `${listing.odo} km` : null,
+      },
+      {
+        label: "Dung luong pin",
+        value: listing?.batteryCapacity
+          ? `${listing.batteryCapacity} kWh`
+          : null,
+      },
+      {
+        label: "Thoi gian sac",
+        value: listing?.chargingTime
+          ? `${listing.chargingTime} gio`
+          : null,
+      },
+      {
+        label: "Tam hoat dong",
+        value: listing?.actualOperatingRange
+          ? `${listing.actualOperatingRange} km`
+          : null,
+      },
+      {
+        label: "Kich thuoc",
+        value: listing?.size ? String(listing.size) : null,
+      },
+      {
+        label: "Khoi luong",
+        value: listing?.mass ? `${listing.mass} kg` : null,
+      },
+      {
+        label: "Khu vuc",
+        value: listing?.area,
+      },
+    ],
+    [listing]
+  ).filter((item) => item.value);
+
+  const seller = listing?.user;
+  const packageInfo = listing?.package;
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow-md border text-center">
+          <p className="text-gray-600">Dang tai thong tin tin dang...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow-md border text-center space-y-4">
+          <p className="text-lg font-semibold text-red-600">{error}</p>
+          <Link
+            to="/"
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md"
+          >
+            Quay lai trang chu
+          </Link>
+        </div>
+      );
+    }
+
+    if (!listing) {
+      return (
+        <div className="bg-white p-6 rounded-lg shadow-md border text-center space-y-4">
+          <p className="text-lg font-semibold text-gray-700">
+            Khong tim thay tin dang
+          </p>
+          <Link
+            to="/"
+            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md"
+          >
+            Quay lai trang chu
+          </Link>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-5 rounded-lg shadow-md border">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handlePrevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
+                aria-label="Anh truoc"
+              >
+                {"<"}
+              </button>
+
+              <img
+                src={images[currentImage]}
+                alt={listing.title}
+                className="w-full h-96 object-cover rounded-lg"
+              />
+
+              <button
+                type="button"
+                onClick={handleNextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
+                aria-label="Anh tiep theo"
+              >
+                {">"}
+              </button>
+            </div>
+
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto mt-4 pb-1">
+                {images.map((imgSrc, idx) => (
+                  <button
+                    type="button"
+                    key={`${imgSrc}-${idx}`}
+                    onClick={() => setCurrentImage(idx)}
+                    className={`h-20 w-28 flex-shrink-0 border rounded-md overflow-hidden ${
+                      currentImage === idx
+                        ? "border-blue-500"
+                        : "border-transparent"
+                    }`}
+                  >
+                    <img
+                      src={imgSrc}
+                      alt={`thumb-${idx}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white p-5 rounded-lg shadow-md border">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              Thong tin chi tiet
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {specItems.map((item) => (
+                <div key={item.label} className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs uppercase text-gray-400 mb-1">
+                    {item.label}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700">
+                    {item.value}
+                  </p>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Description */}
           <div className="bg-white p-5 rounded-lg shadow-md border">
-            <h2 className="text-lg font-bold mb-4">Mô tả chi tiết</h2>
-            <ul className="list-disc pl-5 space-y-2 text-gray-700">
-              {post.description.map((item, idx) => (
-                <li key={idx}>{item}</li>
-              ))}
-            </ul>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Mo ta</h2>
+            {listing.description ? (
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                {listing.description}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Nguoi ban chua cap nhat mo ta chi tiet.
+              </p>
+            )}
           </div>
         </div>
 
-        {/* RIGHT CONTENT */}
-        <div className="col-span-1 space-y-6">
-          {/* Info */}
+        <div className="space-y-6">
           <div className="bg-white p-6 rounded-lg shadow-md border">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <h1 className="text-lg font-bold text-gray-800 flex-1">
-                {post.title}
-              </h1>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <span className="inline-block px-2 py-1 text-xs rounded bg-blue-100 text-blue-600">
+                  {formatListingStatus(listing.listingStatus)}
+                </span>
+                <h1 className="text-xl font-bold text-gray-800 mt-2">
+                  {listing.title}
+                </h1>
+              </div>
               <button
                 type="button"
-                onClick={() => toggleFavorite(favoriteItem)}
+                onClick={() => favoriteItem && toggleFavorite(favoriteItem)}
                 className={`flex items-center justify-center w-10 h-10 rounded-full border transition ${
                   favActive
                     ? "bg-red-50 border-red-200 text-red-500"
@@ -182,54 +360,151 @@ const ListingDetail = () => {
                 />
               </button>
             </div>
-            <p className="text-red-600 font-bold text-2xl mb-1">{post.price}</p>
-            {post.subPrice && <p className="text-gray-500 mb-3">{post.subPrice}</p>}
 
-            <div className="flex space-x-3 mb-3">
-              <button className="flex-1 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+            <p className="text-red-600 font-bold text-2xl mb-2">
+              {formatCurrency(listing.price)}
+            </p>
+
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Khu vuc</span>
+                <span className="font-medium">
+                  {listing.area || "Chua cap nhat"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Danh muc</span>
+                <span className="font-medium">
+                  {listing.category || "Chua cap nhat"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Thuong hieu</span>
+                <span className="font-medium">
+                  {listing.brand?.name || "Chua cap nhat"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Model</span>
+                <span className="font-medium">
+                  {listing.model || "Chua cap nhat"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                type="button"
+                className="flex-1 px-4 py-2 bg-gray-200 rounded-lg text-gray-700"
+              >
                 Chat
               </button>
               <a
-                href={`tel:${post.seller}`}
-                className="flex-1 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500"
+                href={listing.user?.phoneNumber ? `tel:${listing.user.phoneNumber}` : "#"}
+                className="flex-1 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 text-center"
               >
-                Hiện số {post.seller}
+                Goi ngay
               </a>
             </div>
-            <p className="text-sm text-gray-600 mb-1">{post.location}</p>
-            <p className="text-sm text-gray-500">{post.postedAt}</p>
           </div>
 
-          {/* Seller Info */}
           <div className="bg-white p-6 rounded-lg shadow-md border">
-            <div className="flex items-center space-x-3 mb-3">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              Thong tin nguoi ban
+            </h2>
+            <div className="flex items-center gap-4 mb-4">
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/VinFast_Logo.svg/1200px-VinFast_Logo.svg.png"
-                alt="VinFast"
-                className="w-12 h-12 object-contain"
+                src={seller?.thumbnail || FALLBACK_AVATAR}
+                alt={seller?.userName || "Nguoi ban"}
+                className="w-16 h-16 rounded-full object-cover border"
               />
               <div>
-                <p className="font-bold">{post.sellerName}</p>
-                <p className="text-sm text-gray-600">{post.sellerRating}</p>
+                <p className="font-semibold text-gray-800">
+                  {seller?.userName || "Nguoi ban"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Trang thai: {seller?.status || "Khong ro"}
+                </p>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mb-2">
-              {post.active} • Phản hồi: {post.sellerResponse}
-            </p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button className="px-3 py-1 border rounded-full text-sm text-gray-700 hover:bg-gray-100">
-                Xe này còn không ạ?
-              </button>
-              <button className="px-3 py-1 border rounded-full text-sm text-gray-700 hover:bg-gray-100">
-                Xe chính chủ hay đã qua sử dụng?
-              </button>
+
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex justify-between">
+                <span>Email</span>
+                <span className="font-medium">
+                  {seller?.email || "Chua cap nhat"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>So dien thoai</span>
+                <span className="font-medium">
+                  {seller?.phoneNumber || "Chua cap nhat"}
+                </span>
+              </div>
+              {seller?.provider && (
+                <div className="flex justify-between">
+                  <span>Nguon</span>
+                  <span className="font-medium">{seller.provider}</span>
+                </div>
+              )}
             </div>
           </div>
+
+          {packageInfo && (
+            <div className="bg-white p-6 rounded-lg shadow-md border">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">
+                Goi dich vu
+              </h2>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>Loai goi</span>
+                  <span className="font-medium">
+                    {packageInfo.packageType || "Khong ro"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Trang thai</span>
+                  <span className="font-medium">
+                    {packageInfo.status || "Khong ro"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Gia</span>
+                  <span className="font-medium">
+                    {formatCurrency(packageInfo.price)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Thoi han</span>
+                  <span className="font-medium">
+                    {packageInfo.durationInDays
+                      ? `${packageInfo.durationInDays} ngay`
+                      : "Chua cap nhat"}
+                  </span>
+                </div>
+                {packageInfo.description && (
+                  <div>
+                    <span className="block text-xs uppercase text-gray-400 mb-1">
+                      Mo ta
+                    </span>
+                    <p className="text-sm text-gray-600">
+                      {packageInfo.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    );
+  };
+
+  return (
+    <MainLayout>
+      <div className="container mx-auto px-4 py-6">{renderContent()}</div>
     </MainLayout>
   );
 };
 
 export default ListingDetail;
-

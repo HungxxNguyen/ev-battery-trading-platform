@@ -19,15 +19,29 @@ const Payment = () => {
   const listing = paymentState.listing || null;
   const plan = paymentState.plan || null;
   const renewal = paymentState.renewal || {};
+  const origin = paymentState.origin || "renewal";
+  const isNewListing = origin === "new-listing";
 
   const subtotal = Number(plan?.price) || 0;
+  const planDays = Number(plan?.days) || 0;
   const vatRate = 0.08;
   const vat = Math.round(subtotal * vatRate);
   const total = subtotal + vat;
 
   const displayImage = listing?.images?.[0] || FALLBACK_IMAGE;
-  const baseDate = renewal.baseDateStr || listing?.expiresOn || "-";
+  const baseDate = isNewListing
+    ? "-"
+    : renewal.baseDateStr || listing?.expiresOn || "-";
   const nextDate = renewal.nextDateStr || "-";
+  const headingText = isNewListing
+    ? "Thanh toán đăng tin"
+    : "Thanh toán gia hạn tin đăng";
+  const subHeading = isNewListing
+    ? "Hoàn tất thanh toán để tin của bạn được hiển thị trên nền tảng."
+    : "Kiểm tra thông tin và thanh toán qua VNPAY.";
+  const serviceLine = isNewListing
+    ? `Gói đăng tin ${planDays} ngày — tin sẽ hiển thị trong ${planDays} ngày sau khi thanh toán.`
+    : `Gói gia hạn ${planDays} ngày — dự kiến hiển thị đến ${nextDate}.`;
 
   const handleBackToManage = () => {
     // quay về trang quản lý tin (giữ nguyên query nếu có)
@@ -54,10 +68,14 @@ const Payment = () => {
         <div className="bg-gray-50 py-20">
           <div className="max-w-xl mx-auto bg-white border border-gray-200 rounded-xl shadow-sm p-8 text-center space-y-4">
             <h1 className="text-2xl font-semibold text-gray-800">
-              Không tìm thấy dữ liệu gia hạn
+              {isNewListing
+                ? "Không tìm thấy dữ liệu đăng tin"
+                : "Không tìm thấy dữ liệu gia hạn"}
             </h1>
             <p className="text-gray-600">
-              Vui lòng quay lại trang Quản lý tin đăng và chọn lại gói gia hạn.
+              {isNewListing
+                ? "Vui lòng quay lại trang Đăng tin và thực hiện lại biểu mẫu."
+                : "Vui lòng quay lại trang Quản lý tin đăng và chọn lại gói gia hạn."}
             </p>
             <div>
               <button
@@ -103,11 +121,9 @@ const Payment = () => {
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
             <div className="border-b border-gray-100 px-6 py-5">
               <h1 className="text-2xl font-semibold text-gray-800">
-                Thanh toán gia hạn tin đăng
+                {headingText}
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Kiểm tra thông tin và thanh toán qua VNPAY.
-              </p>
+              <p className="text-sm text-gray-500 mt-1">{subHeading}</p>
             </div>
 
             <div className="px-6 py-6 space-y-8">
@@ -129,12 +145,13 @@ const Payment = () => {
                           {listing.title}
                         </p>
                         <p className="text-sm text-gray-500 mt-1">
-                          Gói gia hạn {plan.days} ngày — dự kiến hiển thị đến{" "}
-                          {nextDate}
+                          {serviceLine}
                         </p>
-                        <p className="text-xs text-gray-400">
-                          Tin hiện hết hạn vào {baseDate}
-                        </p>
+                        {!isNewListing && (
+                          <p className="text-xs text-gray-400">
+                            Tin hiện hết hạn vào {baseDate}
+                          </p>
+                        )}
                       </div>
                       <span className="text-lg font-semibold text-red-600">
                         {currency(subtotal)}
