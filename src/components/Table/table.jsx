@@ -1,38 +1,29 @@
-import * as React from "react";
-import { cn } from "../../utils/cn";
+import React from "react";
 
-const Table = ({ className, ...props }) => (
-  <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
-);
-const TableHeader = ({ className, ...props }) => (
-  <thead className={cn("[&_tr]:border-b", className)} {...props} />
-);
-const TableBody = ({ className, ...props }) => (
-  <tbody className={cn("[&_tr:last-child]:border-0", className)} {...props} />
-);
-const TableFooter = ({ className, ...props }) => (
-  <tfoot className={cn("bg-muted font-medium text-foreground", className)} {...props} />
-);
-const TableRow = ({ className, ...props }) => (
-  <tr className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", className)} {...props} />
-);
-const TableHead = ({ className, ...props }) => (
-  <th className={cn("h-10 px-2 text-left align-middle font-medium text-muted-foreground", className)} {...props} />
-);
-const TableCell = ({ className, ...props }) => (
-  <td className={cn("p-2 align-middle", className)} {...props} />
-);
-const TableCaption = ({ className, ...props }) => (
-  <caption className={cn("mt-4 text-sm text-muted-foreground", className)} {...props} />
+export const Table = ({ children }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full text-sm border-separate border-spacing-0">{children}</table>
+  </div>
 );
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-};
+export const TableHeader = ({ children }) => (
+  <thead className="text-left bg-gray-50 border-b border-gray-200">{children}</thead>
+);
+
+export const TableRow = ({ className = "", ...props }) => (
+  <tr className={`border-b border-gray-200 ${className}`} {...props} />
+);
+
+export const TableHead = ({ className = "", children }) => (
+  <th className={`px-3 py-2 font-semibold text-gray-700 uppercase text-xs md:text-sm tracking-wide border-b border-gray-200 border-r last:border-r-0 ${className}`}>
+    {children}
+  </th>
+);
+
+export const TableBody = ({ children }) => <tbody className="align-middle">{children}</tbody>;
+
+export const TableCell = ({ className = "", children, colSpan }) => (
+  <td colSpan={colSpan} className={`px-3 py-2 border-r last:border-r-0 border-gray-200 ${className}`}>
+    {children}
+  </td>
+);

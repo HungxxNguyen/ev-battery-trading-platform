@@ -1,29 +1,17 @@
-import * as React from "react";
-import { cn } from "../../utils/cn";
+import React from "react";
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("rounded-xl border bg-card text-card-foreground shadow", className)}
-    {...props}
-  />
-));
-Card.displayName = "Card";
-
-const CardHeader = ({ className, ...props }) => (
-  <div className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
-);
-const CardTitle = ({ className, ...props }) => (
-  <h3 className={cn("text-2xl font-semibold leading-none tracking-tight", className)} {...props} />
-);
-const CardDescription = ({ className, ...props }) => (
-  <p className={cn("text-sm text-muted-foreground", className)} {...props} />
-);
-const CardContent = ({ className, ...props }) => (
-  <div className={cn("p-6 pt-0", className)} {...props} />
-);
-const CardFooter = ({ className, ...props }) => (
-  <div className={cn("flex items-center p-6 pt-0", className)} {...props} />
+export const Card = ({ className = "", children }) => (
+  <div className={`rounded-xl border bg-white shadow-sm ${className}`}>{children}</div>
 );
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+export const CardHeader = ({ className = "", children }) => (
+  <div className={`px-4 pt-4 ${className}`}>{children}</div>
+);
+
+export const CardTitle = ({ children }) => (
+  <h3 className="text-base md:text-lg font-semibold">{children}</h3>
+);
+
+export const CardContent = ({ className = "", children }) => (
+  <div className={`px-4 pb-4 ${className}`}>{children}</div>
+);
