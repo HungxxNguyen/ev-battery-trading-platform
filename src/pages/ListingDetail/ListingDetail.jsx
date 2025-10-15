@@ -116,9 +116,7 @@ const ListingDetail = () => {
 
   const images = useMemo(() => {
     const fromListing =
-      listing?.listingImages
-        ?.map((img) => img?.imageUrl)
-        .filter(Boolean) ?? [];
+      listing?.listingImages?.map((img) => img?.imageUrl).filter(Boolean) ?? [];
     return fromListing.length > 0 ? fromListing : [FALLBACK_IMAGE];
   }, [listing]);
 
@@ -129,15 +127,11 @@ const ListingDetail = () => {
   }, [images, currentImage]);
 
   const handlePrevImage = () => {
-    setCurrentImage((prev) =>
-      prev === 0 ? images.length - 1 : prev - 1
-    );
+    setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   const handleNextImage = () => {
-    setCurrentImage((prev) =>
-      prev === images.length - 1 ? 0 : prev + 1
-    );
+    setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   const favoriteItem = listing
@@ -180,9 +174,7 @@ const ListingDetail = () => {
       },
       {
         label: "Thoi gian sac",
-        value: listing?.chargingTime
-          ? `${listing.chargingTime} gio`
-          : null,
+        value: listing?.chargingTime ? `${listing.chargingTime} gio` : null,
       },
       {
         label: "Tam hoat dong",
@@ -400,7 +392,11 @@ const ListingDetail = () => {
                 Chat
               </button>
               <a
-                href={listing.user?.phoneNumber ? `tel:${listing.user.phoneNumber}` : "#"}
+                href={
+                  listing.user?.phoneNumber
+                    ? `tel:${listing.user.phoneNumber}`
+                    : "#"
+                }
                 className="flex-1 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 text-center"
               >
                 Goi ngay
@@ -421,9 +417,6 @@ const ListingDetail = () => {
               <div>
                 <p className="font-semibold text-gray-800">
                   {seller?.userName || "Nguoi ban"}
-                </p>
-                <p className="text-sm text-gray-500">
-                  Trang thai: {seller?.status || "Khong ro"}
                 </p>
               </div>
             </div>
@@ -449,52 +442,6 @@ const ListingDetail = () => {
               )}
             </div>
           </div>
-
-          {packageInfo && (
-            <div className="bg-white p-6 rounded-lg shadow-md border">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">
-                Goi dich vu
-              </h2>
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>Loai goi</span>
-                  <span className="font-medium">
-                    {packageInfo.packageType || "Khong ro"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Trang thai</span>
-                  <span className="font-medium">
-                    {packageInfo.status || "Khong ro"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Gia</span>
-                  <span className="font-medium">
-                    {formatCurrency(packageInfo.price)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Thoi han</span>
-                  <span className="font-medium">
-                    {packageInfo.durationInDays
-                      ? `${packageInfo.durationInDays} ngay`
-                      : "Chua cap nhat"}
-                  </span>
-                </div>
-                {packageInfo.description && (
-                  <div>
-                    <span className="block text-xs uppercase text-gray-400 mb-1">
-                      Mo ta
-                    </span>
-                    <p className="text-sm text-gray-600">
-                      {packageInfo.description}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
