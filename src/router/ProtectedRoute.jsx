@@ -1,53 +1,32 @@
-import { useContext, useEffect } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+// src/routes/ProtectedRoute.jsx
+import { useContext } from "react";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import Loading from "../components/loading/Loading";
-import Forbidden from "../pages/Forbidden/Forbidden";
 
 const ProtectedRoute = ({
-  children,
-  redirectTo = "/login",
   isPublic = false,
+  redirectTo = "/login",
   allowedRoles = [],
 }) => {
   const { isAuthenticated, loading } = useContext(AuthContext);
-  const role = localStorage.getItem("role");
+  const role = localStorage.getItem("role"); // hoặc lấy từ context nếu có
   const location = useLocation();
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (loading || !isAuthenticated) return;
+  if (loading) return <Loading />;
 
-    // Xử lý cho Admin
-    if (role === "Admin" && location.pathname !== "/admin") {
-      navigate("/admin", { replace: true });
-    }
-  }, [isAuthenticated, loading, role, location, navigate]);
-
-  if (loading) {
-    return <Loading />;
-  }
-
-  // Nếu route không public và chưa đăng nhập
+  // Chưa đăng nhập mà route không public -> về login
   if (!isPublic && !isAuthenticated) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  // Kiểm tra role nếu có yêu cầu cụ thể
+  // Có yêu cầu role nhưng role hiện tại không hợp lệ -> Forbidden
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    return <Forbidden />;
+    return <Navigate to="/forbidden" replace />;
   }
 
-  // Ngăn User, Artisan, và Staff truy cập các trang không được phép
-  if (role === "User" && location.pathname === "/admin") {
-    return <Forbidden />;
-  }
-
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
-
-  return children;
+  // Cho phép render các route con
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

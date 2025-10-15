@@ -1,10 +1,10 @@
+// src/routes/AppRouter.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import ScrollToTop from "../components/ScrollToTop/ScrollToTop";
 
-// ==================== Pages ====================
-// Public pages
+// Pages...
 import Home from "../pages/Home/Home";
 import Login from "../pages/Login/Login";
 import Register from "../pages/Register/Register";
@@ -22,6 +22,9 @@ import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
 import Transaction from "../pages/Transaction/Transaction";
+import Forbidden from "../pages/Forbidden/Forbidden";
+
+// Admin pages
 import AdminLayout from "../pages/Admin/AdminLayout.jsx";
 import DashboardPage from "../pages/Admin/DashboardPage.jsx";
 import ReviewPage from "../pages/Admin/ReviewPage.jsx";
@@ -30,117 +33,56 @@ import PlansPage from "../pages/Admin/PlansPage.jsx";
 import SettingsPage from "../pages/Admin/SettingsPage.jsx";
 import BrandPage from "../pages/Admin/BrandPage.jsx";
 import UsersModeration from "../pages/Admin/UsersModeration.jsx";
-import Forbidden from "../pages/Forbidden/Forbidden";
 
-// ==================== Routes ====================
+// Guards
 import ProtectedRoute from "./ProtectedRoute";
+
 const AppRouter = () => {
   return (
     <Router>
       <ScrollToTop />
       <AnimatePresence mode="wait">
         <Routes>
+          {/* Public */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route
-            path="/add-listing"
-            element={
-              <ProtectedRoute>
-                <AddListing />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manage-listing"
-            element={
-              <ProtectedRoute>
-                <ManageListing />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/manage-listing/:id"
-            element={
-              <ProtectedRoute>
-                <ManageDetail />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/category/:categoryId" element={<Category />} />
-          <Route
-            path="/payment"
-            element={
-              <ProtectedRoute>
-                <Payment />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/favorites"
-            element={
-              <ProtectedRoute>
-                <Favorites />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
-
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={["Admin"]}>
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="review" element={<ReviewPage />} />
-            <Route path="support" element={<SupportPage />} />
-            <Route path="plans" element={<PlansPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="brands" element={<BrandPage />} />
-            <Route path="users" element={<UsersModeration />} />
-          </Route>
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <ProfileTab />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/transactions"
-            element={
-              <ProtectedRoute>
-                <Transaction />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/forbidden" element={<Forbidden />} />
+
+          {/* User-authenticated (không yêu cầu role cụ thể) */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/add-listing" element={<AddListing />} />
+            <Route path="/manage-listing" element={<ManageListing />} />
+            <Route path="/manage-listing/:id" element={<ManageDetail />} />
+            <Route path="/payment" element={<Payment />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/favorites" element={<Favorites />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/profile" element={<ProfileTab />} />
+            <Route path="/transactions" element={<Transaction />} />
+          </Route>
+
+          {/* Admin-only */}
+          <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="review" element={<ReviewPage />} />
+              <Route path="support" element={<SupportPage />} />
+              <Route path="plans" element={<PlansPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="brands" element={<BrandPage />} />
+              <Route path="users" element={<UsersModeration />} />
+            </Route>
+          </Route>
         </Routes>
       </AnimatePresence>
     </Router>
   );
 };
+
 export default AppRouter;
