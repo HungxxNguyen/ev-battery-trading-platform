@@ -558,8 +558,21 @@ const AddListing = () => {
   };
 
   const handleOpenPackageModal = () => {
+    if (!formData?.Category) {
+      showNotification("Vui lòng chọn danh mục trước", "error");
+      return;
+    }
     setPlanModalOpen(true);
   };
+
+  // Clear selected package when Category changes to prevent mismatch
+  useEffect(() => {
+    setSelectedPackage((prev) =>
+      prev && formData?.Category && prev.packageType !== formData.Category
+        ? null
+        : prev
+    );
+  }, [formData?.Category]);
 
   return (
     <MainLayout>
@@ -764,6 +777,7 @@ const AddListing = () => {
           setSelectedPackage(plan); // Lưu package đã chọn
         }}
         loading={planProcessing}
+        category={formData?.Category}
       />
     </MainLayout>
   );
