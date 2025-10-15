@@ -22,7 +22,14 @@ import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
 import Transaction from "../pages/Transaction/Transaction";
-import Admin from "../pages/Admin/Admin";
+import AdminLayout from "../pages/Admin/AdminLayout.jsx";
+import DashboardPage from "../pages/Admin/DashboardPage.jsx";
+import ReviewPage from "../pages/Admin/ReviewPage.jsx";
+import SupportPage from "../pages/Admin/SupportPage.jsx";
+import PlansPage from "../pages/Admin/PlansPage.jsx";
+import SettingsPage from "../pages/Admin/SettingsPage.jsx";
+import BrandPage from "../pages/Admin/BrandPage.jsx";
+import UsersModeration from "../pages/Admin/UsersModeration.jsx";
 
 const AppRouter = () => {
   return (
@@ -47,7 +54,15 @@ const AppRouter = () => {
           <Route path="/about" element={<About />} />
           <Route path="/profile" element={<ProfileTab />} />
           <Route path="/transactions" element={<Transaction />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="review" element={<ReviewPage />} />
+            <Route path="support" element={<SupportPage />} />
+            <Route path="plans" element={<PlansPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="brands" element={<BrandPage />} />
+            <Route path="users" element={<UsersModeration />} />
+          </Route>
         </Routes>
       </AnimatePresence>
     </Router>
