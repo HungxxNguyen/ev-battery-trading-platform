@@ -34,8 +34,10 @@ export const API_ENDPOINTS_BRAND = {
 
 export const API_ENDPOINTS_PACKAGE = {
   GET_ALL: "/api/Package/GetAll",
-  GET_BY_ID: (id) => `/api/Package/GetById?id=${id}`,
+  // Backend expects '/GetById/id?id={id}' per provided cURL
+  GET_BY_ID: (id) => `/api/Package/GetById/id?id=${id}`,
   CREATE_PACKAGE: "/api/Package/Create",
-  UPDATE_PACKAGE: "/api/Package/UpdatePackage",
+  // Backend uses '/api/Package/Update' (multipart form)
+  UPDATE_PACKAGE: "/api/Package/Update",
   DELETE_PACKAGE: (id) => `/api/Package/Delete/id?id=${id}`,
 };
