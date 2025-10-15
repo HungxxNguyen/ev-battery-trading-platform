@@ -15,7 +15,8 @@ export const API_ENDPOINTS_AUTH = {
 
 // Các endpoint cho sản phẩm
 export const API_ENDPOINTS_LISTING = {
-  GET_LISTING: "/api/Listing/CreateListing",
+  GET_ALL: "/api/Listing/GetAll",
+  GET_DETAIL: "/api/Listing/GetDetail",
   CREATE_LISTING: "/api/Listing/CreateListing",
 };
 
@@ -27,4 +28,12 @@ export const API_ENDPOINTS_USER = {
 
 export const API_ENDPOINTS_BRAND = {
   GET_BRANDS: "/api/Brand/GetAll",
+};
+
+export const API_ENDPOINTS_PACKAGE = {
+  GET_ALL: "/api/Package/GetAll",
+  GET_BY_ID: (id) => `/api/Package/GetById?id=${id}`,
+  CREATE_PACKAGE: "/api/Package/Create",
+  UPDATE_PACKAGE: "/api/Package/UpdatePackage",
+  DELETE_PACKAGE: (id) => `/api/Package/Delete/id?id=${id}`,
 };
