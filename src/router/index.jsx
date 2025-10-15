@@ -23,6 +23,10 @@ import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
 import Transaction from "../pages/Transaction/Transaction";
 import Admin from "../pages/Admin/Admin";
+import Forbidden from "../pages/Forbidden/Forbidden";
+
+// ==================== Routes ====================
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRouter = () => {
   return (
@@ -33,21 +37,92 @@ const AppRouter = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/add-listing" element={<AddListing />} />
-          <Route path="/manage-listing" element={<ManageListing />} />
-          <Route path="/manage-listing/:id" element={<ManageDetail />} />
+          <Route
+            path="/add-listing"
+            element={
+              <ProtectedRoute>
+                <AddListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-listing"
+            element={
+              <ProtectedRoute>
+                <ManageListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manage-listing/:id"
+            element={
+              <ProtectedRoute>
+                <ManageDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/category/:categoryId" element={<Category />} />
-          <Route path="/payment" element={<Payment />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/favorites" element={<Favorites />} />
-          <Route path="/notifications" element={<Notifications />} />
+          <Route
+            path="/payment"
+            element={
+              <ProtectedRoute>
+                <Payment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
-          <Route path="/profile" element={<ProfileTab />} />
-          <Route path="/transactions" element={<Transaction />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfileTab />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedRoute>
+                <Transaction />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["Admin"]}>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/forbidden" element={<Forbidden />} />
         </Routes>
       </AnimatePresence>
     </Router>
