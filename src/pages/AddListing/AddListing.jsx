@@ -19,7 +19,7 @@ import {
 } from "react-icons/fa";
 import { Camera } from "lucide-react";
 import MainLayout from "../../components/layout/MainLayout";
-import brandService from "../../services/apis/brandapi";
+import brandService from "../../services/apis/brandApi";
 import listingService from "../../services/apis/listingApi";
 import { useNotification } from "../../contexts/NotificationContext";
 import ChoosePackage from "./components/ChoosePackage";
