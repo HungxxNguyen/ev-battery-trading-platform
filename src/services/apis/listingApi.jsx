@@ -24,6 +24,15 @@ const listingService = {
     });
   },
 
+  async getMyListings(pageIndex = 1, pageSize = 1000) {
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.GET_MY_LISTINGS(pageIndex, pageSize),
+      {
+        method: "get",
+      }
+    );
+  },
+
   async createListing(data) {
     return await performApiRequest(API_ENDPOINTS_LISTING.CREATE_LISTING, {
       method: "post",

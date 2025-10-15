@@ -1,29 +1,47 @@
 import React from "react";
 
-export const Table = ({ children }) => (
-  <div className="overflow-x-auto">
-    <table className="w-full text-sm border-separate border-spacing-0">{children}</table>
+export const Table = ({ className = "", children, ...props }) => (
+  <div className={`overflow-x-auto ${className}`} {...props}>
+    <table className="w-full text-sm border-separate border-spacing-0">
+      {children}
+    </table>
   </div>
 );
 
-export const TableHeader = ({ children }) => (
-  <thead className="text-left bg-gray-50 border-b border-gray-200">{children}</thead>
+export const TableHeader = ({ className = "", children, ...props }) => (
+  <thead
+    className={`text-left border-b border-slate-800/60 ${className}`}
+    {...props}
+  >
+    {children}
+  </thead>
 );
 
 export const TableRow = ({ className = "", ...props }) => (
-  <tr className={`border-b border-gray-200 ${className}`} {...props} />
+  <tr className={`border-b border-slate-800/60 ${className}`} {...props} />
 );
 
-export const TableHead = ({ className = "", children }) => (
-  <th className={`px-3 py-2 font-semibold text-gray-700 uppercase text-xs md:text-sm tracking-wide border-b border-gray-200 border-r last:border-r-0 ${className}`}>
+export const TableHead = ({ className = "", children, ...props }) => (
+  <th
+    className={`px-3 py-2 text-slate-300 font-medium ${className}`}
+    {...props}
+  >
     {children}
   </th>
 );
 
-export const TableBody = ({ children }) => <tbody className="align-middle">{children}</tbody>;
+export const TableBody = ({ className = "", children, ...props }) => (
+  <tbody className={`align-middle ${className}`} {...props}>
+    {children}
+  </tbody>
+);
 
-export const TableCell = ({ className = "", children, colSpan }) => (
-  <td colSpan={colSpan} className={`px-3 py-2 border-r last:border-r-0 border-gray-200 ${className}`}>
+export const TableCell = ({ className = "", children, colSpan, ...props }) => (
+  <td
+    colSpan={colSpan}
+    className={`px-3 py-2 align-middle ${className}`}
+    {...props}
+  >
     {children}
   </td>
 );

@@ -18,6 +18,7 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
+import listingApi from "../../services/apis/listingApi";
 
 /* ---------------- Tabs (VIỆT HOÁ) ---------------- */
 const TABS = [
@@ -25,151 +26,12 @@ const TABS = [
   { key: "expired", label: "HẾT HẠN" },
   { key: "rejected", label: "BỊ TỪ CHỐI" },
   { key: "payment", label: "CẦN THANH TOÁN" },
-  // { key: "draft", label: "TIN NHÁP" }, // ⟵ BỎ HOÀN TOÀN
   { key: "pending", label: "CHỜ DUYỆT" },
   { key: "hidden", label: "ĐÃ ẨN" },
 ];
 
 /* Quy ước số bài/1 trang để tính "TRANG X" từ metrics.rank */
 const ITEMS_PER_PAGE = 20;
-
-/* ---------------- Sample listings ---------------- */
-const SAMPLE = [
-  {
-    id: 201,
-    title: "VinFast VF 8 Eco 2024",
-    price: 1550000000,
-    postedOn: "26/08/2025",
-    expiresOn: "26/09/2025",
-    status: "active",
-    category: "Ô tô điện",
-    location: "Phường Thảo Điền (Thủ Đức), TP Hồ Chí Minh",
-    images: [
-      "https://images.unsplash.com/photo-1563720223185-11003d516935?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { rank: 82, categoryLabel: "Mục EV & Pin, …" },
-  },
-  {
-    id: 202,
-    title: "Tesla Model 3 Long Range AWD",
-    price: 1350000000,
-    postedOn: "20/09/2025",
-    expiresOn: "20/10/2025",
-    status: "active",
-    category: "Ô tô điện",
-    location: "TP Thủ Đức, TP Hồ Chí Minh",
-    images: [
-      "https://images.unsplash.com/photo-1519581356744-44c5b5f3c47b?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { rank: 76, categoryLabel: "Mục EV & Pin" },
-  },
-  {
-    id: 203,
-    title: "Bộ pin solid-state dung lượng cao",
-    price: 245000000,
-    postedOn: "19/09/2025",
-    expiresOn: "04/10/2025",
-    status: "pending",
-    category: "Pin rời",
-    location: "Quận Cầu Giấy, Hà Nội",
-    images: [
-      "https://images.unsplash.com/photo-1617813489478-0e96bde477c0?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { rank: 91, categoryLabel: "Mục Pin thay thế" },
-  },
-
-  // HẾT HẠN
-  {
-    id: 205,
-    title: "Nissan Leaf 40 kWh 2019",
-    price: 435000000,
-    postedOn: "26/08/2025",
-    expiresOn: "26/09/2025",
-    status: "expired",
-    category: "Ô tô điện",
-    location: "Quận Bình Thạnh, TP Hồ Chí Minh",
-    images: [
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { daysToDelete: 28 },
-  },
-
-  // ĐÃ ẨN
-  {
-    id: 204,
-    title: "BMW i4 eDrive40 đăng ký 2024",
-    price: 2200000000,
-    postedOn: "18/09/2025",
-    expiresOn: "18/10/2025",
-    status: "hidden",
-    category: "Ô tô điện",
-    location: "Quận 7, TP Hồ Chí Minh",
-    images: [
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { rank: 105, categoryLabel: "Mục Xe điện" },
-  },
-
-  /* ----------- CẦN THANH TOÁN ----------- */
-  {
-    id: 206,
-    title: "Kia EV6 GT-Line 2022",
-    price: 1250000000,
-    postedOn: "28/09/2025",
-    expiresOn: "28/10/2025",
-    status: "payment",
-    category: "Ô tô điện",
-    location: "Quận Thanh Xuân, Hà Nội",
-    images: [
-      "https://images.unsplash.com/photo-1627454824205-5b4a0d8b2f2e?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { invoiceId: "INV-2025-000186" },
-  },
-  {
-    id: 207,
-    title: "Pin LFP 60 kWh (bộ tháo xe)",
-    price: 320000000,
-    postedOn: "01/10/2025",
-    expiresOn: "31/10/2025",
-    status: "payment",
-    category: "Pin rời",
-    location: "Quận Hải Châu, Đà Nẵng",
-    images: [
-      "https://images.unsplash.com/photo-1617813536586-62bf6a6bfb38?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: { invoiceId: "INV-2025-000223" },
-  },
-
-  /* ----------- BỊ TỪ CHỐI ----------- */
-  {
-    id: 208,
-    title: "VinFast VF e34 2021 - bản tiêu chuẩn",
-    price: 390000000,
-    status: "rejected",
-    category: "Ô tô điện",
-    location: "Quận Gò Vấp, TP Hồ Chí Minh",
-    images: [
-      "https://images.unsplash.com/photo-1593941707874-ef25b8b63b45?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: {
-      reason: "Ảnh mờ/không rõ biển số; thiếu giấy tờ đăng ký.",
-    },
-  },
-  {
-    id: 209,
-    title: "Xe máy điện Dat Bike Weaver++ 2023",
-    price: 24000000,
-    status: "rejected",
-    category: "Xe 2 bánh điện",
-    location: "Thành phố Đà Nẵng",
-    images: [
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
-    ],
-    metrics: {
-      reason: "Mô tả chưa rõ tình trạng pin/số km đã đi.",
-    },
-  },
-];
 
 /* ---------------- Utils ---------------- */
 const currency = (n) =>
@@ -193,6 +55,49 @@ const formatVNDate = (date) =>
         date.getMonth() + 1
       ).padStart(2, "0")}/${date.getFullYear()}`
     : "";
+
+/* ---------------- Mapping API data to frontend format ---------------- */
+const mapApiDataToFrontend = (apiData) => {
+  if (!apiData || !Array.isArray(apiData)) return [];
+
+  return apiData.map((item) => {
+    // Map status từ API sang frontend status
+    const statusMapping = {
+      Active: "active",
+      Expired: "expired",
+      Rejected: "rejected",
+      Pending: "pending",
+      Hidden: "hidden",
+      Payment: "payment",
+    };
+
+    // Map category từ API sang frontend category
+    const categoryMapping = {
+      ElectricCar: "Ô tô điện",
+      ElectricMotorbike: "Xe máy điện",
+      RemovableBattery: "Pin rời",
+    };
+
+    const frontendItem = {
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      status: statusMapping[item.status] || item.status?.toLowerCase(),
+      category: categoryMapping[item.category] || item.category,
+      location: item.area || "Đang cập nhật",
+      images: item.listingImages?.map((img) => img.imageUrl) || [],
+      postedOn: formatVNDate(new Date()), // Cần API cung cấp ngày đăng
+      expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Cần API cung cấp ngày hết hạn
+      metrics: {
+        rank: Math.floor(Math.random() * 100) + 1, // Tạm thời random, cần API cung cấp
+        categoryLabel: categoryMapping[item.category] || item.category,
+        daysToDelete: 28, // Mặc định
+      },
+    };
+
+    return frontendItem;
+  });
+};
 
 /* ---------------- Click-outside ---------------- */
 function useOnClickOutside(ref, handler) {
@@ -233,7 +138,7 @@ const OptionMenu = ({ onShare, onHide }) => (
   </div>
 );
 
-/* ---------------- Modal “Ẩn tin” ---------------- */
+/* ---------------- Modal "Ẩn tin" ---------------- */
 const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   const [reason, setReason] = useState("");
   const reasons = [
@@ -307,7 +212,7 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   );
 };
 
-/* ---------------- Modal “Gia hạn tin” ---------------- */
+/* ---------------- Modal "Gia hạn tin" ---------------- */
 const ExtendModal = ({ open, listing, onClose, onApply }) => {
   const plans = [
     { days: 15, price: 35100, oldPrice: 39000, discount: 10 },
@@ -516,16 +421,6 @@ const ListingItem = ({
 
             {/* TRANG & MỤC (dưới giá) */}
             <div className="text-xs md:text-sm text-gray-600">
-              {pageFromRank ? (
-                <span className="uppercase tracking-wide font-semibold text-gray-800">
-                  TRANG {pageFromRank}
-                </span>
-              ) : null}
-              {pageFromRank ? (
-                <span className="mx-1 text-gray-400">:</span>
-              ) : (
-                ""
-              )}
               <span>
                 Mục <b>{item.category || "Khác"}</b>
               </span>
@@ -727,12 +622,42 @@ const ManageListing = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlTab]);
 
-  const [listings, setListings] = useState(SAMPLE);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // dropdown + modals
   const [menuForId, setMenuForId] = useState(null);
   const [hideFor, setHideFor] = useState(null);
   const [extendFor, setExtendFor] = useState(null);
+
+  // Fetch data từ API
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await listingApi.getMyListings(1, 1000);
+
+        if (response.data.error === 0) {
+          const mappedData = mapApiDataToFrontend(response.data.data);
+          setListings(mappedData);
+        } else {
+          setError(
+            response.message || "Có lỗi xảy ra khi tải danh sách tin đăng"
+          );
+        }
+      } catch (err) {
+        setError("Không thể kết nối đến server. Vui lòng thử lại sau.");
+        console.error("Error fetching listings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   const filtered = useMemo(
     () => (listings || []).filter((it) => it.status === activeTab),
@@ -772,6 +697,37 @@ const ManageListing = () => {
   const setTab = (key) => setSearchParams({ tab: key });
 
   const activeLabel = TABS.find((t) => t.key === activeTab)?.label || "";
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="px-5 md:px-24 my-10 mb-20 flex justify-center items-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Đang tải danh sách tin đăng...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <div className="px-5 md:px-24 my-10 mb-20">
+          <div className="rounded-xl border border-red-200 p-8 bg-red-50 text-center">
+            <p className="text-red-600 font-semibold">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-5 py-3 bg-red-600 hover:bg-red-500 text-white rounded-md font-semibold transition cursor-pointer"
+            >
+              Thử lại
+            </button>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

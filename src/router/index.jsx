@@ -30,7 +30,6 @@ import DashboardPage from "../pages/Admin/DashboardPage.jsx";
 import ReviewPage from "../pages/Admin/ReviewPage.jsx";
 import SupportPage from "../pages/Admin/SupportPage.jsx";
 import PlansPage from "../pages/Admin/PlansPage.jsx";
-import SettingsPage from "../pages/Admin/SettingsPage.jsx";
 import BrandPage from "../pages/Admin/BrandPage.jsx";
 import UsersModeration from "../pages/Admin/UsersModeration.jsx";
 
@@ -74,7 +73,6 @@ const AppRouter = () => {
               <Route path="review" element={<ReviewPage />} />
               <Route path="support" element={<SupportPage />} />
               <Route path="plans" element={<PlansPage />} />
-              <Route path="settings" element={<SettingsPage />} />
               <Route path="brands" element={<BrandPage />} />
               <Route path="users" element={<UsersModeration />} />
             </Route>
