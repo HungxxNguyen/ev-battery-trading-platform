@@ -1,5 +1,5 @@
 // src/pages/Admin/AdminLayout.jsx
-import React from "react";
+import React, { useContext } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { cn } from "../../utils/cn.jsx";
+import { AuthContext } from "../../contexts/AuthContext.jsx";
 
 /**
  * AdminLayout
@@ -77,9 +78,10 @@ export default function AdminLayout() {
       icon: <Settings className="h-4 w-4" />,
     },
   ];
+  const { logout } = useContext(AuthContext);
 
   const onLogout = () => {
-    // TODO: tích hợp logic đăng xuất thực nếu cần
+    logout();
     navigate("/login");
   };
 
@@ -96,7 +98,9 @@ export default function AdminLayout() {
         />
         <div className="flex flex-col leading-tight">
           <span className="text-base font-semibold">VoltX Exchange Admin</span>
-          <span className="text-xs text-white/70">Second-hand EV & Battery</span>
+          <span className="text-xs text-white/70">
+            Second-hand EV & Battery
+          </span>
         </div>
       </header>
 
