@@ -22,6 +22,8 @@ export const API_ENDPOINTS_LISTING = {
   CREATE_LISTING: "/api/Listing/CreateListing",
   // Admin: get listings filtered by status/price range/pagination
   GET_BY_STATUS: "/api/Listing/GetByStatus",
+  // VNPAY payment URL
+  LISTING_VNPAY: (id) => `/api/Listing/VnpayUrl/${id}`,
 };
 
 // Admin endpoints for listing moderation

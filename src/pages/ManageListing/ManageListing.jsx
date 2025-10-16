@@ -18,7 +18,8 @@ import {
   FiEyeOff,
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
-import listingApi from "../../services/apis/listingApi";
+import listingService from "../../services/apis/listingApi";
+import PaymentButton from "./components/PaymentButton";
 
 /* ---------------- Tabs (VIỆT HOÁ) ---------------- */
 const TABS = [
@@ -29,6 +30,16 @@ const TABS = [
   { key: "pending", label: "CHỜ DUYỆT" },
   { key: "hidden", label: "ĐÃ ẨN" },
 ];
+
+/* ---------------- Payment Status Mapping ---------------- */
+const PAYMENT_STATUS_MAPPING = {
+  Pending: "Đang chờ xử lý",
+  Success: "Thành công",
+  Failed: "Thất bại",
+  Canceled: "Đã hủy",
+  Expired: "Hết hạn",
+  AwaitingPayment: "Chờ thanh toán",
+};
 
 /* Quy ước số bài/1 trang để tính "TRANG X" từ metrics.rank */
 const ITEMS_PER_PAGE = 20;
@@ -61,15 +72,25 @@ const mapApiDataToFrontend = (apiData) => {
   if (!apiData || !Array.isArray(apiData)) return [];
 
   return apiData.map((item) => {
-    // Map status từ API sang frontend status
-    const statusMapping = {
-      Active: "active",
-      Expired: "expired",
-      Rejected: "rejected",
-      Pending: "pending",
-      Hidden: "hidden",
-      Payment: "payment",
-    };
+    // Map status từ API sang frontend status với logic mới
+    let frontendStatus = item.status?.toLowerCase();
+
+    // Logic phân loại tab dựa trên PaymentStatus và status
+    if (item.paymentStatus === "AwaitingPayment" && item.status === "Pending") {
+      frontendStatus = "payment"; // Tab "CẦN THANH TOÁN"
+    } else if (item.paymentStatus === "Success" && item.status === "Pending") {
+      frontendStatus = "pending"; // Tab "CHỜ DUYỆT"
+    } else {
+      // Giữ nguyên mapping cũ cho các trường hợp khác
+      const statusMapping = {
+        Active: "active",
+        Expired: "expired",
+        Rejected: "rejected",
+        Pending: "pending",
+        Hidden: "hidden",
+      };
+      frontendStatus = statusMapping[item.status] || item.status?.toLowerCase();
+    }
 
     // Map category từ API sang frontend category
     const categoryMapping = {
@@ -82,12 +103,16 @@ const mapApiDataToFrontend = (apiData) => {
       id: item.id,
       title: item.title,
       price: item.price,
-      status: statusMapping[item.status] || item.status?.toLowerCase(),
+      status: frontendStatus,
       category: categoryMapping[item.category] || item.category,
       location: item.area || "Đang cập nhật",
       images: item.listingImages?.map((img) => img.imageUrl) || [],
       postedOn: formatVNDate(new Date()), // Cần API cung cấp ngày đăng
       expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Cần API cung cấp ngày hết hạn
+      payment: item.payment || false, // Thêm trường payment từ API
+      paymentStatus: item.paymentStatus, // Giữ nguyên paymentStatus từ API
+      paymentStatusText:
+        PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus, // Convert sang tiếng Việt
       metrics: {
         rank: Math.floor(Math.random() * 100) + 1, // Tạm thời random, cần API cung cấp
         categoryLabel: categoryMapping[item.category] || item.category,
@@ -116,7 +141,7 @@ function useOnClickOutside(ref, handler) {
 }
 
 /* ---------------- Dropdown menu ---------------- */
-const OptionMenu = ({ onShare, onHide }) => (
+const OptionMenu = ({ onShare, onHide, onDelete }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
     <button
       onClick={onShare}
@@ -134,6 +159,16 @@ const OptionMenu = ({ onShare, onHide }) => (
         <FiEyeOff />
       </span>
       <span>Đã bán / Ẩn tin</span>
+    </button>
+    <div className="h-px bg-gray-200" />
+    <button
+      onClick={onDelete}
+      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 cursor-pointer"
+    >
+      <span className="text-lg">
+        <FaRegTrashAlt />
+      </span>
+      <span>Xoá tin</span>
     </button>
   </div>
 );
@@ -212,112 +247,6 @@ const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   );
 };
 
-/* ---------------- Modal "Gia hạn tin" ---------------- */
-const ExtendModal = ({ open, listing, onClose, onApply }) => {
-  const plans = [
-    { days: 15, price: 35100, oldPrice: 39000, discount: 10 },
-    { days: 10, price: 26000, oldPrice: null, discount: 0 },
-    { days: 30, price: 62400, oldPrice: 78000, discount: 20 },
-    { days: 60, price: 117000, oldPrice: 156000, discount: 25 },
-  ];
-  const [selected, setSelected] = useState(plans[0]);
-  useEffect(() => {
-    if (!open) setSelected(plans[0]);
-  }, [open]);
-  if (!open) return null;
-
-  const base = parseVNDate(listing?.expiresOn) || new Date();
-  const next = new Date(base);
-  next.setDate(base.getDate() + (selected?.days || 0));
-  const nextStr = formatVNDate(next);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-2xl rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between px-5 py-3 border-b">
-          <div className="font-semibold text-gray-800">Gia hạn tin đăng</div>
-          <button
-            className="px-2 text-gray-600 text-xl leading-none cursor-pointer"
-            onClick={onClose}
-          >
-            ×
-          </button>
-        </div>
-        <div className="p-5">
-          <div className="font-semibold text-gray-800 mb-3">
-            Chọn thời gian sử dụng
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {plans.map((p) => {
-              const active = selected?.days === p.days;
-              return (
-                <button
-                  key={p.days}
-                  onClick={() => setSelected(p)}
-                  className={`relative text-left rounded-lg border px-4 py-4 cursor-pointer transition ${
-                    active
-                      ? "border-green-600 bg-green-50 ring-1 ring-green-200"
-                      : "border-gray-200 hover:bg-gray-50"
-                  }`}
-                >
-                  {p.discount > 0 && (
-                    <span className="absolute -top-2 -right-2 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">
-                      -{p.discount}%
-                    </span>
-                  )}
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex h-5 w-5 rounded-full border ${
-                        active
-                          ? "border-green-600 bg-blue-600 ring-2 ring-green-200"
-                          : "border-gray-300"
-                      }`}
-                    />
-                    <div>
-                      <div className="font-semibold text-gray-800">
-                        {p.days} ngày
-                      </div>
-                      <div className="text-gray-500">
-                        {p.oldPrice ? (
-                          <>
-                            <span className="line-through mr-2">
-                              {Number(p.oldPrice).toLocaleString("vi-VN")} đ
-                            </span>
-                            <span className="font-medium text-gray-800">
-                              {Number(p.price).toLocaleString("vi-VN")} đ
-                            </span>
-                          </>
-                        ) : (
-                          <span className="font-medium text-gray-800">
-                            {Number(p.price).toLocaleString("vi-VN")} đ
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-4 text-sm text-gray-600">
-            Dự kiến sẽ gia hạn đến{" "}
-            <span className="font-semibold text-gray-800">{nextStr}</span>
-          </p>
-          <div className="mt-4">
-            <button
-              className="w-full px-4 py-3 bg-blue-600 hover:bg-cyan-600 text-white rounded-md font-semibold transition cursor-pointer"
-              onClick={() => onApply(selected)}
-            >
-              Áp dụng
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 /* ---------------- ListingItem ---------------- */
 const ListingItem = ({
   item,
@@ -327,26 +256,12 @@ const ListingItem = ({
   onOpenHideModal,
   menuForId,
   setMenuForId,
-  onOpenExtendModal,
-  onOpenRelist,
-  onUnhide,
   onPayAgain,
+  onUnhide,
 }) => {
   const galleryImage = item.images?.[0];
-  const metrics = item.metrics || {};
-  const isExpired = item.status === "expired";
-  const isHidden = item.status === "hidden";
-  const isPending = item.status === "pending";
-  const isRejected = item.status === "rejected";
-  const isPayment = item.status === "payment";
   const isActive = item.status === "active";
   const canViewDetail = isActive; // chỉ ACTIVE mới cho xem chi tiết
-  const daysToDelete = metrics.daysToDelete ?? 28;
-
-  const pageFromRank =
-    isActive && metrics.rank
-      ? Math.max(1, Math.ceil(Number(metrics.rank) / ITEMS_PER_PAGE))
-      : null;
 
   const menuRef = useRef(null);
   useOnClickOutside(menuRef, () => {
@@ -357,9 +272,7 @@ const ListingItem = ({
   const btnBase =
     "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
   const btnOutline = "border border-gray-300 text-gray-700 hover:bg-gray-50";
-  const btnDangerOutline = "border border-red-200 text-red-600 hover:bg-red-50";
   const btnPrimary = "bg-green-600 hover:bg-green-500 text-white font-semibold";
-  const btnDisabled = "bg-gray-200 text-gray-500 cursor-not-allowed opacity-70";
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -424,6 +337,12 @@ const ListingItem = ({
               <span>
                 Mục <b>{item.category || "Khác"}</b>
               </span>
+              {/* Hiển thị trạng thái thanh toán nếu có */}
+              {item.paymentStatus && (
+                <span className="ml-3">
+                  | Trạng thái thanh toán: <b>{item.paymentStatusText}</b>
+                </span>
+              )}
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
@@ -432,7 +351,7 @@ const ListingItem = ({
             </div>
 
             {/* Ẩn ngày đăng & hết hạn ở trạng thái REJECTED */}
-            {!isRejected && (
+            {item.status !== "rejected" && (
               <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
                 <span>
                   Ngày đăng tin:{" "}
@@ -448,151 +367,82 @@ const ListingItem = ({
                 </span>
               </div>
             )}
-
-            {isExpired && (
-              <div className="mt-3 text-sm rounded-md bg-gray-50 border border-gray-200 px-3 py-2 text-gray-700">
-                Tin đăng sẽ bị xoá khỏi hệ thống sau{" "}
-                <b className="text-red-600">{daysToDelete} ngày</b>
-              </div>
-            )}
           </div>
 
-          {/* Actions */}
+          {/* Actions - CHỈ 4 NÚT CƠ BẢN */}
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            {/* HẾT HẠN & ĐÃ ẨN */}
-            {isExpired ? (
-              <>
-                <button
-                  onClick={() => onOpenRelist(item)}
-                  className={`${btnBase} ${btnPrimary}`}
-                >
-                  <FiRefreshCcw /> Đăng lại
-                </button>
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className={`${btnBase} ${btnDangerOutline}`}
-                >
-                  <FaRegTrashAlt /> Xoá tin
-                </button>
-              </>
-            ) : isHidden ? (
-              <>
-                <button
-                  onClick={() => onUnhide?.(item)}
-                  className={`${btnBase} ${btnPrimary}`}
-                  title="Hiện tin lại"
-                >
-                  <FiEye /> Hiện tin lại
-                </button>
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className={`${btnBase} ${btnDangerOutline}`}
-                >
-                  <FaRegTrashAlt /> Xoá tin
-                </button>
-              </>
-            ) : isRejected ? (
-              <>
-                <button
-                  onClick={() => onEdit(item.id)}
-                  className={`${btnBase} ${btnPrimary}`}
-                  title="Sửa lại tin để gửi duyệt"
-                >
-                  <FiEdit /> Sửa lại tin
-                </button>
-              </>
-            ) : isPayment ? (
-              <>
-                <button
-                  onClick={() => onPayAgain(item)}
-                  className={`${btnBase} ${btnPrimary}`}
-                >
-                  <FiZap /> Thanh toán lại
-                </button>
-                <button
-                  onClick={() => onDelete(item.id)}
-                  className={`${btnBase} ${btnDangerOutline}`}
-                >
-                  <FaRegTrashAlt /> Xoá tin
-                </button>
-              </>
+            {/* Nút 1: Thanh toán / Hiện tin lại */}
+            {item.status === "hidden" ? (
+              <button
+                onClick={() => onUnhide?.(item)}
+                className={`${btnBase} ${btnPrimary}`}
+              >
+                <FiEye /> Hiện tin lại
+              </button>
             ) : (
-              /* ACTIVE / PENDING */
-              <>
-                <button
-                  disabled={isPending}
-                  onClick={() => !isPending && onOpenExtendModal(item)}
-                  className={`${btnBase} ${
-                    isPending ? btnDisabled : btnOutline
-                  }`}
-                >
-                  <FiRefreshCcw /> Gia hạn tin
-                </button>
+              <PaymentButton
+                listingId={item.id}
+                className={`${btnBase} ${btnOutline}`}
+                onSuccess={(response) => {
+                  console.log("Payment created successfully:", response);
+                }}
+                onError={(error) => {
+                  console.error("Payment creation failed:", error);
+                }}
+              >
+                Thanh toán
+              </PaymentButton>
+            )}
 
-                <button
-                  disabled={isPending}
-                  onClick={() => !isPending && onEdit(item.id)}
-                  className={`${btnBase} ${
-                    isPending ? btnDisabled : btnOutline
-                  }`}
-                >
-                  <FiEdit /> Sửa tin
-                </button>
+            {/* Nút 2: Sửa tin */}
+            <button
+              onClick={() => onEdit(item.id)}
+              className={`${btnBase} ${btnOutline}`}
+            >
+              <FiEdit /> Sửa tin
+            </button>
 
-                <div className="relative" ref={menuRef}>
-                  <button
-                    disabled={isPending}
-                    onClick={() => {
-                      if (isPending) return;
-                      setMenuForId((v) => (v === item.id ? null : item.id));
+            {/* Nút 3: Tùy chọn */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => {
+                  setMenuForId((v) => (v === item.id ? null : item.id));
+                }}
+                className={`${btnBase} ${btnOutline}`}
+                aria-haspopup="menu"
+                aria-expanded={menuForId === item.id}
+              >
+                <FiMoreHorizontal /> Tuỳ chọn
+              </button>
+
+              {menuForId === item.id && (
+                <div className="absolute z-20 left-0 md:left-auto md:right-0">
+                  <OptionMenu
+                    onShare={() => {
+                      setMenuForId(null);
+                      alert("Chia sẻ: mở modal chia sẻ ở đây.");
                     }}
-                    className={`${btnBase} ${
-                      isPending ? btnDisabled : btnOutline
-                    }`}
-                    aria-haspopup="menu"
-                    aria-expanded={!isPending && menuForId === item.id}
-                  >
-                    <FiMoreHorizontal /> Tuỳ chọn
-                  </button>
-
-                  {!isPending && menuForId === item.id && (
-                    <div className="absolute z-20 left-0 md:left-auto md:right-0">
-                      <OptionMenu
-                        onShare={() => {
-                          setMenuForId(null);
-                          alert("Chia sẻ: mở modal chia sẻ ở đây.");
-                        }}
-                        onHide={() => {
-                          setMenuForId(null);
-                          onOpenHideModal(item);
-                        }}
-                      />
-                    </div>
-                  )}
+                    onHide={() => {
+                      setMenuForId(null);
+                      onOpenHideModal(item);
+                    }}
+                    onDelete={() => {
+                      setMenuForId(null);
+                      onDelete(item.id);
+                    }}
+                  />
                 </div>
+              )}
+            </div>
 
-                <button
-                  disabled={isPending}
-                  onClick={() => !isPending && onDelete(item.id)}
-                  className={`${btnBase} ${
-                    isPending ? btnDisabled : btnDangerOutline
-                  }`}
-                >
-                  <FaRegTrashAlt /> Xoá tin
-                </button>
-
-                <button
-                  disabled={isPending}
-                  onClick={() => {
-                    /* mở gói đẩy tin */
-                  }}
-                  className={`${btnBase} ${
-                    isPending ? btnDisabled : btnPrimary
-                  }`}
-                >
-                  <FiZap /> Bán nhanh hơn
-                </button>
-              </>
+            {/* Nút 4: Gia hạn tin (chỉ cho tin active) */}
+            {item.status === "active" && (
+              <button
+                onClick={() => onPayAgain(item)}
+                className={`${btnBase} ${btnOutline}`}
+              >
+                <FiRefreshCcw /> Gia hạn tin
+              </button>
             )}
           </div>
         </div>
@@ -629,7 +479,6 @@ const ManageListing = () => {
   // dropdown + modals
   const [menuForId, setMenuForId] = useState(null);
   const [hideFor, setHideFor] = useState(null);
-  const [extendFor, setExtendFor] = useState(null);
 
   // Fetch data từ API
   useEffect(() => {
@@ -638,7 +487,7 @@ const ManageListing = () => {
         setLoading(true);
         setError(null);
 
-        const response = await listingApi.getMyListings(1, 1000);
+        const response = await listingService.getMyListings(1, 1000);
 
         if (response.data.error === 0) {
           const mappedData = mapApiDataToFrontend(response.data.data);
@@ -666,8 +515,10 @@ const ManageListing = () => {
 
   const onDelete = (id) =>
     setListings((prev) => (prev || []).filter((x) => x.id !== id));
+
   const onEdit = (id) =>
     navigate(`/add-listing?mode=edit&id=${id}${location.search}`);
+
   const onNavigate = (listing) => {
     // CHỈ ACTIVE mới cho xem chi tiết
     if (listing?.status !== "active") return;
@@ -675,11 +526,9 @@ const ManageListing = () => {
       state: { listing },
     });
   };
+
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
-
-  // Đăng lại -> mở modal gia hạn; khi áp dụng: active + cập nhật hạn (xử lý ở onApply)
-  const onOpenRelist = (item) => setExtendFor(item);
 
   // ĐÃ ẨN -> Hiện tin lại
   const onUnhide = (item) =>
@@ -689,7 +538,7 @@ const ManageListing = () => {
       )
     );
 
-  // CẦN THANH TOÁN -> Thanh toán lại
+  // Gia hạn tin
   const onPayAgain = (item) => {
     navigate("/payment", { state: { listing: item, retry: true } });
   };
@@ -802,10 +651,8 @@ const ManageListing = () => {
                 onOpenHideModal={setHideFor}
                 menuForId={menuForId}
                 setMenuForId={setMenuForId}
-                onOpenExtendModal={setExtendFor}
-                onOpenRelist={onOpenRelist}
-                onUnhide={onUnhide}
                 onPayAgain={onPayAgain}
+                onUnhide={onUnhide}
               />
             ))}
           </div>
@@ -826,30 +673,6 @@ const ManageListing = () => {
             );
           }
           setHideFor(null);
-        }}
-      />
-
-      {/* Modal Gia hạn / Đăng lại */}
-      <ExtendModal
-        open={!!extendFor}
-        listing={extendFor}
-        onClose={() => setExtendFor(null)}
-        onApply={(plan) => {
-          if (extendFor) {
-            const baseDateObj = parseVNDate(extendFor.expiresOn) || new Date();
-            const baseDateStr = formatVNDate(baseDateObj);
-            const nextDateObj = new Date(baseDateObj);
-            nextDateObj.setDate(baseDateObj.getDate() + (plan?.days || 0));
-            const nextDateStr = formatVNDate(nextDateObj);
-            navigate("/payment", {
-              state: {
-                listing: extendFor,
-                plan,
-                renewal: { baseDateStr, nextDateStr },
-              },
-            });
-          }
-          setExtendFor(null);
         }}
       />
     </MainLayout>

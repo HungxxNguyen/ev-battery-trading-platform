@@ -504,9 +504,7 @@ const AddListing = () => {
         "success"
       );
 
-      // navigate("/payment", {
-      //   state: { origin: "new-listing", listing: listingForPayment, plan }
-      // });
+      navigate("/manage-listing?tab=payment");
     } catch (err) {
       console.error("Create listing error:", err);
       showNotification(

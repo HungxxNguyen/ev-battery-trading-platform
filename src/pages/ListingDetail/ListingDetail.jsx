@@ -1,7 +1,7 @@
 // src/pages/ListingDetail/ListingDetail.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { FiHeart } from "react-icons/fi";
+import { FiHeart, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
 import listingService from "../../services/apis/listingApi";
@@ -24,8 +24,8 @@ const formatCurrency = (value) => {
 const formatListingStatus = (status) => {
   if (!status) return "Khong ro";
   const mapping = {
-    New: "Moi",
-    Used: "Da su dung",
+    New: "Mới",
+    Used: "Đã sử dụng",
   };
   return mapping[status] || status;
 };
@@ -40,6 +40,7 @@ const ListingDetail = () => {
   const [loading, setLoading] = useState(!locationListing);
   const [error, setError] = useState("");
   const [currentImage, setCurrentImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (locationListing && String(locationListing.id) === String(id)) {
@@ -134,6 +135,20 @@ const ListingDetail = () => {
     setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  const openLightbox = () => setLightboxOpen(true);
+  const closeLightbox = () => setLightboxOpen(false);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowLeft") handlePrevImage();
+      if (e.key === "ArrowRight") handleNextImage();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [lightboxOpen, images.length]);
+
   const favoriteItem = listing
     ? {
         id: listing.id,
@@ -148,50 +163,50 @@ const ListingDetail = () => {
 
   const specItems = useMemo(
     () => [
-      { label: "Danh muc", value: listing?.category },
-      { label: "Thuong hieu", value: listing?.brand?.name },
+      { label: "Danh mục", value: listing?.category },
+      { label: "Thương hiệu", value: listing?.brand?.name },
       { label: "Model", value: listing?.model },
       {
-        label: "Nam san xuat",
+        label: "Năm sản xuất",
         value: listing?.yearOfManufacture
           ? String(listing.yearOfManufacture)
           : null,
       },
       {
-        label: "Trang thai",
+        label: "Trạng thái",
         value: formatListingStatus(listing?.listingStatus),
       },
-      { label: "Mau sac", value: listing?.color },
+      { label: "Màu sắc", value: listing?.color },
       {
         label: "Odo",
         value: listing?.odo ? `${listing.odo} km` : null,
       },
       {
-        label: "Dung luong pin",
+        label: "Dung lượng pin",
         value: listing?.batteryCapacity
           ? `${listing.batteryCapacity} kWh`
           : null,
       },
       {
-        label: "Thoi gian sac",
-        value: listing?.chargingTime ? `${listing.chargingTime} gio` : null,
+        label: "Thời gian sạc",
+        value: listing?.chargingTime ? `${listing.chargingTime} giờ` : null,
       },
       {
-        label: "Tam hoat dong",
+        label: "Phạm vi hoạt động",
         value: listing?.actualOperatingRange
           ? `${listing.actualOperatingRange} km`
           : null,
       },
       {
-        label: "Kich thuoc",
+        label: "Kích thước",
         value: listing?.size ? String(listing.size) : null,
       },
       {
-        label: "Khoi luong",
+        label: "Khối lượng",
         value: listing?.mass ? `${listing.mass} kg` : null,
       },
       {
-        label: "Khu vuc",
+        label: "Khu vực",
         value: listing?.area,
       },
     ],
@@ -205,7 +220,7 @@ const ListingDetail = () => {
     if (loading) {
       return (
         <div className="bg-white p-6 rounded-lg shadow-md border text-center">
-          <p className="text-gray-600">Dang tai thong tin tin dang...</p>
+          <p className="text-gray-600">Đang tải thông tin tin đăng...</p>
         </div>
       );
     }
@@ -218,7 +233,7 @@ const ListingDetail = () => {
             to="/"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md"
           >
-            Quay lai trang chu
+            Quay lại trang chủ
           </Link>
         </div>
       );
@@ -228,13 +243,13 @@ const ListingDetail = () => {
       return (
         <div className="bg-white p-6 rounded-lg shadow-md border text-center space-y-4">
           <p className="text-lg font-semibold text-gray-700">
-            Khong tim thay tin dang
+            Không tìm thấy tin đăng
           </p>
           <Link
             to="/"
             className="inline-block px-6 py-3 bg-blue-600 text-white rounded-md"
           >
-            Quay lai trang chu
+            Quay lại trang chủ
           </Link>
         </div>
       );
@@ -254,11 +269,18 @@ const ListingDetail = () => {
                 {"<"}
               </button>
 
-              <img
-                src={images[currentImage]}
-                alt={listing.title}
-                className="w-full h-96 object-cover rounded-lg"
-              />
+              <button
+                type="button"
+                onClick={openLightbox}
+                className="block w-full"
+                aria-label="Xem anh kich thuoc day du"
+              >
+                <img
+                  src={images[currentImage]}
+                  alt={listing.title}
+                  className="w-full h-96 object-cover rounded-lg"
+                />
+              </button>
 
               <button
                 type="button"
@@ -296,7 +318,7 @@ const ListingDetail = () => {
 
           <div className="bg-white p-5 rounded-lg shadow-md border">
             <h2 className="text-lg font-bold text-gray-800 mb-4">
-              Thong tin chi tiet
+              Thông tin chi tiết
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {specItems.map((item) => (
@@ -313,14 +335,14 @@ const ListingDetail = () => {
           </div>
 
           <div className="bg-white p-5 rounded-lg shadow-md border">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Mo ta</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Mô tả</h2>
             {listing.description ? (
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                 {listing.description}
               </p>
             ) : (
               <p className="text-sm text-gray-500">
-                Nguoi ban chua cap nhat mo ta chi tiet.
+                Người bán chưa cập nhật mô tả chi tiết.
               </p>
             )}
           </div>
@@ -359,21 +381,21 @@ const ListingDetail = () => {
 
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex justify-between">
-                <span>Khu vuc</span>
+                <span>Khu vực</span>
                 <span className="font-medium">
-                  {listing.area || "Chua cap nhat"}
+                  {listing.area || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Danh muc</span>
+                <span>Danh mục</span>
                 <span className="font-medium">
-                  {listing.category || "Chua cap nhat"}
+                  {listing.category || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Thuong hieu</span>
+                <span>Thương hiệu</span>
                 <span className="font-medium">
-                  {listing.brand?.name || "Chua cap nhat"}
+                  {listing.brand?.name || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -399,24 +421,24 @@ const ListingDetail = () => {
                 }
                 className="flex-1 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 text-center"
               >
-                Goi ngay
+                Gọi ngay
               </a>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-md border">
             <h2 className="text-lg font-bold text-gray-800 mb-4">
-              Thong tin nguoi ban
+              Thông tin người bán
             </h2>
             <div className="flex items-center gap-4 mb-4">
               <img
                 src={seller?.thumbnail || FALLBACK_AVATAR}
-                alt={seller?.userName || "Nguoi ban"}
+                alt={seller?.userName || "Người bán"}
                 className="w-16 h-16 rounded-full object-cover border"
               />
               <div>
                 <p className="font-semibold text-gray-800">
-                  {seller?.userName || "Nguoi ban"}
+                  {seller?.userName || "Người bán"}
                 </p>
               </div>
             </div>
@@ -429,14 +451,14 @@ const ListingDetail = () => {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>So dien thoai</span>
+                <span>Số điện thoại</span>
                 <span className="font-medium">
-                  {seller?.phoneNumber || "Chua cap nhat"}
+                  {seller?.phoneNumber || "Chưa cập nhật"}
                 </span>
               </div>
               {seller?.provider && (
                 <div className="flex justify-between">
-                  <span>Nguon</span>
+                  <span>Nguồn</span>
                   <span className="font-medium">{seller.provider}</span>
                 </div>
               )}
@@ -450,6 +472,54 @@ const ListingDetail = () => {
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-6">{renderContent()}</div>
+
+      {lightboxOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/70"
+            onClick={closeLightbox}
+            aria-hidden
+          />
+          <div className="relative z-10 max-w-[95vw] max-h-[95vh] flex items-center justify-center px-4">
+            {images.length > 1 && (
+              <button
+                type="button"
+                onClick={handlePrevImage}
+                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
+                aria-label="Anh truoc"
+              >
+                <FiChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            <img
+              src={images[currentImage]}
+              alt={listing?.title || "image"}
+              className="max-w-full max-h-[85vh] object-contain rounded-md shadow-2xl"
+            />
+
+            {images.length > 1 && (
+              <button
+                type="button"
+                onClick={handleNextImage}
+                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
+                aria-label="Anh tiep theo"
+              >
+                <FiChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={closeLightbox}
+              className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
+              aria-label="Dong"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };
