@@ -34,6 +34,7 @@ export default function PlansPage() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   // form state
   const [openForm, setOpenForm] = useState(false);
@@ -55,10 +56,7 @@ export default function PlansPage() {
   );
 
   const statusOptions = useMemo(
-    () => [
-      { value: "Active", label: "Hoạt động" },
-      { value: "Pending", label: "Chờ duyệt" },
-    ],
+    () => [{ value: "Active", label: "Hoạt động" }],
     []
   );
 
@@ -142,15 +140,32 @@ export default function PlansPage() {
     setOpenForm(true);
   };
 
-  const removePlan = (id) => {
-    // Backend delete endpoint not confirmed; keeping removal unimplemented.
-    console.warn("Delete package is not implemented.");
+  const removePlan = async (id) => {
+    if (!id) return;
+    if (!confirm("Xóa gói này?")) return;
+    try {
+      setDeletingId(id);
+      const res = await packageService.deletePackage(id);
+      if (!res.success) {
+        console.error("Xóa gói thất bại:", res.error || res.data);
+        alert(res?.error || "Không thể xóa gói");
+        return;
+      }
+      await loadPlans();
+    } catch (e) {
+      console.error(e);
+      alert(e?.error || e?.message || "Không thể xóa gói");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 text-slate-100">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Quản lý gói đăng bài</h2>
+        <h2 className="text-lg font-semibold text-white">
+          Quản lý gói đăng bài
+        </h2>
         <div className="flex gap-2">
           <Button
             title="Làm mới"
@@ -313,11 +328,19 @@ export default function PlansPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={p.status === "Active" ? "bg-emerald-600/80" : "bg-amber-600/80"}>
+                    <Badge
+                      className={
+                        p.status === "Active"
+                          ? "bg-emerald-600/80"
+                          : "bg-amber-600/80"
+                      }
+                    >
                       {p.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">{currency(p.price)}</TableCell>
+                  <TableCell className="text-right">
+                    {currency(p.price)}
+                  </TableCell>
                   <TableCell className="flex gap-2">
                     <Button
                       title="Chỉnh sửa"
@@ -329,9 +352,10 @@ export default function PlansPage() {
                     <Button
                       title="Xóa gói"
                       onClick={() => removePlan(p.id)}
+                      disabled={deletingId === p.id}
                       className="cursor-pointer rounded-lg bg-rose-500/80 text-white hover:bg-rose-500 gap-2 px-3 py-1.5 text-xs"
                     >
-                      <Trash2 className="h-4 w-4" /> Xóa
+                      <Trash2 className="h-4 w-4" /> {deletingId === p.id ? "Đang xóa..." : "Xóa"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -339,11 +363,12 @@ export default function PlansPage() {
             </TableBody>
           </Table>
           {loading && (
-            <div className="mt-3 text-sm text-slate-400">Đang tải dữ liệu...</div>
+            <div className="mt-3 text-sm text-slate-400">
+              Đang tải dữ liệu...
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
 }
-

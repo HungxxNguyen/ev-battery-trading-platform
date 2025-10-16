@@ -24,5 +24,11 @@ const packageService = {
       data,
     });
   },
+  async deletePackage(id) {
+    if (!id) throw new Error("Thiếu id gói");
+    return await performApiRequest(API_ENDPOINTS_PACKAGE.DELETE_PACKAGE(id), {
+      method: "delete",
+    });
+  },
 };
 export default packageService;

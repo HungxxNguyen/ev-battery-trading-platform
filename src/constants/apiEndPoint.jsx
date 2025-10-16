@@ -20,6 +20,8 @@ export const API_ENDPOINTS_LISTING = {
   GET_MY_LISTINGS: (pageIndex, pageSize) =>
     `/api/Listing/MyListings?pageIndex=${pageIndex}&pageSize=${pageSize}`,
   CREATE_LISTING: "/api/Listing/CreateListing",
+  // Admin: get listings filtered by status/price range/pagination
+  GET_BY_STATUS: "/api/Listing/GetByStatus",
 };
 
 // Các endpoint cho user
