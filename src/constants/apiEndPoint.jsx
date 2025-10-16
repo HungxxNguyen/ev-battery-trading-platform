@@ -24,6 +24,12 @@ export const API_ENDPOINTS_LISTING = {
   GET_BY_STATUS: "/api/Listing/GetByStatus",
 };
 
+// Admin endpoints for listing moderation
+export const API_ENDPOINTS_ADMIN = {
+  ACCEPT_LISTING: (id) => `/api/Admin/Accept-Listing/${id}`,
+  REJECT_LISTING: (id) => `/api/Admin/Reject-Listing/${id}`,
+};
+
 // Các endpoint cho user
 export const API_ENDPOINTS_USER = {
   GET_USER: "/api/User/GetCurrentUser",

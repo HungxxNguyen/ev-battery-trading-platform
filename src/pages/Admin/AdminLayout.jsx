@@ -1,8 +1,8 @@
 // ===============================
 // File: src/pages/Admin/AdminLayout.jsx
 // ===============================
-import React, { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useContext } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../../components/Button/button";
 import logo3 from "../../assets/logo3.png";
 import {
@@ -26,17 +26,22 @@ const GLASS_PANEL =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-2xl";
 
 export default function AdminLayout() {
-  const [page, setPage] = useState("dashboard");
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useContext(AuthContext);
 
-  // Callback chuyển trang từ Dashboard
+  // Xác định trang hiện tại theo URL: /admin/:tab
+  const currentPage = (() => {
+    const seg = location.pathname.split("/")[2] || "";
+    return seg === "" ? "dashboard" : seg;
+  })();
+
+  // Callback điều hướng từ Dashboard
   const goToReviewWith = (_listingId) => {
-    // Có thể lưu _listingId vào state nếu sau này ReviewPage nhận props
-    setPage("review");
+    navigate("/admin/review");
   };
   const goToSupportWith = (_ticketId) => {
-    setPage("support");
+    navigate("/admin/support");
   };
 
   const handleLogout = () => {
@@ -65,38 +70,38 @@ export default function AdminLayout() {
             <SideItem
               icon={<LayoutDashboard className="h-4 w-4" />}
               label="Dashboard"
-              active={page === "dashboard"}
-              onClick={() => setPage("dashboard")}
+              active={currentPage === "dashboard"}
+              onClick={() => navigate("/admin")}
             />
             <SideItem
               icon={<ClipboardCheck className="h-4 w-4" />}
               label="Review"
-              active={page === "review"}
-              onClick={() => setPage("review")}
+              active={currentPage === "review"}
+              onClick={() => navigate("/admin/review")}
             />
             <SideItem
               icon={<Headphones className="h-4 w-4" />}
               label="Support"
-              active={page === "support"}
-              onClick={() => setPage("support")}
+              active={currentPage === "support"}
+              onClick={() => navigate("/admin/support")}
             />
             <SideItem
               icon={<FileText className="h-4 w-4" />}
               label="Plans"
-              active={page === "plans"}
-              onClick={() => setPage("plans")}
+              active={currentPage === "plans"}
+              onClick={() => navigate("/admin/plans")}
             />
             <SideItem
               icon={<Users className="h-4 w-4" />}
               label="Users"
-              active={page === "users"}
-              onClick={() => setPage("users")}
+              active={currentPage === "users"}
+              onClick={() => navigate("/admin/users")}
             />
             <SideItem
               icon={<Building2 className="h-4 w-4" />}
               label="Brands"
-              active={page === "brands"}
-              onClick={() => setPage("brands")}
+              active={currentPage === "brands"}
+              onClick={() => navigate("/admin/brands")}
             />
           </nav>
 
@@ -113,17 +118,17 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className="ml-72 min-h-screen overflow-y-auto px-10 pb-12 pt-24">
-        {page === "dashboard" && (
+        {currentPage === "dashboard" && (
           <DashboardPage
             onSelectListing={goToReviewWith}
             onSelectTicket={goToSupportWith}
           />
         )}
-        {page === "review" && <ReviewPage />}
-        {page === "support" && <SupportPage />}
-        {page === "plans" && <PlansPage />}
-        {page === "users" && <UsersModeration />}
-        {page === "brands" && <BrandPage />}
+        {currentPage === "review" && <ReviewPage />}
+        {currentPage === "support" && <SupportPage />}
+        {currentPage === "plans" && <PlansPage />}
+        {currentPage === "users" && <UsersModeration />}
+        {currentPage === "brands" && <BrandPage />}
       </main>
     </div>
   );
