@@ -1,4 +1,4 @@
-import { API_ENDPOINTS_LISTING } from "../../constants/apiEndPoint";
+import { API_ENDPOINTS_LISTING, API_ENDPOINTS_ADMIN } from "../../constants/apiEndPoint";
 import { performApiRequest } from "../../utils/apiUtils";
 
 const listingService = {
@@ -6,6 +6,19 @@ const listingService = {
     return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
       method: "get",
       params,
+    });
+  },
+
+  async getByStatus({
+    pageIndex = 1,
+    pageSize = 10,
+    from = 0,
+    to = 1000000000,
+    status = "Pending",
+  } = {}) {
+    return await performApiRequest(API_ENDPOINTS_LISTING.GET_BY_STATUS, {
+      method: "get",
+      params: { pageIndex, pageSize, from, to, status },
     });
   },
 
@@ -39,6 +52,30 @@ const listingService = {
       data,
       headers: { "Content-Type": "multipart/form-data" },
     });
+  },
+
+  async acceptListing(id) {
+    if (!id) {
+      return { success: false, error: "Listing id is required", status: null };
+    }
+    return await performApiRequest(API_ENDPOINTS_ADMIN.ACCEPT_LISTING(id), {
+      method: "post",
+    });
+  },
+
+  async rejectListing(id, reason = "") {
+    if (!id) {
+      return { success: false, error: "Listing id is required", status: null };
+    }
+    // Backend expects reason as query param
+    return await performApiRequest(
+      `${API_ENDPOINTS_ADMIN.REJECT_LISTING(id)}?reason=${encodeURIComponent(
+        reason || ""
+      )}`,
+      {
+        method: "post",
+      }
+    );
   },
 };
 

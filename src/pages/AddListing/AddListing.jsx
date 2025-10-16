@@ -35,6 +35,11 @@ const LISTING_STATUS_OPTIONS = [
   { value: "Used", label: "Đã sử dụng" },
 ];
 
+// ===== NEW: constants cho ảnh =====
+const MAX_IMAGES = 10;
+const MAX_SIZE_MB = 10;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+
 // 🔧 Tách các field thành các nhóm để sắp xếp layout
 const MAIN_FIELDS = [
   {
@@ -124,7 +129,13 @@ const MAIN_FIELDS = [
 ];
 
 const AREA_FIELD = [
-  { label: "Khu vực", name: "Area", fieldType: "text", icon: "FaMapMarkerAlt" },
+  {
+    label: "Khu vực",
+    name: "Area",
+    fieldType: "text",
+    icon: "FaMapMarkerAlt",
+    required: true,
+  },
 ];
 
 const DESCRIPTION_FIELD = [
@@ -263,6 +274,7 @@ const fieldComponents = {
 const AddListing = () => {
   const [formData, setFormData] = useState({});
   const [selectedImages, setSelectedImages] = useState([]);
+  const [imageError, setImageError] = useState(""); // ===== NEW
   const [submitting, setSubmitting] = useState(false);
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState(null);
@@ -316,15 +328,32 @@ const AddListing = () => {
   const handleInputChange = (name, value) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
 
+  // ===== updated: thêm kiểm tra & thông báo lỗi ảnh =====
   const addFiles = (files) => {
     if (!files.length) return;
-    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    const remain = Math.max(0, 10 - selectedImages.length);
+
+    let errorMsg = "";
+    const remain = Math.max(0, MAX_IMAGES - selectedImages.length);
     const slice = files.slice(0, remain);
-    const valid = slice.filter(
-      (f) => allowed.includes(f.type) && f.size <= 10 * 1024 * 1024
-    );
+
+    const valid = [];
+    const invalid = [];
+
+    slice.forEach((f) => {
+      const okType = ALLOWED_TYPES.includes(f.type);
+      const okSize = f.size <= MAX_SIZE_MB * 1024 * 1024;
+      if (okType && okSize) valid.push(f);
+      else invalid.push(f);
+    });
+
+    if (invalid.length > 0) {
+      errorMsg = `Có ${invalid.length} ảnh không hợp lệ (định dạng phải là JPG/PNG/GIF/WEBP và ≤ ${MAX_SIZE_MB}MB/ảnh).`;
+    } else if (files.length > remain) {
+      errorMsg = `Tối đa ${MAX_IMAGES} ảnh cho mỗi tin.`;
+    }
+
     setSelectedImages((prev) => [...prev, ...valid]);
+    setImageError(errorMsg);
   };
 
   const handleImageUpload = (e) => addFiles(Array.from(e.target.files || []));
@@ -339,7 +368,6 @@ const AddListing = () => {
   const prepareSubmissionPayload = (packageId = null) => {
     const formDataToSend = new FormData();
 
-    // Thêm PackageId nếu có
     if (packageId) {
       formDataToSend.append("PackageId", packageId);
     } else if (selectedPackage) {
@@ -422,16 +450,13 @@ const AddListing = () => {
     try {
       let payload;
 
-      // Nếu có pendingSubmission thì dùng nó, không thì prepare mới
       if (pendingSubmission) {
         payload = {
           ...pendingSubmission,
           formDataToSend: new FormData(pendingSubmission.formDataToSend),
         };
-        // Thêm PackageId vào pending payload
         payload.formDataToSend.append("PackageId", plan.id);
       } else {
-        // Submit trực tiếp với selectedPackage đã có
         payload = prepareSubmissionPayload(plan.id);
       }
 
@@ -468,7 +493,6 @@ const AddListing = () => {
           : [],
       };
 
-      // Reset form và đóng modal nếu đang mở
       setFormData({});
       setSelectedImages([]);
       setPlanModalOpen(false);
@@ -480,7 +504,6 @@ const AddListing = () => {
         "success"
       );
 
-      // Navigate to payment
       // navigate("/payment", {
       //   state: { origin: "new-listing", listing: listingForPayment, plan }
       // });
@@ -507,7 +530,7 @@ const AddListing = () => {
       "BrandId",
     ];
     for (const field of requiredFields) {
-      if (!formData[field] || formData[field].trim() === "") {
+      if (!formData[field] || String(formData[field]).trim() === "") {
         showNotification(
           `Vui lòng điền ${MAIN_FIELDS.find((f) => f.name === field)?.label}`,
           "error"
@@ -515,12 +538,16 @@ const AddListing = () => {
         return false;
       }
     }
-    if (!selectedPackage) {
-      showNotification("Vui lòng chọn gói đăng tin", "error");
-      return false;
-    }
+
+    // ===== Giữ điều kiện ảnh bắt buộc =====
     if (selectedImages.length === 0) {
       showNotification("Vui lòng tải ít nhất 1 ảnh", "error");
+      setImageError("Bắt buộc: vui lòng tải ít nhất 1 ảnh.");
+      return false;
+    }
+
+    if (!selectedPackage) {
+      showNotification("Vui lòng chọn gói đăng tin", "error");
       return false;
     }
     return true;
@@ -529,17 +556,14 @@ const AddListing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Kiểm tra validation cơ bản
     if (!validateForm()) return;
 
     setSubmitting(true);
 
     try {
-      // Nếu đã có selectedPackage thì submit trực tiếp
       if (selectedPackage) {
         await handlePlanConfirm(selectedPackage);
       } else {
-        // Nếu chưa có thì mở modal để chọn
         const payload = prepareSubmissionPayload();
         setPendingSubmission(payload);
         setPlanModalOpen(true);
@@ -565,7 +589,6 @@ const AddListing = () => {
     setPlanModalOpen(true);
   };
 
-  // Clear selected package when Category changes to prevent mismatch
   useEffect(() => {
     setSelectedPackage((prev) =>
       prev && formData?.Category && prev.packageType !== formData.Category
@@ -574,7 +597,6 @@ const AddListing = () => {
     );
   }, [formData?.Category]);
 
-  // Clear irrelevant fields when Category changes
   useEffect(() => {
     const category = formData?.Category;
     if (!category) return;
@@ -605,19 +627,20 @@ const AddListing = () => {
         <form
           onSubmit={handleSubmit}
           className="bg-white p-8 border border-gray-200 shadow-lg rounded-2xl"
+          noValidate
         >
           {/* Main Fields Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {MAIN_FIELDS.map((item) => {
-              // Conditional visibility based on selected Category
               const category = formData?.Category;
               const isVehicle =
                 category === "ElectricCar" || category === "ElectricMotorbike";
               const isBattery = category === "RemovableBattery";
 
-              // Hide Size & Mass for vehicles; hide Color & Odo for battery
-              const hiddenForVehicle = isVehicle && (item.name === "Size" || item.name === "Mass");
-              const hiddenForBattery = isBattery && (item.name === "Color" || item.name === "Odo");
+              const hiddenForVehicle =
+                isVehicle && (item.name === "Size" || item.name === "Mass");
+              const hiddenForBattery =
+                isBattery && (item.name === "Color" || item.name === "Odo");
               if (hiddenForVehicle || hiddenForBattery) return null;
 
               const isBrand = item.name === "BrandId";
@@ -726,14 +749,18 @@ const AddListing = () => {
 
           {/* Images */}
           <div className="mt-8">
-            <h3 className="font-semibold text-2xl mb-4 text-gray-700">
-              Ảnh minh hoạ
+            {/* ===== NEW: dấu * và aria-required ===== */}
+            <h3 className="font-semibold text-2xl mb-4 text-gray-700 flex items-center gap-2">
+              Ảnh minh hoạ <span className="text-red-500">*</span>
             </h3>
 
             <div
-              className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md bg-white"
+              className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md bg-white ${
+                imageError ? "border-red-400" : "border-gray-300"
+              }`}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
+              aria-required="true"
             >
               <div className="space-y-1 text-center">
                 <Camera className="mx-auto h-12 w-12 text-gray-500" />
@@ -748,16 +775,29 @@ const AddListing = () => {
                       name="file-upload"
                       type="file"
                       className="sr-only"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      accept={ALLOWED_TYPES.join(",")}
                       multiple
                       onChange={handleImageUpload}
+                      // ===== NEW: required khi chưa có ảnh =====
+                      required={selectedImages.length === 0}
+                      aria-invalid={selectedImages.length === 0}
                     />
                   </label>
                   <p>hoặc kéo & thả</p>
                 </div>
                 <p className="text-xs text-gray-500">
-                  PNG, JPG, GIF, WEBP tối đa 10MB/ảnh (tối đa 10 ảnh)
+                  PNG, JPG, GIF, WEBP tối đa {MAX_SIZE_MB}MB/ảnh (tối đa{" "}
+                  {MAX_IMAGES} ảnh)
                 </p>
+
+                {/* ===== NEW: thông báo lỗi/bắt buộc ===== */}
+                {imageError ? (
+                  <p className="mt-2 text-sm text-red-600">{imageError}</p>
+                ) : selectedImages.length === 0 ? (
+                  <p className="mt-2 text-sm text-red-600">
+                    Bắt buộc: vui lòng tải ít nhất 1 ảnh.
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -791,7 +831,10 @@ const AddListing = () => {
           <div className="flex justify-end mt-8">
             <button
               type="submit"
-              disabled={submitting || !selectedPackage}
+              // ===== NEW: disable khi chưa có ảnh =====
+              disabled={
+                submitting || !selectedPackage || selectedImages.length < 1
+              }
               className="cursor-pointer px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200 disabled:opacity-70"
             >
               {submitting ? "Đang đăng..." : "Đăng tin"}
