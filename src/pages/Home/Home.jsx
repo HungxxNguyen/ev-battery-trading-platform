@@ -31,8 +31,8 @@ const formatCurrency = (value) => {
 const formatListingStatus = (status) => {
   if (!status) return "Khong ro";
   const mapping = {
-    New: "Moi",
-    Used: "Da su dung",
+    New: "Mới",
+    Used: "Đã sử dụng",
   };
   return mapping[status] || status;
 };
@@ -46,25 +46,20 @@ const Home = () => {
   const mainCategories = [
     {
       id: "car",
-      title: "Xe o to dien",
+      title: "Xe ô tô điện",
       image: "https://cdn-icons-png.flaticon.com/512/3202/3202926.png",
     },
     {
       id: "bike",
-      title: "Xe may dien",
+      title: "Xe máy điện",
       image:
         "https://tse2.mm.bing.net/th/id/OIP.IY8TgrPvqIlkJaQZ9OqAUwHaFx?w=860&h=670&rs=1&pid=ImgDetMain&o=7&rm=3",
     },
     {
       id: "battery",
-      title: "Pin xe dien",
+      title: "Pin xe điện",
       image:
         "https://img.freepik.com/premium-vector/battery-icon_1076610-15185.jpg",
-    },
-    {
-      id: "other",
-      title: "Phuong tien khac",
-      image: "https://cdn-icons-png.flaticon.com/512/743/743922.png",
     },
   ];
 
@@ -76,7 +71,9 @@ const Home = () => {
       setError("");
 
       try {
-        const response = await listingService.getListings(DEFAULT_LISTING_PARAMS);
+        const response = await listingService.getListings(
+          DEFAULT_LISTING_PARAMS
+        );
 
         if (!active) return;
 
@@ -130,7 +127,7 @@ const Home = () => {
         {/* Danh muc san pham */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
-            Danh muc san pham
+            Danh mục sản phẩm
           </h2>
           <div className="flex gap-4">
             {mainCategories.map((cat) => (
@@ -155,7 +152,7 @@ const Home = () => {
         {/* Tin dang moi nhat */}
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           <h2 className="text-xl font-bold mb-4 text-gray-800">
-            Tin dang moi nhat
+            Tin đăng mới nhất
           </h2>
 
           {error && (
@@ -170,9 +167,12 @@ const Home = () => {
               : listings.length > 0
               ? listings.map((listing) => {
                   const coverImage =
-                    listing.listingImages?.[0]?.imageUrl || FALLBACK_LISTING_IMAGE;
+                    listing.listingImages?.[0]?.imageUrl ||
+                    FALLBACK_LISTING_IMAGE;
                   const favActive = isFavorite(listing.id);
-                  const statusLabel = formatListingStatus(listing.listingStatus);
+                  const statusLabel = formatListingStatus(
+                    listing.listingStatus
+                  );
                   const metaParts = [listing.brand?.name, listing.model].filter(
                     Boolean
                   );
@@ -181,9 +181,6 @@ const Home = () => {
                       ? `Nam ${listing.yearOfManufacture}`
                       : null,
                     listing.odo ? `Odo ${listing.odo} km` : null,
-                    listing.actualOperatingRange
-                      ? `Tam ${listing.actualOperatingRange} km`
-                      : null,
                   ].filter(Boolean);
 
                   return (
@@ -272,7 +269,7 @@ const Home = () => {
               to="/category"
               className="px-6 py-3 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors duration-200 inline-block"
             >
-              Xem them tin dang
+              Xem thêm tin đăng
             </Link>
           </div>
         </div>

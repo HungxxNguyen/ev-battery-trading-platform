@@ -23,6 +23,8 @@ import About from "../pages/About/About";
 import ProfileTab from "../pages/Profile/ProfileTab";
 import Transaction from "../pages/Transaction/Transaction";
 import Forbidden from "../pages/Forbidden/Forbidden";
+import PaymentFailed from "../pages/PaymentStatus/PaymentFailed.jsx";
+import PaymentSuccess from "../pages/PaymentStatus/PaymentSuccess.jsx";
 
 // Admin pages
 import AdminLayout from "../pages/Admin/AdminLayout.jsx";
@@ -52,6 +54,8 @@ const AppRouter = () => {
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/about" element={<About />} />
           <Route path="/forbidden" element={<Forbidden />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-failed" element={<PaymentFailed />} />
 
           {/* User-authenticated (không yêu cầu role cụ thể) */}
           <Route element={<ProtectedRoute />}>

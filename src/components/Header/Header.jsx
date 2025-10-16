@@ -130,7 +130,7 @@ export default function Header() {
               to="/"
               className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 py-2 relative group whitespace-nowrap"
             >
-              Home
+              Trang chủ
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-cyan-400 group-hover:w-full transition-all duration-300"></span>
             </Link>
 
@@ -140,7 +140,7 @@ export default function Header() {
                 onClick={() => toggleDropdown("sell")}
                 className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
               >
-                Sell
+                Bán
                 <svg
                   className="w-4 h-4 ml-1"
                   fill="none"
@@ -182,7 +182,7 @@ export default function Header() {
                 onClick={() => toggleDropdown("shop")}
                 className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
               >
-                Shop
+                Sản phẩm
                 <svg
                   className="w-4 h-4 ml-1"
                   fill="none"

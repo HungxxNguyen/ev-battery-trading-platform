@@ -1,4 +1,7 @@
-import { API_ENDPOINTS_LISTING, API_ENDPOINTS_ADMIN } from "../../constants/apiEndPoint";
+import {
+  API_ENDPOINTS_LISTING,
+  API_ENDPOINTS_ADMIN,
+} from "../../constants/apiEndPoint";
 import { performApiRequest } from "../../utils/apiUtils";
 
 const listingService = {
@@ -76,6 +79,18 @@ const listingService = {
         method: "post",
       }
     );
+  },
+  async getVnPayUrl(id) {
+    if (!id) {
+      return {
+        success: false,
+        error: "Listing id is required",
+        status: null,
+      };
+    }
+    return await performApiRequest(API_ENDPOINTS_LISTING.LISTING_VNPAY(id), {
+      method: "get",
+    });
   },
 };
 
