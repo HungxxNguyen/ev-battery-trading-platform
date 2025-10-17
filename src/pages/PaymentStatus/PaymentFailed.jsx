@@ -1,33 +1,49 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FaTimesCircle } from "react-icons/fa";
+import { FiXCircle } from "react-icons/fi";
+import { Button } from "../../components/Button/button";
+import MainLayout from "../../components/layout/MainLayout";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../components/Card/card";
 
 const PaymentFailed = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white text-[#5e3a1e] px-4">
-      <FaTimesCircle className="text-red-500 text-7xl mb-6" />
-      <h1 className="text-4xl font-bold mb-4">Thanh toán thất bại!</h1>
-      <p className="text-center max-w-md text-lg mb-6">
-        Rất tiếc, đã có sự cố xảy ra trong quá trình thanh toán. Vui lòng thử
-        lại hoặc liên hệ với <span className="font-semibold">EBTP</span> để được
-        hỗ trợ.
-      </p>
-
-      <div className="flex gap-4">
-        <Link
-          to="/"
-          className="bg-[#5e3a1e] text-white px-6 py-3 rounded hover:bg-[#4a2f15] transition"
-        >
-          Quay về trang chủ
-        </Link>
-        <Link
-          to="/manage-listing?tab=payment"
-          className="border border-[#5e3a1e] text-[#5e3a1e] px-6 py-3 rounded hover:bg-[#f5f5f5] transition"
-        >
-          Xem tin đăng chờ thanh toán
-        </Link>
-      </div>
-    </div>
+    <MainLayout>
+      <section className="bg-gradient-to-b from-gray-900 to-blue-900 py-16">
+        <div className="max-w-xl mx-auto px-6">
+          <Card className="bg-gray-800/80 border border-cyan-500/30 text-cyan-100 backdrop-blur-md shadow-xl shadow-cyan-500/20">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 rounded-full grid place-items-center bg-rose-500/10 ring-2 ring-rose-400/40">
+                <FiXCircle className="w-9 h-9 text-rose-400" />
+              </div>
+              <CardTitle className="text-white text-2xl md:text-3xl">
+                Thanh toán thất bại!
+              </CardTitle>
+              <p className="text-blue-200 mt-2">
+                Rất tiếc, đã có sự cố trong quá trình thanh toán. Vui lòng thử
+                lại
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/manage-listing?tab=payment">
+                  <Button className="px-5 py-3">Xem tin chờ thanh toán</Button>
+                </Link>
+                <Link to="/">
+                  <Button variant="outline" className="px-5 py-3">
+                    Về trang chủ
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    </MainLayout>
   );
 };
 
