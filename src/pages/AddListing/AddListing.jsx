@@ -399,10 +399,10 @@ const AddListing = () => {
     const requiredDefaults = {
       Size: "0",
       BrandId: formData.BrandId || "",
-      Color: formData.Color || "string",
+      Color: formData.Color || "--",
       BatteryCapacity: "0",
       Price: formData.Price ? parseFloat(formData.Price) : "0",
-      Model: formData.Model || "string",
+      Model: formData.Model || "--",
       ActualOperatingRange: "0",
       Area: formData.Area || "string",
       YearOfManufacture: "0",

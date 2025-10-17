@@ -67,6 +67,22 @@ const formatVNDate = (date) =>
       ).padStart(2, "0")}/${date.getFullYear()}`
     : "";
 
+// Format: "HH:mm dd/MM/yyyy"
+const formatVNDateTime = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d)) return "";
+  const time = d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${time} ${day}/${month}/${year}`;
+};
+
 /* ---------------- Mapping API data to frontend format ---------------- */
 const mapApiDataToFrontend = (apiData) => {
   if (!apiData || !Array.isArray(apiData)) return [];
@@ -107,6 +123,9 @@ const mapApiDataToFrontend = (apiData) => {
       category: categoryMapping[item.category] || item.category,
       location: item.area || "Đang cập nhật",
       images: item.listingImages?.map((img) => img.imageUrl) || [],
+      activatedAt: item.activatedAt,
+      expiredAt: item.expiredAt,
+      creationDate: item.creationDate,
       postedOn: formatVNDate(new Date()), // Cần API cung cấp ngày đăng
       expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Cần API cung cấp ngày hết hạn
       payment: item.payment || false, // Thêm trường payment từ API
@@ -356,13 +375,19 @@ const ListingItem = ({
                 <span>
                   Ngày đăng tin:{" "}
                   <strong className="font-medium text-gray-700">
-                    {item.postedOn}
+                    {item.activatedAt
+                      ? formatVNDateTime(new Date(item.activatedAt))
+                      : item.creationDate
+                      ? formatVNDateTime(new Date(item.creationDate))
+                      : item.postedOn}
                   </strong>
                 </span>
                 <span>
                   Ngày hết hạn:{" "}
                   <strong className="font-medium text-gray-700">
-                    {item.expiresOn}
+                    {item.expiredAt
+                      ? formatVNDateTime(new Date(item.expiredAt))
+                      : item.expiresOn}
                   </strong>
                 </span>
               </div>
