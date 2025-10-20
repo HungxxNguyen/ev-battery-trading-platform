@@ -1,12 +1,16 @@
-// src/pages/ManageDetail.jsx
+// src/pages/ManageDetail/ManageDetail.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiMapPin, FiHeart } from "react-icons/fi";
+import { FiArrowLeft, FiMapPin, FiMail, FiPhone } from "react-icons/fi";
 import listingService from "../../services/apis/listingApi";
+import brandService from "../../services/apis/brandApi";
+import userService from "../../services/apis/userApi";
+// package-related imports removed
 
 const FALLBACK_IMAGE = "https://placehold.co/1200x800?text=EV+Listing";
+const FALLBACK_AVATAR = "https://placehold.co/160x160?text=User";
 
 const currency = (n) =>
   (Number(n) || 0).toLocaleString("vi-VN", {
@@ -59,7 +63,11 @@ const FieldGrid = ({ title, fields, data }) => {
             <span className="text-gray-800">
               {f.name === "price"
                 ? currency(data?.[f.name] ?? 0)
-                : data?.[f.name] ?? "-"}
+                : data?.[f.name] === undefined ||
+                  data?.[f.name] === null ||
+                  data?.[f.name] === ""
+                ? "-"
+                : data?.[f.name]}
             </span>
           </div>
         ))}
@@ -84,35 +92,158 @@ const ManageDetail = () => {
       try {
         setLoading(true);
         setError(null);
-        let item = null;
 
-        const res = await listingService.getListingDetail(id);
-        const payload = res?.data;
+        // Fetch listing detail + current user concurrently
+        const [detailRes, userRes] = await Promise.all([
+          listingService.getById(id),
+          userService.getCurrentUser(),
+        ]);
+
+        let item = null;
+        // Robustly parse both GetById and GetDetail shapes
+        const payload = detailRes?.data;
         if (payload?.error === 0 && payload?.data) {
           item = payload.data;
-        } else if (payload?.data) {
+        } else if (
+          payload?.data &&
+          typeof payload.data === "object" &&
+          !Array.isArray(payload.data)
+        ) {
           item = payload.data;
+        } else if (payload && typeof payload === "object") {
+          item = payload;
         }
 
         if (!item && listingFromState) item = listingFromState;
         if (!item) throw new Error("Không tìm thấy tin đăng");
 
-        const images =
-          item.listingImages?.map((i) => i.imageUrl).filter(Boolean) ||
-          item.images ||
+        // Package enrichment (fetch only if needed)
+        let pkg = null; // package logic removed
+        // Try to resolve a package id from multiple possible shapes
+        const pkgIdCandidates = [];
+        const pkgId = pkgIdCandidates.length ? pkgIdCandidates[0] : null;
+        // Package fetch removed
+
+        // Seller enrichment (fallback to current user)
+        const currentUser = userRes?.data?.data || {};
+
+        // Prefer images from item; if missing, try picking from navigation state,
+        // and finally try fetching detail endpoint to get images.
+        let images =
+          (Array.isArray(item?.listingImages)
+            ? item.listingImages
+                .map((i) =>
+                  typeof i === "string" ? i : i?.imageUrl || i?.url || ""
+                )
+                .filter(Boolean)
+            : null) ||
+          item?.images ||
           [];
+
+        // If the detail API returns an empty array, but we navigated from
+        // ManageListing with populated images in location.state, use those.
+        if ((!images || images.length === 0) && listingFromState) {
+          const stateImages = Array.isArray(listingFromState.listingImages)
+            ? listingFromState.listingImages
+                .map((i) =>
+                  typeof i === "string" ? i : i?.imageUrl || i?.url || ""
+                )
+                .filter(Boolean)
+            : listingFromState.images || [];
+          if (stateImages?.length) {
+            images = stateImages;
+          }
+        }
+
+        // If images/brand are missing, try detail endpoint to enrich data
+        if ((!images || images.length === 0 || !item?.brand?.name) && id) {
+          const detailAlt = await listingService.getListingDetail(id);
+          const altPayload = detailAlt?.data;
+          const altItem =
+            (altPayload?.data &&
+            typeof altPayload.data === "object" &&
+            !Array.isArray(altPayload.data)
+              ? altPayload.data
+              : Array.isArray(altPayload)
+              ? altPayload[0] ?? null
+              : altPayload && typeof altPayload === "object"
+              ? altPayload
+              : null) || null;
+          if (altItem) {
+            const altImages = Array.isArray(altItem.listingImages)
+              ? altItem.listingImages
+                  .map((i) =>
+                    typeof i === "string" ? i : i?.imageUrl || i?.url || ""
+                  )
+                  .filter(Boolean)
+              : altItem.images || [];
+            images = altImages && altImages.length ? altImages : images;
+
+            // Enrich brand and other fields if missing from getById
+            if (!item?.brand?.name && altItem?.brand?.name) {
+              item = { ...item, brand: altItem.brand };
+            }
+            // Package enrichment removed
+          }
+        }
+
+        // If brand still missing but we have a brand id, fetch brand by id
+        if (!item?.brand?.name) {
+          const possibleBrandId =
+            item?.brandId ??
+            item?.BrandId ??
+            item?.brandID ??
+            item?.brand?.id ??
+            item?.brand?.Id ??
+            item?.brand?.ID ??
+            null;
+          if (possibleBrandId) {
+            try {
+              const brRes = await brandService.getBrandById(possibleBrandId);
+              const brPayload = brRes?.data;
+              const brandObj =
+                (brPayload?.data && typeof brPayload.data === "object"
+                  ? brPayload.data
+                  : brPayload && typeof brPayload === "object"
+                  ? brPayload
+                  : null) || null;
+              if (brandObj) {
+                const brId =
+                  brandObj.id ?? brandObj.Id ?? brandObj.ID ?? possibleBrandId;
+                const brName =
+                  brandObj.name ?? brandObj.Name ?? brandObj.brandName ?? null;
+                item = {
+                  ...item,
+                  brand: {
+                    id: brId,
+                    name: brName,
+                    ...brandObj,
+                  },
+                };
+              }
+            } catch (e) {
+              // ignore brand fetch error, fallback to raw brandName if any
+            }
+          }
+        }
 
         const view = {
           ...item,
           images: images.length ? images : [FALLBACK_IMAGE],
           categoryLabel:
             CATEGORY_LABEL[item.category] || item.category || "Khác",
-          brandName: item.brand?.name || "",
-          sellerName: item.user?.userName || item.user?.email || "",
-          sellerEmail: item.user?.email || "",
-          sellerPhone: item.user?.phoneNumber || "",
-          paymentStatusVi:
-            PAYMENT_STATUS_VI[item.paymentStatus] || item.paymentStatus,
+          brandName:
+            item.brand?.name ?? item.brandName ?? item.BrandName ?? null,
+          listingStatus: item.listingStatus || item.status || null,
+          sellerName:
+            item.user?.userName ||
+            item.user?.email ||
+            currentUser?.userName ||
+            "",
+          sellerEmail: item.user?.email || currentUser?.email || "",
+          sellerPhone: item.user?.phoneNumber || currentUser?.phoneNumber || "",
+          sellerAvatar:
+            item.user?.thumbnail || currentUser?.thumbnail || FALLBACK_AVATAR,
         };
 
         setDetail(view);
@@ -296,12 +427,7 @@ const ManageDetail = () => {
                     Mục <b>{categoryLabel}</b>
                   </p>
                 </div>
-                <button
-                  className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 cursor-pointer"
-                  title="Lưu"
-                >
-                  <FiHeart />
-                </button>
+                <button className="hidden" title="Lưu"></button>
               </div>
 
               <div className="mt-3 flex items-center gap-2">
@@ -319,7 +445,10 @@ const ManageDetail = () => {
                   <>
                     <span className="text-gray-400">|</span>
                     <span>
-                      Cập nhật {formatVNDateTime(detail.activatedAt || detail.creationDate)}
+                      Cập nhật{" "}
+                      {formatVNDateTime(
+                        detail.activatedAt || detail.creationDate
+                      )}
                     </span>
                   </>
                 )}
@@ -329,7 +458,8 @@ const ManageDetail = () => {
                 <div className="mt-2 text-sm text-gray-600 flex flex-wrap gap-4">
                   {detail.activatedAt && (
                     <span>
-                      Ngày đăng tin: <b>{formatVNDateTime(detail.activatedAt)}</b>
+                      Ngày đăng tin:{" "}
+                      <b>{formatVNDateTime(detail.activatedAt)}</b>
                     </span>
                   )}
                   {detail.expiredAt && (
@@ -342,7 +472,11 @@ const ManageDetail = () => {
             </div>
 
             {/* Thông tin chung */}
-            <FieldGrid title="Thông tin chung" fields={commonFields} data={detail} />
+            <FieldGrid
+              title="Thông tin chung"
+              fields={commonFields}
+              data={detail}
+            />
 
             {/* Thông số theo danh mục */}
             <FieldGrid
@@ -356,20 +490,53 @@ const ManageDetail = () => {
           <div className="space-y-4">
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="text-sm text-gray-700">
-                <div className="font-semibold">Người bán</div>
-                <div className="mt-2 text-gray-600 space-y-1">
-                  <div>Tên: <b>{detail.sellerName || "-"}</b></div>
-                  <div>Email: <b>{detail.sellerEmail || "-"}</b></div>
-                  <div>Điện thoại: <b>{detail.sellerPhone || "-"}</b></div>
+                <div className="mt-3 flex items-center gap-4">
+                  <img
+                    src={detail.sellerAvatar || FALLBACK_AVATAR}
+                    alt={detail.sellerName || ""}
+                    className="w-16 h-16 rounded-full object-cover border"
+                  />
+                  <div className="text-gray-700">
+                    <div className="text-base font-semibold text-gray-800">
+                      {detail.sellerName || "-"}
+                    </div>
+                    <div className="mt-1 text-sm text-gray-600 flex flex-col gap-1">
+                      <div className="inline-flex items-center gap-2 truncate">
+                        <FiMail className="text-gray-400" />
+                        <span className="truncate">
+                          {detail.sellerEmail || "-"}
+                        </span>
+                      </div>
+                      <div className="inline-flex items-center gap-2">
+                        <FiPhone className="text-gray-400" />
+                        <span>{detail.sellerPhone || "-"}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-4 text-gray-700">
+
+                <div className="hidden">
+                  <div>
+                    Tên: <b>{detail.sellerName || "-"}</b>
+                  </div>
+                  <div>
+                    Email: <b>{detail.sellerEmail || "-"}</b>
+                  </div>
+                  <div>
+                    Điện thoại: <b>{detail.sellerPhone || "-"}</b>
+                  </div>
+                </div>
+                <div className="mt-4 text-gray-700 hidden">
                   <div className="font-semibold">Gói đang dùng</div>
                   <div className="text-gray-600">
                     {detail.package?.name ? (
                       <>
                         <span>{detail.package?.name}</span>
-                        {typeof detail.package?.durationInDays !== "undefined" && (
-                          <span className="ml-2 text-sm text-gray-500">({detail.package?.durationInDays} ngày)</span>
+                        {typeof detail.package?.durationInDays !==
+                          "undefined" && (
+                          <span className="ml-2 text-sm text-gray-500">
+                            ({detail.package?.durationInDays} ngày)
+                          </span>
                         )}
                       </>
                     ) : (
@@ -390,11 +557,25 @@ const ManageDetail = () => {
                 </button>
                 <button
                   className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-500 text-white font-semibold cursor-pointer"
-                  onClick={() => navigate(`/add-listing?mode=edit&id=${detail.id}`)}
+                  onClick={() =>
+                    navigate(`/add-listing?mode=edit&id=${detail.id}`)
+                  }
                 >
                   Sửa tin
                 </button>
               </div>
+
+              {false && detail.paymentStatus === "AwaitingPayment" && (
+                <div className="mt-3">
+                  <div
+                    listingId={detail.id}
+                    variant="primary"
+                    className="w-full justify-center"
+                  >
+                    Thanh toán gói
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bình luận placeholder */}
@@ -412,4 +593,3 @@ const ManageDetail = () => {
 };
 
 export default ManageDetail;
-

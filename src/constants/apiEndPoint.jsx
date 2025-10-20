@@ -17,6 +17,8 @@ export const API_ENDPOINTS_AUTH = {
 export const API_ENDPOINTS_LISTING = {
   GET_ALL: "/api/Listing/GetAll",
   GET_DETAIL: "/api/Listing/GetDetail",
+  // Backend detail by id (per provided cURL)
+  GET_BY_ID: (id) => `/api/Listing/GetById/${id}`,
   GET_MY_LISTINGS: (pageIndex, pageSize) =>
     `/api/Listing/MyListings?pageIndex=${pageIndex}&pageSize=${pageSize}`,
   CREATE_LISTING: "/api/Listing/CreateListing",
