@@ -1,23 +1,16 @@
 // ===============================
 // File: src/pages/Admin/DashboardPage.jsx
 // ===============================
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "../../components/Card/card";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
-} from "../../components/Table/table";
 import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
+import listingService from "../../services/apis/listingApi";
 import {
   LineChart,
   Line,
@@ -43,12 +36,6 @@ const KPI_CARD_STYLES = [
 ];
 const COLORS = ["#0ea5e9", "#10b981", "#f59e0b"]; // pie colors
 
-const kpis = [
-  { label: "Tổng User", value: 12480, sub: "+3.1% vs 7d" },
-  { label: "Bài chờ duyệt", value: 128, sub: "24 quá hạn" },
-  { label: "User bị báo xấu", value: 37, sub: "+5 hôm nay" },
-  { label: "Doanh thu hôm nay", value: 92.4, sub: "+18% vs hôm qua" },
-];
 const revenueData = Array.from({ length: 30 }).map((_, i) => ({
   day: i + 1,
   revenue: Math.round(50 + Math.random() * 120),
@@ -61,32 +48,6 @@ const planMix = [
   { name: "Free", value: 56 },
   { name: "Pro", value: 34 },
   { name: "VIP", value: 10 },
-];
-const pendingPosts = [
-  {
-    id: "lst_001",
-    title: "Xe điện VinFast Vento S 2022",
-    seller: "Nguyễn A",
-    price: 18500000,
-    createdAt: "2025-09-24 09:12",
-    category: "Xe điện",
-  },
-  {
-    id: "lst_002",
-    title: "Pin Lithium 60V - 48Ah (cũ 80%)",
-    seller: "Trần B",
-    price: 4200000,
-    createdAt: "2025-09-24 08:41",
-    category: "Pin",
-  },
-  {
-    id: "lst_003",
-    title: "Xe đạp điện Pega Aura 2021",
-    seller: "Lâm C",
-    price: 6900000,
-    createdAt: "2025-09-25 10:05",
-    category: "Xe điện",
-  },
 ];
 const openTickets = [
   {
@@ -107,12 +68,6 @@ const openTickets = [
   },
 ];
 
-const currency = (v) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(v);
 const formatKpiValue = (k) =>
   k.label.includes("Doanh thu")
     ? `${k.value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}m₫`
@@ -123,10 +78,49 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
     () => revenueData.reduce((a, b) => a + b.revenue, 0),
     []
   );
+  // Fetch total pending listings for KPI
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await listingService.getByStatus({
+          pageIndex: 1,
+          pageSize: 1,
+          from: 0,
+          to: 1000000000,
+          status: "Pending",
+        });
+        if (cancelled) return;
+        if (res?.success && res?.data) {
+          const d = res.data;
+          const total =
+            (typeof d.totalRecords === "number" && d.totalRecords) ||
+            (typeof d.total === "number" && d.total) ||
+            (typeof d.totalCount === "number" && d.totalCount) ||
+            (typeof d.count === "number" && d.count) ||
+            (Array.isArray(d.data) ? d.data.length : 0);
+          setPendingCount(Number(total) || 0);
+        }
+      } catch (_) {
+        // silent fail; keep 0
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const onRowKey = (e, id) => {
-    if (e.key === "Enter") onSelectListing?.(id);
-  };
+  const kpiList = useMemo(
+    () => [
+      { label: "Tổng User", value: 12480, sub: "+3.1% vs 7d" },
+      { label: "Bài chờ duyệt", value: pendingCount, sub: "" },
+      { label: "User bị báo xấu", value: 37, sub: "+5 hôm nay" },
+      { label: "Doanh thu hôm nay", value: 92.4, sub: "+18% vs hôm qua" },
+    ],
+    [pendingCount]
+  );
+
   const onTicketKey = (e, id) => {
     if (e.key === "Enter") onSelectTicket?.(id);
   };
@@ -135,7 +129,7 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
     <div className="mx-auto max-w-7xl grid gap-6 text-slate-100">
       {/* KPI */}
       <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((k, i) => (
+        {kpiList.map((k, i) => (
           <div
             key={i}
             className={`${
@@ -146,7 +140,9 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
             <div className="text-3xl font-extrabold mt-2">
               {formatKpiValue(k)}
             </div>
-            <div className="text-xs opacity-90 mt-2">{k.sub}</div>
+            {k.sub ? (
+              <div className="text-xs opacity-90 mt-2">{k.sub}</div>
+            ) : null}
           </div>
         ))}
       </section>
@@ -219,7 +215,7 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
 
         <Card className={GLASS_CARD}>
           <CardHeader>
-            <CardTitle>Tỉ lệ gói</CardTitle>
+            <CardTitle>Tỷ lệ gói</CardTitle>
           </CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
@@ -243,70 +239,8 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
         </Card>
       </section>
 
-      {/* Pending + Support below */}
+      {/* Support */}
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-x-6 gap-y-8">
-        <Card className={`xl:col-span-3 ${GLASS_CARD}`}>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle>Hàng chờ duyệt bài</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <Table className="text-slate-200 text-sm">
-              <TableHeader className="bg-slate-900/40 border-b border-slate-800/60 [&_th]:text-slate-300">
-                <TableRow>
-                  <TableHead className="w-[120px]">Mã</TableHead>
-                  <TableHead>Tiêu đề</TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    Danh mục
-                  </TableHead>
-                  <TableHead className="hidden lg:table-cell">
-                    Người bán
-                  </TableHead>
-                  <TableHead className="text-right">Giá</TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    Tạo lúc
-                  </TableHead>
-                  <TableHead className="w-[140px]">Trạng thái</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="[&_tr:last-child]:border-0 [&>tr>td]:py-3">
-                {pendingPosts.map((p) => (
-                  <TableRow
-                    key={p.id}
-                    role="button"
-                    tabIndex={0}
-                    title="Xem & duyệt bài"
-                    onClick={() => onSelectListing?.(p.id)}
-                    onKeyDown={(e) => onRowKey(e, p.id)}
-                    className="cursor-pointer border-b border-slate-800/60 bg-slate-900/35 transition-colors hover:bg-slate-800/60 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  >
-                    <TableCell className="font-mono text-xs">{p.id}</TableCell>
-                    <TableCell className="font-medium underline text-primary">
-                      {p.title}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {p.category}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {p.seller}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {currency(p.price)}
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs text-slate-400">
-                      {p.createdAt}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <Badge className="inline-flex items-center whitespace-nowrap px-2.5 py-1 bg-amber-500/80 text-white">
-                        Đang chờ
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
         <Card className={`xl:col-span-3 ${GLASS_CARD}`}>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Hỗ trợ (Open)</CardTitle>
@@ -327,13 +261,13 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
                     <div>
                       <p className="text-sm font-medium">{t.subject}</p>
                       <p className="text-xs text-slate-400 mt-1">
-                        #{t.id} • {t.user}
+                        #{t.id} · {t.user}
                       </p>
                     </div>
                     <Badge className="uppercase">{t.tag}</Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs mt-3">
-                    <span className="text-slate-400">SLA: {t.sla || "—"}</span>
+                    <span className="text-slate-400">SLA: {t.sla || "-"}</span>
                     <Button
                       className="cursor-pointer bg-black text-white hover:bg-neutral-800 px-4 py-1.5 text-sm rounded-lg"
                       onClick={(e) => {
