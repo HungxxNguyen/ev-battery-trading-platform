@@ -293,6 +293,130 @@ const ListingItem = ({
   const btnOutline = "border border-gray-300 text-gray-700 hover:bg-gray-50";
   const btnPrimary = "bg-green-600 hover:bg-green-500 text-white font-semibold";
 
+  // Render actions theo trạng thái
+  const renderActions = () => {
+    switch (item.status) {
+      case "active": // ĐANG HIỂN THỊ
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3 relative">
+            {/* Nút chỉnh sửa */}
+            <button
+              onClick={() => onEdit(item.id)}
+              className={`${btnBase} ${btnOutline}`}
+            >
+              <FiEdit /> Sửa tin
+            </button>
+
+            {/* Nút tùy chọn */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => {
+                  setMenuForId((v) => (v === item.id ? null : item.id));
+                }}
+                className={`${btnBase} ${btnOutline}`}
+                aria-haspopup="menu"
+                aria-expanded={menuForId === item.id}
+              >
+                <FiMoreHorizontal /> Tuỳ chọn
+              </button>
+
+              {menuForId === item.id && (
+                <div className="absolute z-20 left-0 md:left-auto md:right-0">
+                  <OptionMenu
+                    onShare={() => {
+                      setMenuForId(null);
+                      alert("Chia sẻ: mở modal chia sẻ ở đây.");
+                    }}
+                    onHide={() => {
+                      setMenuForId(null);
+                      onOpenHideModal(item);
+                    }}
+                    onDelete={() => {
+                      setMenuForId(null);
+                      onDelete(item.id);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case "rejected": // BỊ TỪ CHỐI
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Chỉ hiển thị nút chỉnh sửa */}
+            <button
+              onClick={() => onEdit(item.id)}
+              className={`${btnBase} ${btnOutline}`}
+            >
+              <FiEdit /> Sửa tin
+            </button>
+          </div>
+        );
+
+      case "expired": // HẾT HẠN
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Chỉ hiển thị nút gia hạn tin */}
+            <button
+              onClick={() => onPayAgain(item)}
+              className={`${btnBase} ${btnPrimary}`}
+            >
+              <FiRefreshCcw /> Gia hạn tin
+            </button>
+          </div>
+        );
+
+      case "payment": // CẦN THANH TOÁN
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Chỉ hiển thị nút thanh toán */}
+            <PaymentButton
+              listingId={item.id}
+              className={`${btnBase} ${btnPrimary}`}
+              onSuccess={(response) => {
+                console.log("Payment created successfully:", response);
+              }}
+              onError={(error) => {
+                console.error("Payment creation failed:", error);
+              }}
+            >
+              Thanh toán
+            </PaymentButton>
+          </div>
+        );
+
+      case "pending": // CHỜ DUYỆT
+        // Ẩn hết nút
+        return null;
+
+      case "hidden": // ĐÃ ẨN
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Hiển thị lại tin */}
+            <button
+              onClick={() => onUnhide?.(item)}
+              className={`${btnBase} ${btnPrimary}`}
+            >
+              <FiEye /> Hiện tin lại
+            </button>
+
+            {/* Xóa tin */}
+            <button
+              onClick={() => onDelete(item.id)}
+              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
+            >
+              <FaRegTrashAlt /> Xóa tin
+            </button>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
       <div className="p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
@@ -394,82 +518,8 @@ const ListingItem = ({
             )}
           </div>
 
-          {/* Actions - CHỈ 4 NÚT CƠ BẢN */}
-          <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            {/* Nút 1: Thanh toán / Hiện tin lại */}
-            {item.status === "hidden" ? (
-              <button
-                onClick={() => onUnhide?.(item)}
-                className={`${btnBase} ${btnPrimary}`}
-              >
-                <FiEye /> Hiện tin lại
-              </button>
-            ) : (
-              <PaymentButton
-                listingId={item.id}
-                className={`${btnBase} ${btnOutline}`}
-                onSuccess={(response) => {
-                  console.log("Payment created successfully:", response);
-                }}
-                onError={(error) => {
-                  console.error("Payment creation failed:", error);
-                }}
-              >
-                Thanh toán
-              </PaymentButton>
-            )}
-
-            {/* Nút 2: Sửa tin */}
-            <button
-              onClick={() => onEdit(item.id)}
-              className={`${btnBase} ${btnOutline}`}
-            >
-              <FiEdit /> Sửa tin
-            </button>
-
-            {/* Nút 3: Tùy chọn */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => {
-                  setMenuForId((v) => (v === item.id ? null : item.id));
-                }}
-                className={`${btnBase} ${btnOutline}`}
-                aria-haspopup="menu"
-                aria-expanded={menuForId === item.id}
-              >
-                <FiMoreHorizontal /> Tuỳ chọn
-              </button>
-
-              {menuForId === item.id && (
-                <div className="absolute z-20 left-0 md:left-auto md:right-0">
-                  <OptionMenu
-                    onShare={() => {
-                      setMenuForId(null);
-                      alert("Chia sẻ: mở modal chia sẻ ở đây.");
-                    }}
-                    onHide={() => {
-                      setMenuForId(null);
-                      onOpenHideModal(item);
-                    }}
-                    onDelete={() => {
-                      setMenuForId(null);
-                      onDelete(item.id);
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Nút 4: Gia hạn tin (chỉ cho tin active) */}
-            {item.status === "active" && (
-              <button
-                onClick={() => onPayAgain(item)}
-                className={`${btnBase} ${btnOutline}`}
-              >
-                <FiRefreshCcw /> Gia hạn tin
-              </button>
-            )}
-          </div>
+          {/* Actions - HIỂN THỊ THEO TRẠNG THÁI */}
+          {renderActions()}
         </div>
       </div>
     </div>
