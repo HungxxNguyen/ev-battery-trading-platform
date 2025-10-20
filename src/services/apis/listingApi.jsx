@@ -12,6 +12,19 @@ const listingService = {
     });
   },
 
+  async getById(id) {
+    if (!id) {
+      return {
+        success: false,
+        error: "Listing id is required",
+        status: null,
+      };
+    }
+    return await performApiRequest(API_ENDPOINTS_LISTING.GET_BY_ID(id), {
+      method: "get",
+    });
+  },
+
   async getByStatus({
     pageIndex = 1,
     pageSize = 10,
