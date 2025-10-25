@@ -424,18 +424,9 @@ const ListingItem = ({
         <div className="flex md:flex-col items-start gap-3 md:w-[200px]">
           <button
             type="button"
-            onClick={() => canViewDetail && onNavigate(item)}
-            disabled={!canViewDetail}
-            className={`w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition ${
-              canViewDetail
-                ? "hover:border-green-500 cursor-pointer"
-                : "cursor-not-allowed opacity-70"
-            }`}
-            title={
-              canViewDetail
-                ? "Xem chi tiết tin"
-                : "Chỉ xem chi tiết với tin ở mục ĐANG HIỂN THỊ"
-            }
+            onClick={() => onNavigate(item)}
+            className={`w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition ${"hover:border-green-500 cursor-pointer"}`}
+            title={"Xem chi tiết tin"}
           >
             {galleryImage ? (
               <img
@@ -445,7 +436,7 @@ const ListingItem = ({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                No image
+                Trạng thái thanh toán
               </div>
             )}
           </button>
@@ -455,18 +446,9 @@ const ListingItem = ({
         <div className="flex-1">
           <div className="flex flex-col gap-1">
             <button
-              onClick={() => canViewDetail && onNavigate(item)}
-              disabled={!canViewDetail}
-              className={`text-left text-lg md:text-xl font-semibold transition ${
-                canViewDetail
-                  ? "text-gray-800 hover:text-blue-600 cursor-pointer"
-                  : "text-gray-500 cursor-not-allowed"
-              }`}
-              title={
-                canViewDetail
-                  ? "Xem chi tiết tin"
-                  : "Chỉ xem chi tiết với tin ở mục ĐANG HIỂN THỊ"
-              }
+              onClick={() => onNavigate(item)}
+              className={`text-left text-lg md:text-xl font-semibold transition "text-gray-800 hover:text-blue-600 cursor-pointer"}`}
+              title={"Xem chi tiết tin"}
             >
               {item.title}
             </button>
@@ -494,7 +476,8 @@ const ListingItem = ({
             </div>
 
             {/* Ẩn ngày đăng & hết hạn ở trạng thái REJECTED */}
-            {item.status !== "rejected" && (
+            {item.status === "payment" || item.status === "pending" ? (
+              // Trạng thái "payment": chỉ hiện ngày đăng tin
               <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
                 <span>
                   Ngày đăng tin:{" "}
@@ -506,15 +489,31 @@ const ListingItem = ({
                       : item.postedOn}
                   </strong>
                 </span>
-                <span>
-                  Ngày hết hạn:{" "}
-                  <strong className="font-medium text-gray-700">
-                    {item.expiredAt
-                      ? formatVNDateTime(new Date(item.expiredAt))
-                      : item.expiresOn}
-                  </strong>
-                </span>
               </div>
+            ) : (
+              // Các trạng thái khác (trừ "rejected"): hiện đăng + hết hạn
+              item.status !== "rejected" && (
+                <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
+                  <span>
+                    Ngày đăng tin:{" "}
+                    <strong className="font-medium text-gray-700">
+                      {item.activatedAt
+                        ? formatVNDateTime(new Date(item.activatedAt))
+                        : item.creationDate
+                        ? formatVNDateTime(new Date(item.creationDate))
+                        : item.postedOn}
+                    </strong>
+                  </span>
+                  <span>
+                    Ngày hết hạn:{" "}
+                    <strong className="font-medium text-gray-700">
+                      {item.expiredAt
+                        ? formatVNDateTime(new Date(item.expiredAt))
+                        : item.expiresOn}
+                    </strong>
+                  </span>
+                </div>
+              )
             )}
           </div>
 
@@ -595,8 +594,6 @@ const ManageListing = () => {
     navigate(`/add-listing?mode=edit&id=${id}${location.search}`);
 
   const onNavigate = (listing) => {
-    // CHỈ ACTIVE mới cho xem chi tiết
-    if (listing?.status !== "active") return;
     navigate(`/manage-listing/${listing.id}${location.search}`, {
       state: { listing },
     });

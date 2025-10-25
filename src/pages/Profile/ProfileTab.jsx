@@ -257,7 +257,7 @@ const ProfileTab = () => {
       const response = await userService.updateUser(updateData);
 
       if (response.success) {
-        setIsUpdate(true);
+        setIsUpdate((prev) => !prev);
         setIsEditing(false);
         showNotification("Cập nhật thông tin thành công!", "success");
       } else {

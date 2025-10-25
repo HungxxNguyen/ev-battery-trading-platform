@@ -321,9 +321,17 @@ export default function Header() {
               >
                 {isAuthenticated && user ? (
                   <>
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
-                      {user.userName.charAt(0).toUpperCase()}
-                    </div>
+                    {user.thumbnail ? (
+                      <img
+                        src={user.thumbnail}
+                        alt="User avatar"
+                        className="w-8 h-8 rounded-full object-cover border border-cyan-500/30"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                        {user.userName?.charAt(0)?.toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-sm font-medium">{user.userName}</span>
                   </>
                 ) : (
