@@ -178,7 +178,7 @@ const Home = () => {
                   );
                   const secondaryParts = [
                     listing.yearOfManufacture
-                      ? `Nam ${listing.yearOfManufacture}`
+                      ? `Năm ${listing.yearOfManufacture}`
                       : null,
                     listing.odo ? `Odo ${listing.odo} km` : null,
                   ].filter(Boolean);
