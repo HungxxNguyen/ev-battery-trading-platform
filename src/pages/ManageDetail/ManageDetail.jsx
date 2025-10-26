@@ -318,7 +318,6 @@ const ManageDetail = () => {
     { label: "Model", name: "model" },
     { label: "Năm sản xuất", name: "yearOfManufacture" },
     { label: "Khu vực", name: "area" },
-    { label: "Mô tả chi tiết", name: "description", long: true },
   ];
 
   const getSpecFields = (cat) => {
@@ -484,6 +483,21 @@ const ManageDetail = () => {
               fields={specFields}
               data={detail}
             />
+            {/* Mô tả chi tiết */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 md:p-6">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Mô tả chi tiết
+              </h3>
+              {detail?.description ? (
+                <p className="mt-3 text-gray-700 leading-relaxed whitespace-pre-line">
+                  {detail.description}
+                </p>
+              ) : (
+                <p className="mt-3 text-sm text-gray-500">
+                  Người bán chưa cập nhật mô tả chi tiết.
+                </p>
+              )}
+            </div>
           </div>
 
           {/* RIGHT column - Seller card + actions */}

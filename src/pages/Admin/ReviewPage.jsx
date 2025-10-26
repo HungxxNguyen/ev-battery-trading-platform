@@ -8,6 +8,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Card,
   CardHeader,
@@ -47,6 +48,12 @@ const formatDateTime = (value) => {
 };
 
 export default function ReviewPage() {
+  const translateCategory = (value) =>
+    ({
+      RemovableBattery: "Pin điện rời",
+      ElectricMotorbike: "Xe 2 bánh điện",
+      ElectricCar: "Xe 4 bánh điện",
+    }[value] || value);
   // List state
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,29 +64,48 @@ export default function ReviewPage() {
 
   // Selection + details
   const [selectedId, setSelectedId] = useState(null);
-  const selected = useMemo(
-    () => items.find((x) => x.id === selectedId) || null,
-    [items, selectedId]
-  );
+  const selected = useMemo(() => {
+    const sid = selectedId == null ? null : String(selectedId);
+    return items.find((x) => String(x.id) === sid) || null;
+  }, [items, selectedId]);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sync selectedId with URL (?id=)
+  useEffect(() => {
+    const idParam = searchParams.get("id");
+    const parsed = idParam ?? null; // keep as string to avoid type mismatch
+    if ((parsed || null) !== (selectedId || null)) {
+      setSelectedId(parsed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
   const images = selected?.listingImages || [];
 
   const openLightbox = (idx) => {
     setLightboxIndex(idx);
+    setIsZoomed(false);
     setLightboxOpen(true);
   };
-  const closeLightbox = () => setLightboxOpen(false);
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setIsZoomed(false);
+  };
 
   const prevImage = useCallback(() => {
     if (!images.length) return;
     setLightboxIndex((i) => (i - 1 + images.length) % images.length);
+    setIsZoomed(false);
   }, [images.length]);
 
   const nextImage = useCallback(() => {
     if (!images.length) return;
     setLightboxIndex((i) => (i + 1) % images.length);
+    setIsZoomed(false);
   }, [images.length]);
 
   useEffect(() => {
@@ -90,11 +116,8 @@ export default function ReviewPage() {
       if (e.key === "ArrowRight") nextImage();
     };
     document.addEventListener("keydown", onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
     };
   }, [lightboxOpen, prevImage, nextImage]);
 
@@ -123,6 +146,13 @@ export default function ReviewPage() {
     }
   }, [rejectMode]);
 
+  // Description expand/collapse
+  const [descExpanded, setDescExpanded] = useState(false);
+  useEffect(() => {
+    // reset khi chọn bài mới
+    setDescExpanded(false);
+  }, [selectedId]);
+
   const fetchData = async () => {
     setLoading(true);
     setError("");
@@ -147,11 +177,15 @@ export default function ReviewPage() {
   }, [status, pageIndex, pageSize]);
 
   const onSelectListing = (id) => {
-    setSelectedId(id);
+    setSelectedId(String(id));
     setRejectMode(false);
     setRejectReason("");
     setLightboxOpen(false);
     setLightboxIndex(0);
+    setIsZoomed(false);
+    const next = new URLSearchParams(searchParams);
+    next.set("id", String(id));
+    setSearchParams(next);
   };
 
   const backToList = () => {
@@ -160,6 +194,10 @@ export default function ReviewPage() {
     setRejectReason("");
     setLightboxOpen(false);
     setLightboxIndex(0);
+    setIsZoomed(false);
+    const next = new URLSearchParams(searchParams);
+    next.delete("id");
+    setSearchParams(next, { replace: true });
   };
 
   const doAccept = async (id) => {
@@ -194,7 +232,8 @@ export default function ReviewPage() {
     }
   };
 
-  if (!selectedId) {
+  // Show list when no valid selected object
+  if (!selected) {
     const renderPaymentBadge = (s) => {
       switch (s) {
         case "Success":
@@ -368,7 +407,7 @@ export default function ReviewPage() {
                         </TableCell>
 
                         <TableCell className="hidden md:table-cell text-center">
-                          {p.category}
+                          {translateCategory(p.category)}
                         </TableCell>
 
                         <TableCell className="hidden lg:table-cell text-center">
@@ -462,6 +501,7 @@ export default function ReviewPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-3">
+          {/* Thông tin chi tiết */}
           <Card className="bg-slate-900/30 border border-slate-800/60">
             <CardHeader className="pb-3">
               <CardTitle>Thông tin chi tiết</CardTitle>
@@ -470,7 +510,7 @@ export default function ReviewPage() {
               <div className="text-lg font-semibold text-white">
                 {selected?.title}
               </div>
-              <div className="text-cyan-300/90">{selected?.category}</div>
+              <div className="text-cyan-300/90">{translateCategory(selected?.category)}</div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-300">
                 <div>
                   Giá bán:{" "}
@@ -519,12 +559,7 @@ export default function ReviewPage() {
                   <span className="font-medium">{selected?.mass}</span>
                 </div>
               </div>
-              <div className="text-sm text-slate-300">
-                Mô tả:{" "}
-                <span className="font-normal text-slate-200">
-                  {selected?.description}
-                </span>
-              </div>
+
               <div className="text-sm text-slate-300">
                 Người đăng:{" "}
                 <span className="font-medium">
@@ -534,7 +569,7 @@ export default function ReviewPage() {
               <div className="text-sm text-slate-300">
                 Email:{" "}
                 <span className="font-medium">
-                  {selected?.user?.email || "Chua c?p nh?t"}
+                  {selected?.user?.email || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="text-sm text-slate-300">
@@ -554,6 +589,7 @@ export default function ReviewPage() {
             </CardContent>
           </Card>
 
+          {/* Hình ảnh */}
           <Card className="bg-slate-900/30 border border-slate-800/60">
             <CardHeader className="pb-3">
               <CardTitle>Hình ảnh tin đăng</CardTitle>
@@ -581,6 +617,51 @@ export default function ReviewPage() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Mô tả bài đăng (tách riêng, có xem thêm/thu gọn) */}
+          <Card className="bg-slate-900/30 border border-slate-800/60">
+            <CardHeader className="pb-3">
+              <CardTitle>Mô tả bài đăng</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selected?.description &&
+              typeof selected.description === "string" &&
+              selected.description.trim() !== "" ? (
+                <div className="relative">
+                  <p
+                    className={`text-slate-200 leading-relaxed whitespace-pre-line transition-all ${
+                      descExpanded ? "max-h-none" : "max-h-40 overflow-hidden"
+                    }`}
+                  >
+                    {selected.description}
+                  </p>
+
+                  {/* Fade mờ khi thu gọn */}
+                  {!descExpanded &&
+                    typeof selected.description === "string" &&
+                    selected.description.length > 240 && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-900/40 to-transparent" />
+                    )}
+
+                  {/* Nút xem thêm / thu gọn */}
+                  {typeof selected.description === "string" &&
+                    selected.description.length > 240 && (
+                      <button
+                        type="button"
+                        onClick={() => setDescExpanded((v) => !v)}
+                        className="mt-3 text-sm font-medium text-cyan-300 hover:text-cyan-200 cursor-pointer"
+                      >
+                        {descExpanded ? "Thu gọn" : "Xem thêm"}
+                      </button>
+                    )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  Người bán chưa cập nhật mô tả chi tiết.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -647,9 +728,10 @@ export default function ReviewPage() {
           </Card>
         </div>
       </div>
+
       {lightboxOpen && images.length > 0 && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-auto"
           role="dialog"
           aria-modal="true"
           aria-label="Xem ảnh gốc"
@@ -676,11 +758,16 @@ export default function ReviewPage() {
           </button>
 
           {/* Image */}
-          <div className="max-w-[90vw] max-h-[85vh]">
+          <div className="flex flex-col items-center">
             <img
               src={images[lightboxIndex].imageUrl}
               alt={`Ảnh ${lightboxIndex + 1}`}
-              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              className={`rounded-lg shadow-2xl ${
+                isZoomed
+                  ? "cursor-zoom-out w-auto h-auto"
+                  : "cursor-zoom-in max-w-[90vw] max-h-[85vh] object-contain"
+              }`}
+              onClick={() => setIsZoomed(!isZoomed)}
               draggable={false}
             />
             <div className="mt-3 text-center text-slate-200 text-sm">
