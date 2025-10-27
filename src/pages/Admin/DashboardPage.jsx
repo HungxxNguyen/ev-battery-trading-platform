@@ -11,6 +11,7 @@ import {
 import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
 import listingService from "../../services/apis/listingApi";
+import adminService from "../../services/apis/adminApi";
 import {
   LineChart,
   Line,
@@ -78,6 +79,41 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
     () => revenueData.reduce((a, b) => a + b.revenue, 0),
     []
   );
+
+  // ====== NEW: Fetch total users for KPI ======
+  const [userCount, setUserCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await adminService.getCountUser();
+        if (cancelled) return;
+
+        // Axios thường bọc payload ở res.data
+        const payload = res?.data ?? res;
+
+        // Ưu tiên đếm mảng data; nếu không có thì fallback sang count
+        let total = 0;
+        if (Array.isArray(payload?.data)) {
+          total = payload.data.length;
+        } else if (typeof payload?.count === "number") {
+          total = payload.count;
+        } else if (Array.isArray(res?.data)) {
+          // fallback phụ nếu API trả thẳng mảng
+          total = res.data.length;
+        }
+
+        setUserCount(Number(total) || 0);
+      } catch {
+        // giữ nguyên 0 nếu lỗi
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  // ============================================
+
   // Fetch total pending listings for KPI
   const [pendingCount, setPendingCount] = useState(0);
   useEffect(() => {
@@ -102,7 +138,7 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
             (Array.isArray(d.data) ? d.data.length : 0);
           setPendingCount(Number(total) || 0);
         }
-      } catch (_) {
+      } catch {
         // silent fail; keep 0
       }
     })();
@@ -113,12 +149,13 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
 
   const kpiList = useMemo(
     () => [
-      { label: "Tổng User", value: 12480, sub: "+3.1% vs 7d" },
+      // Replace 12480 by fetched userCount
+      { label: "Tổng User", value: userCount },
       { label: "Bài chờ duyệt", value: pendingCount, sub: "" },
       { label: "User bị báo xấu", value: 37, sub: "+5 hôm nay" },
       { label: "Doanh thu hôm nay", value: 92.4, sub: "+18% vs hôm qua" },
     ],
-    [pendingCount]
+    [userCount, pendingCount]
   );
 
   const onTicketKey = (e, id) => {
