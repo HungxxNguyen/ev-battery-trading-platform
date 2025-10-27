@@ -32,6 +32,8 @@ export const API_ENDPOINTS_LISTING = {
 export const API_ENDPOINTS_ADMIN = {
   ACCEPT_LISTING: (id) => `/api/Admin/Accept-Listing/${id}`,
   REJECT_LISTING: (id) => `/api/Admin/Reject-Listing/${id}`,
+  // Admin: users management
+  GET_ALL_USERS: "/api/Admin/Get-All-Users",
 };
 
 // Các endpoint cho user

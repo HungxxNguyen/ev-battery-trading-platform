@@ -51,6 +51,7 @@ export default function PlansPage() {
       { value: "ElectricCar", label: "Ô tô điện" },
       { value: "ElectricMotorbike", label: "Xe máy điện" },
       { value: "RemovableBattery", label: "Pin điện" },
+      { value: "Free", label: "Miễn phí" },
     ],
     []
   );
@@ -355,7 +356,8 @@ export default function PlansPage() {
                       disabled={deletingId === p.id}
                       className="cursor-pointer rounded-lg bg-rose-500/80 text-white hover:bg-rose-500 gap-2 px-3 py-1.5 text-xs"
                     >
-                      <Trash2 className="h-4 w-4" /> {deletingId === p.id ? "Đang xóa..." : "Xóa"}
+                      <Trash2 className="h-4 w-4" />{" "}
+                      {deletingId === p.id ? "Đang xóa..." : "Xóa"}
                     </Button>
                   </TableCell>
                 </TableRow>
