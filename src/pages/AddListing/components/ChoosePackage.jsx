@@ -6,7 +6,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
   const [selected, setSelected] = useState(null);
   const [packageLoading, setPackageLoading] = useState(false);
 
-  // Hàm dịch packageType
+  // Dịch packageType (category hiển thị)
   const translatePackageType = (packageType) => {
     const typeMap = {
       ElectricCar: "Ô tô điện",
@@ -16,31 +16,49 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
     return typeMap[packageType] || packageType;
   };
 
-  // Fetch packages from API and filter by selected category
+  // Xác định gói free theo nhiều dấu hiệu phổ biến
+  const computeIsFree = (raw) => {
+    const priceZero = Number(raw?.price) === 0;
+    const flagIsFree = raw?.isFree === true;
+    const nameFree =
+      typeof raw?.name === "string" && /free|miễn\s*phí/i.test(raw.name.trim());
+    const tierFree =
+      typeof raw?.tier === "string" && /free/i.test(raw.tier.trim());
+    const typeFree =
+      typeof raw?.type === "string" && /free/i.test(raw.type.trim());
+    return priceZero || flagIsFree || nameFree || tierFree || typeFree;
+  };
+
+  // Fetch packages
   useEffect(() => {
     const fetchPackages = async () => {
       setPackageLoading(true);
       try {
         const response = await packageService.getAllPackages();
-        if (response.data && response.data.data) {
-          // Transform API data to match component structure
+        if (response?.data?.data) {
+          // Chuẩn hoá dữ liệu
           const transformedPlans = response.data.data.map((pkg) => ({
             id: pkg.id,
             days: pkg.durationInDays,
             price: pkg.price,
             name: pkg.name,
-            packageType: pkg.packageType,
+            packageType: pkg.packageType, // đây là category
             translatedPackageType: translatePackageType(pkg.packageType),
             oldPrice: null,
             discount: 0,
             description: pkg.description,
             status: pkg.status,
+            isFree: computeIsFree(pkg), // <-- thêm cờ free
           }));
 
-          // Filter by selected category if provided
+          // Filter:
+          // - Nếu có category: lấy gói cùng category HOẶC gói free (luôn hiển thị)
+          // - Nếu chưa chọn category: chỉ hiển thị các gói free
           const filtered = category
-            ? transformedPlans.filter((p) => p.packageType === category)
-            : [];
+            ? transformedPlans.filter(
+                (p) => p.packageType === category || p.isFree
+              )
+            : transformedPlans.filter((p) => p.isFree);
 
           setPlans(filtered);
           setSelected(filtered.length > 0 ? filtered[0] : null);
@@ -57,6 +75,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
     }
   }, [open, category]);
 
+  // Reset khi đóng modal
   useEffect(() => {
     if (!open) {
       setPlans([]);
@@ -67,14 +86,28 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
   const handleConfirm = () => {
     if (selected) {
       onConfirm(selected);
-      onClose(); // Đóng modal sau khi chọn
+      onClose();
     }
   };
 
   if (!open) return null;
 
-  // When category not selected, guide user to choose category first
-  if (open && !category && !packageLoading) {
+  // Loading
+  if (packageLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
+        <div className="absolute inset-0 bg-black/40" />
+        <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-2xl rounded-lg bg-white shadow-xl">
+          <div className="flex items-center justify-center px-5 py-8">
+            <div className="text-gray-600">Đang tải dữ liệu...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Nếu chưa chọn category và KHÔNG có gói free nào → hướng dẫn chọn danh mục
+  if (open && !category && !packageLoading && plans.length === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -98,19 +131,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
     );
   }
 
-  if (packageLoading) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-2xl rounded-lg bg-white shadow-xl">
-          <div className="flex items-center justify-center px-5 py-8">
-            <div className="text-gray-600">Đang tải dữ liệu...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Không có gói nào khả dụng (đã thử hiển thị free + category)
   if (plans.length === 0 && !packageLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
@@ -163,6 +184,7 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {plans.map((plan) => {
               const active = selected?.id === plan.id;
+              const isFree = plan.isFree;
               return (
                 <button
                   key={`plan-${plan.id}`}
@@ -177,6 +199,11 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
                   {plan.discount > 0 && (
                     <span className="absolute -top-2 -right-2 text-xs font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">
                       -{plan.discount}%
+                    </span>
+                  )}
+                  {isFree && (
+                    <span className="absolute -top-2 left-2 text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-full">
+                      Miễn phí
                     </span>
                   )}
                   <div className="flex items-center gap-3">
@@ -203,7 +230,10 @@ const ChoosePackage = ({ open, onClose, onConfirm, loading, category }) => {
                           </>
                         ) : (
                           <span className="font-medium text-gray-800">
-                            {Number(plan.price).toLocaleString("vi-VN")} đ
+                            {isFree
+                              ? "0 đ"
+                              : Number(plan.price).toLocaleString("vi-VN") +
+                                " đ"}
                           </span>
                         )}
                       </div>
