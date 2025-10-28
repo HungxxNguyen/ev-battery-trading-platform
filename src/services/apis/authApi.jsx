@@ -149,7 +149,7 @@ const authService = {
       };
     }
     const formData = new FormData();
-    formData.append("EmailOrPhoneNumber", email);
+    formData.append("Email", email);
 
     return performApiRequest(API_ENDPOINTS_AUTH.FORGOT_PASSWORD, {
       method: "post",

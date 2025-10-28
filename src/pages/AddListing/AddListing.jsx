@@ -1,5 +1,5 @@
 // src/pages/AddListing/AddListing.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -35,12 +35,12 @@ const LISTING_STATUS_OPTIONS = [
   { value: "Used", label: "Đã sử dụng" },
 ];
 
-// ===== NEW: constants cho ảnh =====
+// ===== Ảnh =====
 const MAX_IMAGES = 10;
 const MAX_SIZE_MB = 10;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
-// 🔧 Tách các field thành các nhóm để sắp xếp layout
+// ===== Layout fields =====
 const MAIN_FIELDS = [
   {
     label: "Danh mục",
@@ -271,10 +271,37 @@ const fieldComponents = {
   textarea: (p) => <TextAreaField {...p} />,
 };
 
+const typeToLabel = (val) =>
+  CATEGORY_OPTIONS.find((x) => x.value === val)?.label ?? val;
+
+// ====== HỢP NHẤT & LỌC THƯƠNG HIỆU THEO DANH MỤC ======
+const normalizeBrandType = (t) => {
+  if (t == null) return "";
+  const raw = String(t?.value ?? t?.type ?? t?.Type ?? t ?? "").trim();
+  if (/^electric\s*car$/i.test(raw)) return "ElectricCar";
+  if (/^electric\s*motorbike$/i.test(raw)) return "ElectricMotorbike";
+  if (/^removable\s*battery$/i.test(raw)) return "RemovableBattery";
+  if (["ElectricCar", "ElectricMotorbike", "RemovableBattery"].includes(raw))
+    return raw;
+  return raw;
+};
+
+const toBrandModel = (b) => ({
+  id: String(
+    b.id ?? b.Id ?? b.ID ?? b.brandId ?? b.BrandId ?? b.BrandID ?? b.uuid ?? ""
+  ),
+  name: String(
+    b.name ?? b.Name ?? b.brandName ?? b.BrandName ?? b.title ?? b.Title ?? ""
+  ),
+  type: normalizeBrandType(
+    b.type ?? b.Type ?? b.category ?? b.Category ?? b.kind
+  ),
+});
+
 const AddListing = () => {
   const [formData, setFormData] = useState({});
   const [selectedImages, setSelectedImages] = useState([]);
-  const [imageError, setImageError] = useState(""); // ===== NEW
+  const [imageError, setImageError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [pendingSubmission, setPendingSubmission] = useState(null);
@@ -287,6 +314,7 @@ const AddListing = () => {
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
+  // Tải danh sách thương hiệu
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -313,25 +341,31 @@ const AddListing = () => {
     };
   }, []);
 
-  const brandOptions = (brands || [])
-    .map((b) => {
-      const value =
-        b.id ?? b.Id ?? b.ID ?? b.brandId ?? b.BrandId ?? b.BrandID ?? b.uuid;
-      const label =
-        b.name ?? b.Name ?? b.brandName ?? b.BrandName ?? b.title ?? b.Title;
-      return value && label
-        ? { value: String(value), label: String(label) }
-        : null;
-    })
-    .filter(Boolean);
+  // Chuẩn hoá brand
+  const brandsNormalized = useMemo(() => {
+    return (brands || []).map(toBrandModel).filter((x) => x.id && x.name);
+  }, [brands]);
 
+  // Lọc brand theo Category đang chọn
+  const filteredBrandOptions = useMemo(() => {
+    const cat = formData?.Category;
+    const list = cat ? brandsNormalized.filter((b) => b.type === cat) : [];
+    return list.map((b) => ({ value: b.id, label: b.name, _type: b.type }));
+  }, [brandsNormalized, formData?.Category]);
+
+  // Khi đổi category → reset BrandId
   const handleInputChange = (name, value) =>
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === "Category") {
+        next.BrandId = "";
+      }
+      return next;
+    });
 
-  // ===== updated: thêm kiểm tra & thông báo lỗi ảnh =====
+  // Ảnh
   const addFiles = (files) => {
     if (!files.length) return;
-
     let errorMsg = "";
     const remain = Math.max(0, MAX_IMAGES - selectedImages.length);
     const slice = files.slice(0, remain);
@@ -365,6 +399,7 @@ const AddListing = () => {
   const removeImage = (index) =>
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
 
+  // Chuẩn bị payload
   const prepareSubmissionPayload = (packageId = null) => {
     const formDataToSend = new FormData();
 
@@ -503,7 +538,6 @@ const AddListing = () => {
         "Đăng tin thành công. Vui lòng hoàn tất thanh toán",
         "success"
       );
-
       navigate("/manage-listing?tab=payment");
     } catch (err) {
       console.error("Create listing error:", err);
@@ -517,7 +551,7 @@ const AddListing = () => {
     }
   };
 
-  // Thêm hàm validation
+  // Validation
   const validateForm = () => {
     const requiredFields = [
       "Title",
@@ -529,15 +563,12 @@ const AddListing = () => {
     ];
     for (const field of requiredFields) {
       if (!formData[field] || String(formData[field]).trim() === "") {
-        showNotification(
-          `Vui lòng điền ${MAIN_FIELDS.find((f) => f.name === field)?.label}`,
-          "error"
-        );
+        const f = MAIN_FIELDS.find((x) => x.name === field);
+        showNotification(`Vui lòng điền ${f?.label || field}`, "error");
         return false;
       }
     }
 
-    // ===== Giữ điều kiện ảnh bắt buộc =====
     if (selectedImages.length === 0) {
       showNotification("Vui lòng tải ít nhất 1 ảnh", "error");
       setImageError("Bắt buộc: vui lòng tải ít nhất 1 ảnh.");
@@ -553,11 +584,9 @@ const AddListing = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setSubmitting(true);
-
     try {
       if (selectedPackage) {
         await handlePlanConfirm(selectedPackage);
@@ -587,6 +616,7 @@ const AddListing = () => {
     setPlanModalOpen(true);
   };
 
+  // Huỷ package nếu đổi danh mục khác
   useEffect(() => {
     setSelectedPackage((prev) =>
       prev && formData?.Category && prev.packageType !== formData.Category
@@ -595,6 +625,7 @@ const AddListing = () => {
     );
   }, [formData?.Category]);
 
+  // Ẩn/hiện fields theo danh mục
   useEffect(() => {
     const category = formData?.Category;
     if (!category) return;
@@ -646,14 +677,24 @@ const AddListing = () => {
                 ? {
                     ...item,
                     fieldType: "dropdown",
-                    options: brandOptions,
+                    options: filteredBrandOptions, // danh sách đã lọc theo Category
                     disabled:
+                      !formData?.Category ||
                       brandsLoading ||
                       !!brandsError ||
-                      brandOptions.length === 0,
-                    placeholder: brandsLoading
+                      filteredBrandOptions.length === 0,
+                    placeholder: !formData?.Category
+                      ? "Chọn danh mục trước"
+                      : brandsLoading
                       ? "Đang tải thương hiệu..."
+                      : filteredBrandOptions.length === 0
+                      ? `Chưa có thương hiệu cho danh mục “${typeToLabel(
+                          formData?.Category
+                        )}”`
                       : "Chọn thương hiệu",
+                    helperText: formData?.Category
+                      ? `Đang lọc theo: ${typeToLabel(formData.Category)}`
+                      : "Hãy chọn danh mục để hiển thị thương hiệu tương ứng",
                   }
                 : item;
 
@@ -670,7 +711,7 @@ const AddListing = () => {
             })}
           </div>
 
-          {/* Area Field và Package Selection - cùng hàng */}
+          {/* Area Field & Package */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Khu vực */}
             <div>
@@ -693,7 +734,7 @@ const AddListing = () => {
               <LabelWithIcon
                 icon="FaClipboardList"
                 label="Chọn gói đăng tin"
-                required={true}
+                required
               />
               <button
                 type="button"
@@ -729,7 +770,7 @@ const AddListing = () => {
             </div>
           </div>
 
-          {/* Description Field - full width */}
+          {/* Description */}
           <div className="mt-8">
             {DESCRIPTION_FIELD.map((item) => {
               const Comp = fieldComponents[item.fieldType];
@@ -747,7 +788,6 @@ const AddListing = () => {
 
           {/* Images */}
           <div className="mt-8">
-            {/* ===== NEW: dấu * và aria-required ===== */}
             <h3 className="font-semibold text-2xl mb-4 text-gray-700 flex items-center gap-2">
               Ảnh minh hoạ <span className="text-red-500">*</span>
             </h3>
@@ -776,7 +816,6 @@ const AddListing = () => {
                       accept={ALLOWED_TYPES.join(",")}
                       multiple
                       onChange={handleImageUpload}
-                      // ===== NEW: required khi chưa có ảnh =====
                       required={selectedImages.length === 0}
                       aria-invalid={selectedImages.length === 0}
                     />
@@ -788,7 +827,6 @@ const AddListing = () => {
                   {MAX_IMAGES} ảnh)
                 </p>
 
-                {/* ===== NEW: thông báo lỗi/bắt buộc ===== */}
                 {imageError ? (
                   <p className="mt-2 text-sm text-red-600">{imageError}</p>
                 ) : selectedImages.length === 0 ? (
@@ -829,7 +867,6 @@ const AddListing = () => {
           <div className="flex justify-end mt-8">
             <button
               type="submit"
-              // ===== NEW: disable khi chưa có ảnh =====
               disabled={
                 submitting || !selectedPackage || selectedImages.length < 1
               }
@@ -840,11 +877,12 @@ const AddListing = () => {
           </div>
         </form>
       </motion.div>
+
       <ChoosePackage
         open={planModalOpen}
         onClose={handlePlanModalClose}
         onConfirm={(plan) => {
-          setSelectedPackage(plan); // Lưu package đã chọn
+          setSelectedPackage(plan);
         }}
         loading={planProcessing}
         category={formData?.Category}

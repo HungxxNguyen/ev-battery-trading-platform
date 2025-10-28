@@ -15,10 +15,11 @@ const brandService = {
     });
   },
 
-  async createBrand(name) {
+  async createBrand(name, type) {
     if (!name || !name.trim()) throw new Error("Tên thương hiệu không hợp lệ");
     const form = new FormData();
     form.append("Name", name.trim());
+    form.append("Type", type);
     return await performApiRequest(API_ENDPOINTS_BRAND.CREATE, {
       method: "post",
       data: form,

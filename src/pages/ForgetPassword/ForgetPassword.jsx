@@ -50,6 +50,10 @@ const ForgetPassword = () => {
         const res = await authService.resetPassword(token, newPassword);
         if (res?.success) {
           showNotification("Đặt lại mật khẩu thành công!", "success");
+          // Chuyển hướng về trang đăng nhập sau khi đặt lại mật khẩu thành công
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 1500);
         } else {
           showNotification(
             res?.error || "Không thể đặt lại mật khẩu. Vui lòng thử lại.",
