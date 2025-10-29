@@ -11,6 +11,7 @@ import Register from "../pages/Register/Register";
 import AddListing from "../pages/AddListing/AddListing";
 import ManageListing from "../pages/ManageListing/ManageListing";
 import ManageDetail from "../pages/ManageDetail/ManageDetail";
+import UpdateListing from "../pages/UpdateListing/UpdateListing";
 import ListingDetail from "../pages/ListingDetail/ListingDetail";
 import Category from "../pages/Category/Category";
 import Payment from "../pages/Payment/Payment";
@@ -60,6 +61,7 @@ const AppRouter = () => {
           {/* User-authenticated (không yêu cầu role cụ thể) */}
           <Route element={<ProtectedRoute />}>
             <Route path="/add-listing" element={<AddListing />} />
+            <Route path="/update-listing/:id" element={<UpdateListing />} />
             <Route path="/manage-listing" element={<ManageListing />} />
             <Route path="/manage-listing/:id" element={<ManageDetail />} />
             <Route path="/payment" element={<Payment />} />

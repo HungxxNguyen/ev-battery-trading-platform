@@ -22,6 +22,8 @@ export const API_ENDPOINTS_LISTING = {
   GET_MY_LISTINGS: (pageIndex, pageSize) =>
     `/api/Listing/MyListings?pageIndex=${pageIndex}&pageSize=${pageSize}`,
   CREATE_LISTING: "/api/Listing/CreateListing",
+  // Update existing listing (multipart form)
+  UPDATE_LISTING: "/api/Listing/UpdateListing",
   // Admin: get listings filtered by status/price range/pagination
   GET_BY_STATUS: "/api/Listing/GetByStatus",
   // VNPAY payment URL
