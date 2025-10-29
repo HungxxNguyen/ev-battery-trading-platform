@@ -417,227 +417,294 @@ const Category = () => {
     </div>
   );
 
-  const PricePopover = () => (
-    <div
-      ref={priceRef}
-      className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="mb-3 text-sm text-gray-700 font-medium">Khoảng giá</div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          value={priceFrom}
-          onChange={(e) => setPriceFrom(Number(e.target.value) || 0)}
-          className="flex-1 rounded border border-gray-300 px-3 py-2"
-          placeholder="Giá tối thiểu"
-        />
-        <span>-</span>
-        <input
-          type="number"
-          value={priceTo}
-          onChange={(e) => setPriceTo(Number(e.target.value) || 0)}
-          className="flex-1 rounded border border-gray-300 px-3 py-2"
-          placeholder="Giá tối đa"
-        />
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {PRICE_PRESETS.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => {
-              setPriceFrom(p.from);
-              setPriceTo(p.to || 5_000_000_000);
-            }}
-            className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 cursor-pointer"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => {
-            setPriceFrom(0);
-            setPriceTo(5_000_000_000);
-          }}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
-        >
-          Xóa lọc
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpenMenu(null)}
-          className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
-        >
-          Áp dụng
-        </button>
-      </div>
-    </div>
-  );
+  const PricePopover = () => {
+    const [localPriceFrom, setLocalPriceFrom] = useState(priceFrom);
+    const [localPriceTo, setLocalPriceTo] = useState(priceTo);
 
-  const YearPopover = () => (
-    <div
-      ref={yearRef}
-      className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="mb-3 text-sm text-gray-700 font-medium">Năm sản xuất</div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          value={yearFrom}
-          onChange={(e) => setYearFrom(e.target.value)}
-          className="flex-1 rounded border border-gray-300 px-3 py-2"
-          placeholder="Năm tối thiểu"
-        />
-        <span>-</span>
-        <input
-          type="number"
-          value={yearTo}
-          onChange={(e) => setYearTo(e.target.value)}
-          className="flex-1 rounded border border-gray-300 px-3 py-2"
-          placeholder="Năm tối đa"
-        />
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {YEAR_PRESETS.map((y) => (
-          <button
-            key={y.label}
-            onClick={() => {
-              setYearFrom(y.from);
-              setYearTo(y.to);
-            }}
-            className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 cursor-pointer"
-          >
-            {y.label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => {
-            setYearFrom("");
-            setYearTo("");
-          }}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
-        >
-          Xóa lọc
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpenMenu(null)}
-          className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
-        >
-          Áp dụng
-        </button>
-      </div>
-    </div>
-  );
+    const handleApply = () => {
+      setPriceFrom(localPriceFrom);
+      setPriceTo(localPriceTo);
+      setOpenMenu(null);
+    };
 
-  const BrandPopover = () => (
-    <div
-      ref={brandRef}
-      className="absolute z-20 mt-2 w-96 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="relative mb-3">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          value={brandSearch}
-          onChange={(e) => setBrandSearch(e.target.value)}
-          placeholder="Nhập tìm hãng"
-          className="w-full rounded border border-gray-300 pl-10 pr-3 py-2"
-        />
+    const handleReset = () => {
+      setLocalPriceFrom(0);
+      setLocalPriceTo(5_000_000_000);
+    };
+
+    return (
+      <div
+        ref={priceRef}
+        className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 text-sm text-gray-700 font-medium">Khoảng giá</div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={localPriceFrom}
+            onChange={(e) => setLocalPriceFrom(Number(e.target.value) || 0)}
+            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            placeholder="Giá tối thiểu"
+          />
+          <span>-</span>
+          <input
+            type="number"
+            value={localPriceTo}
+            onChange={(e) => setLocalPriceTo(Number(e.target.value) || 0)}
+            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            placeholder="Giá tối đa"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {PRICE_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              onClick={() => {
+                setLocalPriceFrom(p.from);
+                setLocalPriceTo(p.to || 5_000_000_000);
+              }}
+              className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 cursor-pointer"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
+        </div>
       </div>
-      <div className="max-h-60 overflow-auto space-y-2 pr-1">
-        {filteredBrandList.map((b) => (
+    );
+  };
+
+  const YearPopover = () => {
+    const [localYearFrom, setLocalYearFrom] = useState(yearFrom);
+    const [localYearTo, setLocalYearTo] = useState(yearTo);
+
+    const handleApply = () => {
+      setYearFrom(localYearFrom);
+      setYearTo(localYearTo);
+      setOpenMenu(null);
+    };
+
+    const handleReset = () => {
+      setLocalYearFrom("");
+      setLocalYearTo("");
+    };
+
+    return (
+      <div
+        ref={yearRef}
+        className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 text-sm text-gray-700 font-medium">
+          Năm sản xuất
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={localYearFrom}
+            onChange={(e) => setLocalYearFrom(e.target.value)}
+            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            placeholder="Năm tối thiểu"
+          />
+          <span>-</span>
+          <input
+            type="number"
+            value={localYearTo}
+            onChange={(e) => setLocalYearTo(e.target.value)}
+            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            placeholder="Năm tối đa"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {YEAR_PRESETS.map((y) => (
+            <button
+              key={y.label}
+              onClick={() => {
+                setLocalYearFrom(y.from);
+                setLocalYearTo(y.to);
+              }}
+              className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 cursor-pointer"
+            >
+              {y.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const BrandPopover = () => {
+    const [localBrandSearch, setLocalBrandSearch] = useState(brandSearch);
+    const [localBrandId, setLocalBrandId] = useState(brandId);
+
+    const handleApply = () => {
+      setBrandId(localBrandId);
+      setBrandSearch(localBrandSearch);
+      setOpenMenu(null);
+    };
+
+    const handleReset = () => {
+      setLocalBrandId("");
+      setLocalBrandSearch("");
+    };
+
+    const filteredBrandList = useMemo(() => {
+      const byType = brands
+        .map(toBrandModel)
+        .filter((b) => !mapping?.api || b.type === mapping.api);
+      if (!localBrandSearch.trim()) return byType;
+      return byType.filter((b) =>
+        b.name.toLowerCase().includes(localBrandSearch.trim().toLowerCase())
+      );
+    }, [brands, mapping?.api, localBrandSearch]);
+
+    return (
+      <div
+        ref={brandRef}
+        className="absolute z-20 mt-2 w-96 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative mb-3">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={localBrandSearch}
+            onChange={(e) => setLocalBrandSearch(e.target.value)}
+            placeholder="Nhập tìm hãng"
+            className="w-full rounded border border-gray-300 pl-10 pr-3 py-2"
+          />
+        </div>
+        <div className="max-h-60 overflow-auto space-y-2 pr-1">
+          {filteredBrandList.map((b) => (
+            <label
+              key={b.id}
+              className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
+            >
+              <span>{b.name}</span>
+              <input
+                type="radio"
+                name="brand"
+                value={b.id}
+                checked={String(localBrandId) === String(b.id)}
+                onChange={() => setLocalBrandId(b.id)}
+              />
+            </label>
+          ))}
+          {filteredBrandList.length === 0 && (
+            <div className="text-sm text-gray-500">Không có hãng phù hợp</div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const StatusPopover = () => {
+    const [localStatus, setLocalStatus] = useState(status);
+
+    const handleApply = () => {
+      setStatus(localStatus);
+      setOpenMenu(null);
+    };
+
+    const handleReset = () => {
+      setLocalStatus("");
+    };
+
+    return (
+      <div
+        ref={statusRef}
+        className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      >
+        <div className="mb-2 text-sm text-gray-700 font-medium">Tình trạng</div>
+        {[
+          { value: "New", label: "Mới" },
+          { value: "Used", label: "Đã sử dụng" },
+        ].map((opt) => (
           <label
-            key={b.id}
+            key={opt.value}
             className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
           >
-            <span>{b.name}</span>
+            <span>{opt.label}</span>
             <input
               type="radio"
-              name="brand"
-              value={b.id}
-              checked={String(brandId) === String(b.id)}
-              onChange={() => setBrandId(b.id)}
+              name="status"
+              value={opt.value}
+              checked={localStatus === opt.value}
+              onChange={() => setLocalStatus(opt.value)}
             />
           </label>
         ))}
-        {filteredBrandList.length === 0 && (
-          <div className="text-sm text-gray-500">Không có hãng phù hợp</div>
-        )}
+        <div className="mt-2 pt-2 flex items-center justify-between border-t">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            type="button"
+            onClick={handleApply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
+        </div>
       </div>
-
-      <div className="mt-3 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setBrandId("")}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
-        >
-          Xóa lọc
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpenMenu(null)}
-          className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
-        >
-          Áp dụng
-        </button>
-      </div>
-    </div>
-  );
-
-  const StatusPopover = () => (
-    <div
-      ref={statusRef}
-      className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
-    >
-      <div className="mb-2 text-sm text-gray-700 font-medium">Tình trạng</div>
-      {[
-        { value: "New", label: "Mới" },
-        { value: "Used", label: "Đã sử dụng" },
-      ].map((opt) => (
-        <label
-          key={opt.value}
-          className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
-        >
-          <span>{opt.label}</span>
-          <input
-            type="radio"
-            name="status"
-            value={opt.value}
-            checked={status === opt.value}
-            onChange={() => setStatus(opt.value)}
-          />
-        </label>
-      ))}
-      <div className="mt-2 pt-2 flex items-center justify-between border-t">
-        <button
-          type="button"
-          onClick={() => setStatus("")}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
-        >
-          Xóa lọc
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpenMenu(null)}
-          className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
-        >
-          Áp dụng
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // Card renderer
   const renderCards = () => {
