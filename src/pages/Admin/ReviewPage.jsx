@@ -51,8 +51,8 @@ export default function ReviewPage() {
   const translateCategory = (value) =>
     ({
       RemovableBattery: "Pin điện rời",
-      ElectricMotorbike: "Xe 2 bánh điện",
-      ElectricCar: "Xe 4 bánh điện",
+      ElectricMotorbike: "Xe máy điện",
+      ElectricCar: "Xe ô tô điện",
     }[value] || value);
   // List state
   const [items, setItems] = useState([]);
@@ -510,7 +510,9 @@ export default function ReviewPage() {
               <div className="text-lg font-semibold text-white">
                 {selected?.title}
               </div>
-              <div className="text-cyan-300/90">{translateCategory(selected?.category)}</div>
+              <div className="text-cyan-300/90">
+                {translateCategory(selected?.category)}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-300">
                 <div>
                   Giá bán:{" "}

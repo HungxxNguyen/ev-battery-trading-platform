@@ -102,6 +102,16 @@ function useOnClickOutside(ref, handler) {
   }, [ref, handler]);
 }
 
+// Small debounce helper for text inputs
+function useDebouncedValue(value, delay = 450) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 // -----------------------------
 // Component
 // -----------------------------
@@ -125,6 +135,8 @@ const Category = () => {
   );
 
   // Filters
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const debouncedQuery = useDebouncedValue(query, 450);
   const [priceFrom, setPriceFrom] = useState(
     Number(searchParams.get("from")) >= 0 ? Number(searchParams.get("from")) : 0
   );
@@ -210,6 +222,8 @@ const Category = () => {
         const params = {
           pageIndex: 1, // always get the freshest set; UI paging is client-side
           pageSize: 500, // reasonable cap to avoid huge payloads
+          // Do not pass text search to backend: backend search may not include 'model'.
+          // Fetch broadly and apply text filtering (title/brand/model/area) client-side below.
           from: Math.max(0, Number(priceFrom) || 0),
           to: Math.max(Number(priceFrom) || 0, Number(priceTo) || 0),
           category: mapping?.api,
@@ -251,6 +265,7 @@ const Category = () => {
     // Avoid updating URL while a popover is open to prevent input blur
     if (openMenu !== null) return;
     const next = new URLSearchParams(searchParams);
+    query ? next.set("q", String(query)) : next.delete("q");
     next.set("pageSize", String(pageSize));
     next.set("from", String(priceFrom || 0));
     next.set("to", String(priceTo || 0));
@@ -262,6 +277,7 @@ const Category = () => {
     sortBy ? next.set("sort", String(sortBy)) : next.delete("sort");
     setSearchParams(next, { replace: true });
   }, [
+    query,
     pageSize,
     priceFrom,
     priceTo,
@@ -303,6 +319,9 @@ const Category = () => {
     const getBrandId = (it) =>
       String(it.brand?.id ?? it.brandId ?? it.BrandId ?? it.BrandID ?? "");
     const getArea = (it) => String(it.area ?? it.Area ?? "");
+    const getTitle = (it) => String(it.title ?? it.Title ?? "");
+    const getModel = (it) => String(it.model ?? it.Model ?? "");
+    const getBrandName = (it) => String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
     const getDateVal = (it) => {
       const d =
         it.activatedAt ??
@@ -315,6 +334,14 @@ const Category = () => {
     };
 
     const filtered = arr.filter((it) => {
+      // Text query across title/brand/model/area
+      if (debouncedQuery && debouncedQuery.trim()) {
+        const q = debouncedQuery.trim().toLowerCase();
+        const hay = [getTitle(it), getBrandName(it), getModel(it), getArea(it)]
+          .join(" ")
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       if (mapping?.api) {
         const cat = getCat(it);
         if (cat && cat !== mapping.api) return false;
@@ -345,6 +372,7 @@ const Category = () => {
     return sorted;
   }, [
     rawItems,
+    debouncedQuery,
     mapping?.api,
     priceFrom,
     priceTo,
@@ -363,6 +391,7 @@ const Category = () => {
   );
 
   const onClearAll = () => {
+    setQuery("");
     setPriceFrom(0);
     setPriceTo(5_000_000_000);
     setYearFrom("");
@@ -800,6 +829,7 @@ const Category = () => {
   };
 
   const hasActiveFilters =
+    query ||
     priceFrom !== 0 ||
     priceTo !== 5_000_000_000 ||
     yearFrom ||
@@ -825,6 +855,26 @@ const Category = () => {
           <div className="p-4">
             <div className="flex items-center justify-between gap-4">
               <Summary />
+            </div>
+
+            {/* Search box */}
+            <div className="relative mt-3">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Tìm sản phẩm, thương hiệu, model..."
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <FiX />
+                </button>
+              )}
             </div>
 
             {/* Filter chips */}
@@ -881,6 +931,14 @@ const Category = () => {
                 {openMenu === "status" && <StatusPopover />}
               </div>
 
+              {/* Area */}
+              <input
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="Khu vực"
+                className="w-36 rounded-lg border border-gray-300 px-3 py-2"
+              />
+
               {/* Sort */}
               <div className="ml-auto flex items-center gap-2">
                 <label className="text-sm text-gray-600">Sắp xếp</label>
@@ -909,6 +967,9 @@ const Category = () => {
             {/* Active filter pills */}
             {hasActiveFilters && (
               <div className="mt-3 flex flex-wrap gap-2">
+                {query ? (
+                  <ActivePill text={`Tìm: ${query}`} onClear={() => setQuery("")} />
+                ) : null}
                 {priceFrom !== 0 || priceTo !== 5_000_000_000 ? (
                   <ActivePill
                     text={`Giá: ${priceFrom.toLocaleString(
@@ -946,6 +1007,13 @@ const Category = () => {
                   <ActivePill
                     text={`Tình trạng: ${formatListingStatus(status)}`}
                     onClear={() => setStatus("")}
+                  />
+                ) : null}
+
+                {area ? (
+                  <ActivePill
+                    text={`Khu vực: ${area}`}
+                    onClear={() => setArea("")}
                   />
                 ) : null}
 
