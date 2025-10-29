@@ -15,6 +15,7 @@ import UpdateListing from "../pages/UpdateListing/UpdateListing";
 import ListingDetail from "../pages/ListingDetail/ListingDetail";
 import Category from "../pages/Category/Category";
 import Search from "../pages/Search/Search";
+import Listings from "../pages/Listings/Listings";
 import Payment from "../pages/Payment/Payment";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
@@ -53,6 +54,7 @@ const AppRouter = () => {
           <Route path="/listing/:id" element={<ListingDetail />} />
           <Route path="/search" element={<Search />} />
           <Route path="/search/:keyword" element={<Search />} />
+          <Route path="/listings" element={<Listings />} />
           <Route path="/category/:categoryId" element={<Category />} />
           <Route path="/forgetpassword" element={<ForgetPassword />} />
           <Route path="/verify-otp" element={<VerifyOtp />} />
