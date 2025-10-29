@@ -565,20 +565,6 @@ const ManageDetail = () => {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <button className="px-4 py-2 rounded-md border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold cursor-pointer">
-                  Đã bán / Ẩn tin
-                </button>
-                <button
-                  className="px-4 py-2 rounded-md bg-green-600 hover:bg-green-500 text-white font-semibold cursor-pointer"
-                  onClick={() =>
-                    navigate(`/add-listing?mode=edit&id=${detail.id}`)
-                  }
-                >
-                  Sửa tin
-                </button>
-              </div>
-
               {false && detail.paymentStatus === "AwaitingPayment" && (
                 <div className="mt-3">
                   <div
