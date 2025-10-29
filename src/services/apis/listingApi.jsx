@@ -70,6 +70,31 @@ const listingService = {
     });
   },
 
+  async updateListing(data) {
+    // Built-in mock for the provided UpdateListing API
+    const useMock = String(import.meta.env.VITE_USE_MOCK || "").toLowerCase() === "true";
+    if (useMock) {
+      // Simulate network latency
+      await new Promise((r) => setTimeout(r, 300));
+      return {
+        success: true,
+        status: 200,
+        data: {
+          error: 0,
+          message: "Cập nhật bài đăng thành công",
+          count: 0,
+          data: null,
+        },
+      };
+    }
+
+    return await performApiRequest(API_ENDPOINTS_LISTING.UPDATE_LISTING, {
+      method: "put",
+      data,
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
   async acceptListing(id) {
     if (!id) {
       return { success: false, error: "Listing id is required", status: null };

@@ -292,6 +292,7 @@ const ListingItem = ({
     "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
   const btnOutline = "border border-gray-300 text-gray-700 hover:bg-gray-50";
   const btnPrimary = "bg-green-600 hover:bg-green-500 text-white font-semibold";
+  const btnSecondary = "bg-blue-600 hover:bg-blue-500 text-white font-semibold";
 
   // Render actions theo trạng thái
   const renderActions = () => {
@@ -299,6 +300,14 @@ const ListingItem = ({
       case "active": // ĐANG HIỂN THỊ
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
             {/* Nút chỉnh sửa */}
             <button
               onClick={() => onEdit(item.id)}
@@ -345,7 +354,15 @@ const ListingItem = ({
       case "rejected": // BỊ TỪ CHỐI
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Chỉ hiển thị nút chỉnh sửa */}
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
+            {/* Nút chỉnh sửa */}
             <button
               onClick={() => onEdit(item.id)}
               className={`${btnBase} ${btnOutline}`}
@@ -358,7 +375,15 @@ const ListingItem = ({
       case "expired": // HẾT HẠN
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Chỉ hiển thị nút gia hạn tin */}
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
+            {/* Nút gia hạn tin */}
             <button
               onClick={() => onPayAgain(item)}
               className={`${btnBase} ${btnPrimary}`}
@@ -371,7 +396,15 @@ const ListingItem = ({
       case "payment": // CẦN THANH TOÁN
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Chỉ hiển thị nút thanh toán */}
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
+            {/* Nút thanh toán */}
             <PaymentButton
               listingId={item.id}
               className={`${btnBase} ${btnPrimary}`}
@@ -388,12 +421,29 @@ const ListingItem = ({
         );
 
       case "pending": // CHỜ DUYỆT
-        // Ẩn hết nút
-        return null;
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+          </div>
+        );
 
       case "hidden": // ĐÃ ẨN
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Nút xem chi tiết */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
             {/* Hiển thị lại tin */}
             <button
               onClick={() => onUnhide?.(item)}
@@ -413,7 +463,17 @@ const ListingItem = ({
         );
 
       default:
-        return null;
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            {/* Nút xem chi tiết cho các trạng thái khác */}
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+          </div>
+        );
     }
   };
 
@@ -422,12 +482,7 @@ const ListingItem = ({
       <div className="p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
         {/* LEFT: Image */}
         <div className="flex md:flex-col items-start gap-3 md:w-[200px]">
-          <button
-            type="button"
-            onClick={() => onNavigate(item)}
-            className={`w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 transition ${"hover:border-green-500 cursor-pointer"}`}
-            title={"Xem chi tiết tin"}
-          >
+          <div className="w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
             {galleryImage ? (
               <img
                 src={galleryImage}
@@ -436,22 +491,18 @@ const ListingItem = ({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                Trạng thái thanh toán
+                Không có ảnh
               </div>
             )}
-          </button>
+          </div>
         </div>
 
         {/* RIGHT */}
         <div className="flex-1">
           <div className="flex flex-col gap-1">
-            <button
-              onClick={() => onNavigate(item)}
-              className={`text-left text-lg md:text-xl font-semibold transition "text-gray-800 hover:text-blue-600 cursor-pointer"}`}
-              title={"Xem chi tiết tin"}
-            >
+            <h3 className="text-lg md:text-xl font-semibold text-gray-800">
               {item.title}
-            </button>
+            </h3>
 
             <p className="text-red-600 font-bold text-lg select-none">
               {currency(item.price)}
@@ -590,8 +641,7 @@ const ManageListing = () => {
   const onDelete = (id) =>
     setListings((prev) => (prev || []).filter((x) => x.id !== id));
 
-  const onEdit = (id) =>
-    navigate(`/add-listing?mode=edit&id=${id}${location.search}`);
+  const onEdit = (id) => navigate(`/update-listing/${id}${location.search}`);
 
   const onNavigate = (listing) => {
     navigate(`/manage-listing/${listing.id}${location.search}`, {
