@@ -179,7 +179,9 @@ export default function Listings() {
         const params = {
           pageIndex: 1,
           pageSize: 500,
-          search: debouncedQuery || undefined,
+          // Note: do NOT pass text search to backend here.
+          // Backend search does not include model, which breaks model queries.
+          // We fetch broadly and apply robust client-side filtering below.
           from: Math.max(0, Number(priceFrom) || 0),
           to: Math.max(Number(priceFrom) || 0, Number(priceTo) || 0),
           category: category || undefined,
@@ -212,7 +214,7 @@ export default function Listings() {
       }
     })();
     setUiPage(1);
-  }, [debouncedQuery, category, brandId, status, area, priceFrom, priceTo, yearFrom, yearTo]);
+  }, [category, brandId, status, area, priceFrom, priceTo, yearFrom, yearTo]);
 
   // URL sync
   useEffect(() => {

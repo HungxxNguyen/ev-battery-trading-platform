@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+/*  */ import React, { useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -125,13 +125,12 @@ export default function Search() {
       : DEFAULT_PAGE_SIZE
   );
 
+  const [rawItems, setRawItems] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [totalItems, setTotalItems] = useState(undefined);
   const [totalPages, setTotalPages] = useState(undefined);
-
-  const abortRef = useRef(null);
 
   // Keep internal keyword in sync when navigating directly
   useEffect(() => {
@@ -152,19 +151,16 @@ export default function Search() {
         return;
       }
 
-      // cancel previous
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+      // Note: removed AbortController; using client-side filtering instead of server-side search.
 
       setLoading(true);
       setError("");
 
       try {
-        const res = await listingService.getListings(
-          { search: k, pageIndex, pageSize },
-          { signal: controller.signal }
-        );
+        const res = await listingService.getListings({
+          pageIndex: 1,
+          pageSize: 500,
+        });
         if (!isActive) return;
 
         if (res?.success) {
@@ -174,9 +170,32 @@ export default function Search() {
             totalItems: ti,
             totalPages: tp,
           } = extractItemsAndMeta(payload?.data ?? payload);
-          setItems(Array.isArray(it) ? it : []);
-          setTotalItems(ti);
-          setTotalPages(tp);
+          const base = Array.isArray(it) ? it : [];
+          setRawItems(base);
+          // Client-side text search across title/brand/model/area
+          const getTitle = (it) => String(it.title ?? it.Title ?? "");
+          const getModel = (it) => String(it.model ?? it.Model ?? "");
+          const getBrandName = (it) =>
+            String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
+          const getArea = (it) => String(it.area ?? it.Area ?? "");
+          const filtered = base.filter((it) => {
+            const hay = [
+              getTitle(it),
+              getBrandName(it),
+              getModel(it),
+              getArea(it),
+            ]
+              .join(" ")
+              .toLowerCase();
+            return hay.includes(k.toLowerCase());
+          });
+          const total = filtered.length;
+          const tpc = Math.ceil(total / pageSize) || 0;
+          const start = (Math.max(1, pageIndex) - 1) * pageSize;
+          const pageItems = filtered.slice(start, start + pageSize);
+          setItems(pageItems);
+          setTotalItems(total);
+          setTotalPages(tpc);
         } else {
           setItems([]);
           setTotalItems(0);
@@ -185,7 +204,6 @@ export default function Search() {
         }
       } catch (err) {
         if (!isActive) return;
-        if (err?.name === "AbortError") return; // ignore aborted
         setItems([]);
         setTotalItems(0);
         setTotalPages(0);
@@ -198,7 +216,6 @@ export default function Search() {
     doFetch();
     return () => {
       isActive = false;
-      if (abortRef.current) abortRef.current.abort();
     };
   }, [debouncedKeyword, pageIndex, pageSize]);
 

@@ -208,21 +208,21 @@ export default function Header() {
                     Tất cả sản phẩm
                   </Link>
                   <Link
-                    to="/categories/cars"
+                    to="/category/car"
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
                     Ô tô điện
                   </Link>
                   <Link
-                    to="/categories/batteries"
+                    to="/category/bike"
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
-                    Xe 2 bánh điện
+                    Xe máy điện
                   </Link>
                   <Link
-                    to="/categories/accessories"
+                    to="/category/battery"
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >

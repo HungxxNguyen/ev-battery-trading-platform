@@ -87,6 +87,13 @@ const formatVNDateTime = (date) => {
 const mapApiDataToFrontend = (apiData) => {
   if (!apiData || !Array.isArray(apiData)) return [];
 
+  // Thêm mapping cho packageType
+  const packageTypeMapping = {
+    ElectricCar: "Ô tô điện",
+    ElectricMotorbike: "Xe máy điện",
+    RemovableBattery: "Pin rời",
+  };
+
   return apiData.map((item) => {
     // Map status từ API sang frontend status với logic mới
     let frontendStatus = item.status?.toLowerCase();
@@ -132,6 +139,17 @@ const mapApiDataToFrontend = (apiData) => {
       paymentStatus: item.paymentStatus, // Giữ nguyên paymentStatus từ API
       paymentStatusText:
         PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus, // Convert sang tiếng Việt
+      // Thêm thông tin package
+      package: item.package
+        ? {
+            name: item.package.name,
+            price: item.package.price,
+            durationInDays: item.package.durationInDays,
+            packageType:
+              packageTypeMapping[item.package.packageType] ||
+              item.package.packageType,
+          }
+        : null,
       metrics: {
         rank: Math.floor(Math.random() * 100) + 1, // Tạm thời random, cần API cung cấp
         categoryLabel: categoryMapping[item.category] || item.category,
@@ -497,7 +515,7 @@ const ListingItem = ({
           </div>
         </div>
 
-        {/* RIGHT */}
+        {/* MIDDLE: Content */}
         <div className="flex-1">
           <div className="flex flex-col gap-1">
             <h3 className="text-lg md:text-xl font-semibold text-gray-800">
@@ -513,7 +531,6 @@ const ListingItem = ({
               <span>
                 Mục <b>{item.category || "Khác"}</b>
               </span>
-              {/* Hiển thị trạng thái thanh toán nếu có */}
               {item.paymentStatus && (
                 <span className="ml-3">
                   | Trạng thái thanh toán: <b>{item.paymentStatusText}</b>
@@ -526,9 +543,8 @@ const ListingItem = ({
               <span>{item.location}</span>
             </div>
 
-            {/* Ẩn ngày đăng & hết hạn ở trạng thái REJECTED */}
+            {/* Ngày đăng & hết hạn */}
             {item.status === "payment" || item.status === "pending" ? (
-              // Trạng thái "payment": chỉ hiện ngày đăng tin
               <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
                 <span>
                   Ngày đăng tin:{" "}
@@ -542,7 +558,6 @@ const ListingItem = ({
                 </span>
               </div>
             ) : (
-              // Các trạng thái khác (trừ "rejected"): hiện đăng + hết hạn
               item.status !== "rejected" && (
                 <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
                   <span>
@@ -571,6 +586,50 @@ const ListingItem = ({
           {/* Actions - HIỂN THỊ THEO TRẠNG THÁI */}
           {renderActions()}
         </div>
+
+        {/* RIGHT: Package Info */}
+        {item.package && (
+          <div className="md:w-[220px] flex-shrink-0">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <FiZap className="text-blue-600 text-lg" />
+                <div className="font-semibold text-blue-800 text-sm">
+                  Gói đăng tin
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-700">Tên gói:</span>
+                  <span className="font-semibold text-blue-900 text-right">
+                    {item.package.name}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-700">Phân loại:</span>
+                  <span className="font-semibold text-blue-900">
+                    {item.package.packageType}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-700">Thời hạn:</span>
+                  <span className="font-semibold text-blue-900">
+                    {item.package.durationInDays} ngày
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-blue-700">Chi phí:</span>
+                  <span className="font-bold text-blue-900">
+                    {currency(item.package.price)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
