@@ -16,6 +16,8 @@ import {
   FaFileAlt,
   FaMapMarkerAlt,
   FaCircle,
+  FaLock,
+  FaInfoCircle,
 } from "react-icons/fa";
 import { Camera } from "lucide-react";
 import MainLayout from "../../components/layout/MainLayout";
@@ -29,6 +31,9 @@ const CATEGORY_OPTIONS = [
   { value: "ElectricMotorbike", label: "Xe máy điện" },
   { value: "RemovableBattery", label: "Pin điện" },
 ];
+const CATEGORY_LABEL = Object.fromEntries(
+  CATEGORY_OPTIONS.map((o) => [o.value, o.label])
+);
 
 const LISTING_STATUS_OPTIONS = [
   { value: "New", label: "Mới" },
@@ -41,7 +46,7 @@ const MAX_SIZE_MB = 10;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 // Form field layout (reuse from AddListing)
-const MAIN_FIELDS = [
+const BASE_MAIN_FIELDS = [
   {
     label: "Danh mục",
     name: "Category",
@@ -49,6 +54,9 @@ const MAIN_FIELDS = [
     required: true,
     options: CATEGORY_OPTIONS,
     icon: "FaCar",
+    // Khóa không cho chọn danh mục khi cập nhật:
+    disabled: true,
+    help: "Danh mục được khóa để đảm bảo dữ liệu nhất quán.",
   },
   {
     label: "Trạng thái",
@@ -131,10 +139,10 @@ const MAIN_FIELDS = [
 
 const DESCRIPTION_FIELD = [
   {
-    label: "Mô tả chi tiết",
     name: "Description",
     fieldType: "textarea",
     icon: "FaFileAlt",
+    placeholder: "Nêu rõ tình trạng xe, bảo dưỡng, phụ kiện kèm theo...",
   },
 ];
 
@@ -153,6 +161,8 @@ const ICONS = {
   FaFileAlt,
   FaMapMarkerAlt,
   FaCircle,
+  FaLock,
+  FaInfoCircle,
 };
 
 // Normalize helpers reused from AddListing
@@ -178,13 +188,33 @@ const toBrandModel = (b) => ({
   ),
 });
 
-// Field renderers (aligned with AddListing)
+// UI helpers
+const badgeClass = (variant) => {
+  switch (variant) {
+    case "primary":
+      return "bg-green-50 text-green-700 ring-1 ring-green-200";
+    case "warn":
+      return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+    case "muted":
+      return "bg-gray-50 text-gray-700 ring-1 ring-gray-200";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
+
+// Field renderers
 const FieldWrapper = ({ item, children }) => (
-  <div className="bg-white border border-gray-200 rounded-lg p-4">
+  <div className="bg-white border border-gray-200 rounded-xl p-4">
     <label className="block text-sm font-medium text-gray-700">
       {item.label}
       {item.required && <span className="text-red-500"> *</span>}
     </label>
+    {item.help ? (
+      <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+        <FaInfoCircle className="opacity-70" />
+        <span>{item.help}</span>
+      </div>
+    ) : null}
     <div className="mt-2 flex items-center gap-2">{children}</div>
   </div>
 );
@@ -199,31 +229,61 @@ const TextInput = ({ item, formData, onChange }) => {
         value={formData[item.name] ?? ""}
         onChange={(e) => onChange(item.name, e.target.value)}
         placeholder={item.placeholder || ""}
-        className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
       />
     </FieldWrapper>
   );
 };
 
-const Dropdown = ({ item, value, onChange }) => {
+const Dropdown = ({ item, value, onChange, optionsOverride, disabled }) => {
   const Icon = ICONS[item.icon] || FaClipboardList;
+  const opts = optionsOverride ?? item.options ?? [];
   return (
     <FieldWrapper item={item}>
       <Icon className="text-gray-500" />
       <select
         value={value ?? ""}
         onChange={(e) => onChange(item.name, e.target.value)}
-        className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+        className={`flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white ${
+          disabled ? "opacity-70 pointer-events-none" : ""
+        }`}
+        disabled={disabled}
+        aria-readonly={disabled}
+        title={disabled ? "Trường này đã bị khóa khi cập nhật" : undefined}
       >
-        <option value="" disabled>
-          Chọn {item.label.toLowerCase()}
-        </option>
-        {item.options?.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+        {!disabled && (
+          <option value="" disabled>
+            Chọn {item.label.toLowerCase()}
           </option>
-        ))}
+        )}
+        {opts.length === 0 ? (
+          <option value="" disabled>
+            {disabled ? "—" : "Không có dữ liệu"}
+          </option>
+        ) : (
+          opts.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))
+        )}
       </select>
+    </FieldWrapper>
+  );
+};
+
+const ReadonlyBadge = ({ item, valueLabel }) => {
+  const Icon = ICONS[item.icon] || FaClipboardList;
+  return (
+    <FieldWrapper item={item}>
+      <Icon className="text-gray-500" />
+      <div
+        className={`px-3 py-2 rounded-lg text-sm ${badgeClass(
+          "muted"
+        )} select-none`}
+      >
+        {valueLabel || "—"}
+      </div>
     </FieldWrapper>
   );
 };
@@ -238,7 +298,7 @@ const TextArea = ({ item, formData, onChange }) => {
         value={formData[item.name] ?? ""}
         onChange={(e) => onChange(item.name, e.target.value)}
         placeholder={item.placeholder || "Mô tả chi tiết..."}
-        className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
       />
     </FieldWrapper>
   );
@@ -247,8 +307,14 @@ const TextArea = ({ item, formData, onChange }) => {
 const fieldComponents = {
   text: TextInput,
   number: TextInput,
-  dropdown: ({ item, formData, onChange }) => (
-    <Dropdown item={item} value={formData[item.name]} onChange={onChange} />
+  dropdown: ({ item, formData, onChange, optionsOverride, disabled }) => (
+    <Dropdown
+      item={item}
+      value={formData[item.name]}
+      onChange={onChange}
+      optionsOverride={optionsOverride}
+      disabled={disabled || item.disabled}
+    />
   ),
   textarea: TextArea,
 };
@@ -302,6 +368,7 @@ const UpdateListing = () => {
     () => (brands || []).map(toBrandModel).filter((b) => b.id && b.name),
     [brands]
   );
+
   const filteredBrandOptions = useMemo(() => {
     const cat = formData?.Category;
     const list = cat ? brandsNormalized.filter((b) => b.type === cat) : [];
@@ -312,7 +379,8 @@ const UpdateListing = () => {
   const handleInputChange = (name, value) =>
     setFormData((prev) => {
       const next = { ...prev, [name]: value };
-      if (name === "Category") next.BrandId = ""; // reset brand when category changes
+      // Category bị khóa, nhưng vẫn giữ logic reset phòng khi sau này mở khóa
+      if (name === "Category") next.BrandId = "";
       return next;
     });
 
@@ -330,7 +398,6 @@ const UpdateListing = () => {
             : payload;
         if (!item) throw new Error("Không tìm thấy tin đăng");
 
-        // Pre-fill form data with uppercase keys expected by backend
         const prefill = {
           Id: item.id ?? item.Id ?? id,
           Title: item.title ?? item.Title ?? "",
@@ -382,7 +449,6 @@ const UpdateListing = () => {
             return url ? { id: id || url, url } : null;
           })
           .filter(Boolean);
-        console.log("imgs: ", item);
 
         if (active) setExistingImages(imgs);
       } catch (err) {
@@ -445,10 +511,10 @@ const UpdateListing = () => {
       "Category",
       "ListingStatus",
       "BrandId",
-    ]; // Description optional for update
+    ];
     for (const f of required) {
       if (!formData[f] || String(formData[f]).trim() === "") {
-        const def = MAIN_FIELDS.find((x) => x.name === f) || { label: f };
+        const def = BASE_MAIN_FIELDS.find((x) => x.name === f) || { label: f };
         showNotification(`Vui lòng điền ${def.label}`, "error");
         return false;
       }
@@ -463,9 +529,8 @@ const UpdateListing = () => {
     setSubmitting(true);
     try {
       const fd = new FormData();
-      // Required id
       fd.append("Id", String(formData.Id || id));
-      // Append scalar fields if present
+
       [
         "Title",
         "Price",
@@ -488,17 +553,17 @@ const UpdateListing = () => {
         if (v !== undefined && v !== null && String(v) !== "") fd.append(k, v);
       });
 
-      // Images to add
       imagesToAdd.forEach((file) => fd.append("ImagesToAdd", file));
-      // Images to remove (ids or urls)
       imagesToRemove.forEach((val) => fd.append("ImagesToRemove", val));
 
       const res = await listingService.updateListing(fd);
-      if (!res?.success) throw new Error(res?.error || "Cập nhật thất bại");
+      if (!res?.success && !res?.data?.success)
+        throw new Error(res?.error || res?.data?.error || "Cập nhật thất bại");
 
-      const msg = res?.data?.message || "Cập nhật bài đăng thành công";
+      const msg =
+        res?.data?.message || res?.message || "Cập nhật bài đăng thành công";
       showNotification(msg, "success");
-      navigate(`/manage-listing/${formData.Id || id}`);
+      navigate(`/manage-listing?tab=pending`);
     } catch (err) {
       console.error("Update listing error:", err);
       showNotification(err?.message || "Không thể cập nhật", "error");
@@ -506,6 +571,19 @@ const UpdateListing = () => {
       setSubmitting(false);
     }
   };
+
+  const totalImages =
+    existingImages.length - imagesToRemove.length + imagesToAdd.length;
+
+  // MAIN_FIELDS cho trang update (Category bị khóa)
+  const MAIN_FIELDS = BASE_MAIN_FIELDS;
+
+  const statusChip =
+    formData?.ListingStatus === "New"
+      ? { text: "Mới", cls: badgeClass("primary") }
+      : formData?.ListingStatus
+      ? { text: "Đã sử dụng", cls: badgeClass("muted") }
+      : null;
 
   return (
     <MainLayout>
@@ -515,57 +593,178 @@ const UpdateListing = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
       >
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-          Cập nhật tin đăng
-        </h2>
+        {/* Header */}
+        <div className="flex flex-col gap-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            Cập nhật tin đăng
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-sm ${badgeClass(
+                "muted"
+              )}`}
+            >
+              Danh mục:{" "}
+              <strong className="ml-1">
+                {CATEGORY_LABEL[formData?.Category] || "—"}
+              </strong>
+            </span>
+            {statusChip ? (
+              <span
+                className={`px-3 py-1 rounded-full text-sm ${statusChip.cls}`}
+              >
+                Trạng thái: <strong className="ml-1">{statusChip.text}</strong>
+              </span>
+            ) : null}
+            {/* {formData?.Id ? (
+              <span className="px-3 py-1 rounded-full text-sm bg-gray-50 text-gray-700 ring-1 ring-gray-200">
+                ID:{" "}
+                <strong className="ml-1">
+                  {String(formData.Id).slice(0, 8)}...
+                </strong>
+              </span>
+            ) : null} */}
+          </div>
+
+          <div className="mt-1 flex items-center gap-2 text-sm text-gray-600">
+            <FaLock className="opacity-70" />
+            <span>
+              Danh mục bị khóa ở màn cập nhật. Nếu cần đổi danh mục, hãy tạo tin
+              mới.
+            </span>
+          </div>
+        </div>
 
         {loading ? (
-          <div className="mt-6 bg-white border border-gray-200 rounded-xl p-6">
-            Đang tải dữ liệu...
+          <div className="mt-6 bg-white border border-gray-200 rounded-xl p-6 animate-pulse">
+            <div className="h-5 w-40 bg-gray-200 rounded mb-4"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-24 bg-gray-100 rounded-lg" />
+              ))}
+            </div>
           </div>
         ) : (
           <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
             {/* Main fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {MAIN_FIELDS.map((item) => {
-                const Comp = fieldComponents[item.fieldType];
-                if (item.name === "BrandId") {
-                  const optItem = { ...item, options: filteredBrandOptions };
+            <section>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                Thông tin chính
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {MAIN_FIELDS.map((item) => {
+                  const Comp = fieldComponents[item.fieldType];
+
+                  // Category: khóa chọn — hiển thị dropdown disabled hoặc badge readonly
+                  if (item.name === "Category") {
+                    // Cách 1: Dropdown disabled (giữ bố cục đồng nhất)
+                    return (
+                      <div key={item.name}>
+                        {fieldComponents.dropdown({
+                          item,
+                          formData,
+                          onChange: handleInputChange,
+                          optionsOverride: [
+                            {
+                              value: formData?.Category ?? "",
+                              label: CATEGORY_LABEL[formData?.Category] || "—",
+                            },
+                          ],
+                          disabled: true,
+                        })}
+                      </div>
+                    );
+                    // Cách 2 (thay thế): Badge readonly
+                    // return (
+                    //   <ReadonlyBadge
+                    //     key={item.name}
+                    //     item={item}
+                    //     valueLabel={CATEGORY_LABEL[formData?.Category] || "—"}
+                    //   />
+                    // );
+                  }
+
+                  if (item.name === "BrandId") {
+                    // Dropdown thương hiệu theo danh mục
+                    const optItem = { ...item };
+                    let opts = filteredBrandOptions;
+                    if (brandsLoading) {
+                      opts = [
+                        {
+                          value: "",
+                          label: "Đang tải danh sách thương hiệu...",
+                        },
+                      ];
+                    } else if (brandsError) {
+                      opts = [{ value: "", label: "Lỗi tải thương hiệu" }];
+                    } else if (!formData?.Category) {
+                      opts = [
+                        {
+                          value: "",
+                          label: "Danh mục trống — không có dữ liệu",
+                        },
+                      ];
+                    } else if (filteredBrandOptions.length === 0) {
+                      opts = [
+                        { value: "", label: "Không có thương hiệu phù hợp" },
+                      ];
+                    }
+                    return (
+                      <div key={item.name}>
+                        {Comp?.({
+                          item: optItem,
+                          formData,
+                          onChange: handleInputChange,
+                          optionsOverride: opts,
+                        })}
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={item.name}>
                       {Comp?.({
-                        item: optItem,
+                        item,
                         formData,
                         onChange: handleInputChange,
                       })}
                     </div>
                   );
-                }
-                return (
-                  <div key={item.name}>
-                    {Comp?.({ item, formData, onChange: handleInputChange })}
-                  </div>
-                );
-              })}
-            </div>
+                })}
+              </div>
+            </section>
 
             {/* Description */}
-            <div>
-              {DESCRIPTION_FIELD.map((item) => {
-                const Comp = fieldComponents[item.fieldType];
-                return (
-                  <div key={item.name}>
-                    {Comp?.({ item, formData, onChange: handleInputChange })}
-                  </div>
-                );
-              })}
-            </div>
+            <section>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                Mô tả chi tiết
+              </h3>
+              <div>
+                {DESCRIPTION_FIELD.map((item) => {
+                  const Comp = fieldComponents[item.fieldType];
+                  return (
+                    <div key={item.name}>
+                      {Comp?.({ item, formData, onChange: handleInputChange })}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Images manager */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <h3 className="font-semibold text-xl mb-3 text-gray-700">
-                Hình ảnh
-              </h3>
+            <section className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-xl text-gray-800">
+                  Hình ảnh
+                </h3>
+                <div
+                  className={`text-sm px-2.5 py-1 rounded ${badgeClass(
+                    totalImages > MAX_IMAGES ? "warn" : "muted"
+                  )}`}
+                >
+                  {totalImages}/{MAX_IMAGES} ảnh
+                </div>
+              </div>
 
               {/* Existing images */}
               {existingImages?.length ? (
@@ -574,6 +773,7 @@ const UpdateListing = () => {
                     <label
                       key={img.id}
                       className="relative block border border-gray-200 rounded-lg overflow-hidden bg-white"
+                      title="Tick để xoá ảnh này khi cập nhật"
                     >
                       <img
                         src={img.url}
@@ -587,7 +787,7 @@ const UpdateListing = () => {
                           checked={imagesToRemove.includes(img.id)}
                           onChange={() => toggleRemoveExisting(img)}
                         />
-                        <span>Xóa ảnh này</span>
+                        <span>Xoá ảnh này</span>
                       </div>
                     </label>
                   ))}
@@ -596,7 +796,7 @@ const UpdateListing = () => {
 
               {/* Add new images */}
               <div
-                className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md bg-white ${
+                className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-lg bg-white ${
                   imageError ? "border-red-400" : "border-gray-300"
                 }`}
                 onDragOver={handleDragOver}
@@ -649,28 +849,29 @@ const UpdateListing = () => {
                         onClick={() => removeNewImage(index)}
                         className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
                         aria-label="Xoá ảnh"
+                        title="Xoá ảnh vừa thêm"
                       >
-                        x
+                        ×
                       </button>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
+            </section>
 
             {/* Submit */}
             <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50"
+                className="px-6 py-3 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
               >
                 Huỷ
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-70"
+                className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 disabled:opacity-70"
               >
                 {submitting ? "Đang cập nhật..." : "Cập nhật"}
               </button>

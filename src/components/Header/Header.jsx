@@ -212,21 +212,21 @@ export default function Header() {
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
-                    Xe điện
+                    Ô tô điện
                   </Link>
                   <Link
                     to="/categories/batteries"
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
-                    Pin
+                    Xe 2 bánh điện
                   </Link>
                   <Link
                     to="/categories/accessories"
                     className="block px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                     onClick={closeAllDropdowns}
                   >
-                    Phụ kiện
+                    Pin điện
                   </Link>
                 </div>
               )}
