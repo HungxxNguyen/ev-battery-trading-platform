@@ -16,7 +16,6 @@ import ListingDetail from "../pages/ListingDetail/ListingDetail";
 import Category from "../pages/Category/Category";
 import Search from "../pages/Search/Search";
 import Listings from "../pages/Listings/Listings";
-import Payment from "../pages/Payment/Payment";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
 import Notifications from "../pages/Notifications/Notifications";
@@ -69,7 +68,6 @@ const AppRouter = () => {
             <Route path="/update-listing/:id" element={<UpdateListing />} />
             <Route path="/manage-listing" element={<ManageListing />} />
             <Route path="/manage-listing/:id" element={<ManageDetail />} />
-            <Route path="/payment" element={<Payment />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/notifications" element={<Notifications />} />
