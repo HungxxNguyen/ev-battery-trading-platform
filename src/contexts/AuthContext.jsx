@@ -16,13 +16,13 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         const tokenInfo = decodeToken(token);
         if (tokenInfo && tokenInfo.exp > Date.now() / 1000) {
-          // Lưu role vào localStorage
+          // Save role for later use
           localStorage.setItem("role", tokenInfo.role);
           setIsAuthenticated(true);
           try {
             const response = await userService.getCurrentUser();
             if (response.success) {
-              setUser(response.data.data); // Cập nhật user từ API
+              setUser(response.data?.data);
             } else {
               console.error("Failed to fetch user data:", response.error);
               setLoading(false);
@@ -33,14 +33,14 @@ export const AuthProvider = ({ children }) => {
           }
         } else {
           localStorage.removeItem("token");
-          localStorage.removeItem("role"); // Xóa role nếu token hết hạn
+          localStorage.removeItem("role");
         }
       }
       setLoading(false);
     };
 
     initializeAuth();
-  }, [isUpdate]); // Chỉ chạy một lần khi component mount
+  }, [isUpdate]);
 
   const login = async (userData, token) => {
     if (!userData || !token) {
@@ -50,19 +50,19 @@ export const AuthProvider = ({ children }) => {
 
     const tokenInfo = decodeToken(token);
     if (!tokenInfo || tokenInfo.exp <= Date.now() / 1000) {
-      alert("Token không hợp lệ hoặc đã hết hạn");
+      alert("Token khong hop le hoac da het han");
       return;
     }
 
-    localStorage.setItem("token", token); // Chỉ lưu token
-    localStorage.setItem("role", tokenInfo.role); // Lưu role từ token
+    localStorage.setItem("token", token);
+    localStorage.setItem("role", tokenInfo.role);
     setIsAuthenticated(true);
 
-    // Gọi API để lấy thông tin user
+    // Fetch user info
     try {
       const response = await userService.getCurrentUser();
       if (response.success) {
-        setUser(response.data); // Cập nhật user từ API
+        setUser(response.data?.data);
       } else {
         console.error("Failed to fetch user data:", response.error);
       }
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.clear(); // Xóa toàn bộ localStorage (token và role)
+    localStorage.clear();
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -92,3 +92,4 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
