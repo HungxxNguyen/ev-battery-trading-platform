@@ -25,6 +25,16 @@ const userService = {
       data: userData,
     });
   },
+
+  /**
+   * Lấy thông tin người dùng theo Id
+   */
+  async getById(id) {
+    if (!id) {
+      return { success: false, error: "User id is required", status: null };
+    }
+    return performApiRequest(API_ENDPOINTS_USER.GET_BY_ID(id), { method: "get" });
+  },
 };
 
 export default userService;

@@ -683,7 +683,7 @@ export default function ReviewPage() {
                     </option>
                   </select>
                   <label htmlFor="descriptionReject" className="font-medium">
-                    Mô tả thêm (không bắt buộc):
+                    Mô tả thêm (Bắt buộc):
                   </label>
                   <textarea
                     id="descriptionReject"

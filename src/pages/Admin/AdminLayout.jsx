@@ -13,6 +13,7 @@ import {
   Users,
   Building2,
   LogOut,
+  Flag,
 } from "lucide-react";
 import DashboardPage from "./DashboardPage";
 import ReviewPage from "./ReviewPage";
@@ -20,6 +21,7 @@ import SupportPage from "./SupportPage";
 import PlansPage from "./PlansPage";
 import UsersModeration from "./UsersModeration";
 import BrandPage from "./BrandPage";
+import ReportsAdminPage from "./Reports";
 import { AuthContext } from "../../contexts/AuthContext";
 
 const GLASS_PANEL =
@@ -80,6 +82,12 @@ export default function AdminLayout() {
               onClick={() => navigate("/admin/review")}
             />
             <SideItem
+              icon={<Flag className="h-4 w-4" />}
+              label="Reports"
+              active={currentPage === "reports"}
+              onClick={() => navigate("/admin/reports")}
+            />
+            <SideItem
               icon={<Headphones className="h-4 w-4" />}
               label="Support"
               active={currentPage === "support"}
@@ -125,6 +133,7 @@ export default function AdminLayout() {
           />
         )}
         {currentPage === "review" && <ReviewPage />}
+        {currentPage === "reports" && <ReportsAdminPage />}
         {currentPage === "support" && <SupportPage />}
         {currentPage === "plans" && <PlansPage />}
         {currentPage === "users" && <UsersModeration />}

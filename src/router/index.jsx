@@ -36,6 +36,7 @@ import SupportPage from "../pages/Admin/SupportPage.jsx";
 import PlansPage from "../pages/Admin/PlansPage.jsx";
 import BrandPage from "../pages/Admin/BrandPage.jsx";
 import UsersModeration from "../pages/Admin/UsersModeration.jsx";
+import ReportsAdminPage from "../pages/Admin/Reports.jsx";
 
 // Guards
 import ProtectedRoute from "./ProtectedRoute";
@@ -84,6 +85,7 @@ const AppRouter = () => {
               <Route path="plans" element={<PlansPage />} />
               <Route path="brands" element={<BrandPage />} />
               <Route path="users" element={<UsersModeration />} />
+              <Route path="reports" element={<ReportsAdminPage />} />
             </Route>
           </Route>
         </Routes>

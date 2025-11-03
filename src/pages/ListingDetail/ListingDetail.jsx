@@ -1,17 +1,19 @@
 // src/pages/ListingDetail/ListingDetail.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useContext } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { FiHeart, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
 import listingService from "../../services/apis/listingApi";
+import ReportButton from "../../components/report/ReportButton";
+import { AuthContext } from "../../contexts/AuthContext";
 
 const FALLBACK_IMAGE = "https://placehold.co/1200x800?text=Listing";
 const FALLBACK_AVATAR = "https://placehold.co/160x160?text=User";
 
 const formatCurrency = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return "Lien he";
+    return "Liên hệ";
   }
 
   try {
@@ -22,7 +24,7 @@ const formatCurrency = (value) => {
 };
 
 const formatListingStatus = (status) => {
-  if (!status) return "Khong ro";
+  if (!status) return "Không rõ";
   const mapping = {
     New: "Mới",
     Used: "Đã sử dụng",
@@ -31,6 +33,8 @@ const formatListingStatus = (status) => {
 };
 
 const ListingDetail = () => {
+  const auth = useContext(AuthContext) || {};
+  const currentUserId = auth?.user?.id;
   const { id } = useParams();
   const location = useLocation();
   const locationListing = location.state?.listing;
@@ -84,18 +88,18 @@ const ListingDetail = () => {
             setListing(detail);
           } else {
             setListing(null);
-            setError("Khong tim thay thong tin tin dang");
+            setError("Không tìm thấy thông tin tin đăng");
           }
         } else {
           setListing(null);
-          setError(response.error || "Khong the tai chi tiet tin dang");
+          setError(response.error || "Không thể tải chi tiết tin đăng");
         }
       } catch (fetchError) {
         if (!active) {
           return;
         }
         setListing(null);
-        setError(fetchError.message || "Khong the tai chi tiet tin dang");
+        setError(fetchError.message || "Không thể tải chi tiết tin đăng");
       } finally {
         if (active) {
           setLoading(false);
@@ -214,6 +218,13 @@ const ListingDetail = () => {
   ).filter((item) => item.value);
 
   const seller = listing?.user;
+  const sellerId =
+    seller?.id ??
+    seller?.userId ??
+    seller?.accountId ??
+    seller?.userID ??
+    seller?.user_id ??
+    null;
   const packageInfo = listing?.package;
 
   const renderContent = () => {
@@ -264,7 +275,7 @@ const ListingDetail = () => {
                 type="button"
                 onClick={handlePrevImage}
                 className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
-                aria-label="Anh truoc"
+                aria-label="Ảnh trước"
               >
                 {"<"}
               </button>
@@ -273,7 +284,7 @@ const ListingDetail = () => {
                 type="button"
                 onClick={openLightbox}
                 className="block w-full"
-                aria-label="Xem anh kich thuoc day du"
+                aria-label="Xem ảnh kích thước đầy đủ"
               >
                 <img
                   src={images[currentImage]}
@@ -286,7 +297,7 @@ const ListingDetail = () => {
                 type="button"
                 onClick={handleNextImage}
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
-                aria-label="Anh tiep theo"
+                aria-label="Ảnh tiếp theo"
               >
                 {">"}
               </button>
@@ -367,7 +378,7 @@ const ListingDetail = () => {
                     ? "bg-red-50 border-red-200 text-red-500"
                     : "bg-white border-gray-200 text-gray-400 hover:text-red-400"
                 }`}
-                aria-label="Luu tin yeu thich"
+                aria-label="Lưu tin yêu thích"
               >
                 <FiHeart
                   className={`w-5 h-5 ${favActive ? "fill-current" : ""}`}
@@ -401,7 +412,7 @@ const ListingDetail = () => {
               <div className="flex justify-between">
                 <span>Model</span>
                 <span className="font-medium">
-                  {listing.model || "Chua cap nhat"}
+                  {listing.model || "Chưa cập nhật"}
                 </span>
               </div>
             </div>
@@ -413,16 +424,16 @@ const ListingDetail = () => {
               >
                 Chat
               </button>
-              <a
-                href={
-                  listing.user?.phoneNumber
-                    ? `tel:${listing.user.phoneNumber}`
-                    : "#"
-                }
-                className="flex-1 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 text-center"
-              >
-                Gọi ngay
-              </a>
+              {listing?.id && (
+                <ReportButton
+                  listingId={listing.id}
+                  userId={currentUserId}
+                  ownerId={sellerId}
+                  variant="button"
+                  className="flex-1 justify-center"
+                  label="Báo cáo tin"
+                />
+              )}
             </div>
           </div>
 
@@ -447,7 +458,7 @@ const ListingDetail = () => {
               <div className="flex justify-between">
                 <span>Email</span>
                 <span className="font-medium">
-                  {seller?.email || "Chua cap nhat"}
+                  {seller?.email || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -463,6 +474,8 @@ const ListingDetail = () => {
                 </div>
               )}
             </div>
+
+            {/* Removed extra report action under seller card as requested */}
           </div>
         </div>
       </div>
@@ -486,7 +499,7 @@ const ListingDetail = () => {
                 type="button"
                 onClick={handlePrevImage}
                 className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
-                aria-label="Anh truoc"
+                aria-label="Ảnh trước"
               >
                 <FiChevronLeft className="w-6 h-6" />
               </button>
@@ -503,7 +516,7 @@ const ListingDetail = () => {
                 type="button"
                 onClick={handleNextImage}
                 className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
-                aria-label="Anh tiep theo"
+                aria-label="Ảnh tiếp theo"
               >
                 <FiChevronRight className="w-6 h-6" />
               </button>
@@ -513,7 +526,7 @@ const ListingDetail = () => {
               type="button"
               onClick={closeLightbox}
               className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full"
-              aria-label="Dong"
+              aria-label="Đóng"
             >
               <FiX className="w-5 h-5" />
             </button>
