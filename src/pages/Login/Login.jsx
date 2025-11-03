@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FaUser, FaLock } from "react-icons/fa";
 import logo3 from "./../../assets/logo3.png";
 import backgroundImg from "./../../assets/background.png";
@@ -16,18 +16,34 @@ const Login = () => {
   const { showNotification } = useNotification();
   const [errors, setErrors] = useState({ email: "", passwordHash: "" });
 
+  const location = useLocation();
+
   const handleAuthSuccess = (token, role) => {
     localStorage.setItem("token", token);
     localStorage.setItem("role", role);
     showNotification(MESSAGES.AUTH.LOGIN_SUCCESS, "success");
 
-    const redirectPaths = {
-      Admin: "/admin",
-      default: "/",
-    };
+    let target = "/";
+    try {
+      if (role === "Admin") {
+        target = "/admin";
+      } else {
+        const params = new URLSearchParams(window.location.search);
+        const qsRedirect = params.get("redirect");
+        if (qsRedirect && typeof qsRedirect === "string" && qsRedirect.startsWith("/") && !qsRedirect.startsWith("//")) {
+          target = qsRedirect;
+        } else if (location?.state?.from) {
+          const from = location.state.from;
+          const fromPath = (from.pathname || "/") + (from.search || "");
+          if (fromPath.startsWith("/")) target = fromPath;
+        }
+      }
+    } catch (e) {
+      target = role === "Admin" ? "/admin" : "/";
+    }
 
     setTimeout(() => {
-      window.location.href = redirectPaths[role] || redirectPaths.default;
+      window.location.href = target;
     }, 500);
   };
 
@@ -255,3 +271,5 @@ const Footer = () => (
 );
 
 export default Login;
+
+
