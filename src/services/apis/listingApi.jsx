@@ -5,10 +5,9 @@ import {
 import { performApiRequest } from "../../utils/apiUtils";
 
 const listingService = {
-  async getListings(params = {}) {
+  async getListings() {
     return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
       method: "get",
-      params,
     });
   },
 
@@ -25,17 +24,13 @@ const listingService = {
     });
   },
 
-  async getByStatus({
-    pageIndex = 1,
-    pageSize = 10,
-    from = 0,
-    to = 1000000000,
-    status = "Pending",
-  } = {}) {
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_BY_STATUS, {
-      method: "get",
-      params: { pageIndex, pageSize, from, to, status },
-    });
+  async getByStatus(pageIndex = 1, pageSize = 10, status = "Pending") {
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.GET_BY_STATUS(pageIndex, pageSize, status),
+      {
+        method: "get",
+      }
+    );
   },
 
   async getListingDetail(id) {

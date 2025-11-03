@@ -120,13 +120,7 @@ export default function DashboardPage({ onSelectListing, onSelectTicket }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await listingService.getByStatus({
-          pageIndex: 1,
-          pageSize: 1,
-          from: 0,
-          to: 1000000000,
-          status: "Pending",
-        });
+        const res = await listingService.getByStatus(1, 1000, "Pending");
         if (cancelled) return;
         if (res?.success && res?.data) {
           const d = res.data;
