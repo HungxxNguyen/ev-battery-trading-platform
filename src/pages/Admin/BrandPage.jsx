@@ -250,7 +250,9 @@ export default function BrandPage() {
     <div className="mx-auto max-w-5xl space-y-4 text-slate-100">
       <Card className={GLASS_CARD6}>
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle>Thương hiệu</CardTitle>
+          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">
+            Thương hiệu
+          </h2>
         </CardHeader>
 
         <CardContent className="space-y-4">

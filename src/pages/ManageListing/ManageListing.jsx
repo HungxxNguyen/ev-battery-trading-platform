@@ -16,6 +16,8 @@ import {
   FiZap,
   FiEye,
   FiEyeOff,
+  FiAlertTriangle,
+  FiInfo,
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
 import listingService from "../../services/apis/listingApi";
@@ -41,7 +43,18 @@ const PAYMENT_STATUS_MAPPING = {
   AwaitingPayment: "Chờ thanh toán",
 };
 
-/* Quy ước số bài/1 trang để tính "TRANG X" từ metrics.rank */
+/* ---------------- Reject reason mapping ---------------- */
+const REJECT_REASON_MAPPING = {
+  CATEGORY_MISMATCH: "Danh mục không khớp",
+  INSUFFICIENT_INFO: "Thiếu thông tin quan trọng",
+  VIOLATES_POLICY: "Vi phạm quy định đăng tin",
+  DUPLICATE_LISTING: "Tin đăng trùng lặp",
+  INAPPROPRIATE_CONTENT: "Nội dung không phù hợp",
+  PRICING_ISSUE: "Giá bán không hợp lý",
+  INVALID_IMAGES: "Hình ảnh không hợp lệ",
+  OTHER: "Lý do khác",
+};
+
 const ITEMS_PER_PAGE = 20;
 
 /* ---------------- Utils ---------------- */
@@ -87,7 +100,6 @@ const formatVNDateTime = (date) => {
 const mapApiDataToFrontend = (apiData) => {
   if (!apiData || !Array.isArray(apiData)) return [];
 
-  // Thêm mapping cho packageType
   const packageTypeMapping = {
     ElectricCar: "Ô tô điện",
     ElectricMotorbike: "Xe máy điện",
@@ -95,16 +107,17 @@ const mapApiDataToFrontend = (apiData) => {
   };
 
   return apiData.map((item) => {
-    // Map status từ API sang frontend status với logic mới
     let frontendStatus = item.status?.toLowerCase();
 
     // Logic phân loại tab dựa trên PaymentStatus và status
     if (item.paymentStatus === "AwaitingPayment" && item.status === "Pending") {
       frontendStatus = "payment"; // Tab "CẦN THANH TOÁN"
+    } else if (item.paymentStatus === "Failed" && item.status === "Pending") {
+      // Thanh toán thất bại cũng cần hiển thị ở tab "CẦN THANH TOÁN"
+      frontendStatus = "payment";
     } else if (item.paymentStatus === "Success" && item.status === "Pending") {
       frontendStatus = "pending"; // Tab "CHỜ DUYỆT"
     } else {
-      // Giữ nguyên mapping cũ cho các trường hợp khác
       const statusMapping = {
         Active: "active",
         Expired: "expired",
@@ -115,7 +128,6 @@ const mapApiDataToFrontend = (apiData) => {
       frontendStatus = statusMapping[item.status] || item.status?.toLowerCase();
     }
 
-    // Map category từ API sang frontend category
     const categoryMapping = {
       ElectricCar: "Ô tô điện",
       ElectricMotorbike: "Xe máy điện",
@@ -133,13 +145,15 @@ const mapApiDataToFrontend = (apiData) => {
       activatedAt: item.activatedAt,
       expiredAt: item.expiredAt,
       creationDate: item.creationDate,
-      postedOn: formatVNDate(new Date()), // Cần API cung cấp ngày đăng
-      expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // Cần API cung cấp ngày hết hạn
-      payment: item.payment || false, // Thêm trường payment từ API
-      paymentStatus: item.paymentStatus, // Giữ nguyên paymentStatus từ API
+      // Reject information
+      resonReject: item.resonReject || item.reasonReject || null,
+      descriptionReject: item.descriptionReject || null,
+      postedOn: formatVNDate(new Date()),
+      expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+      payment: item.payment || false,
+      paymentStatus: item.paymentStatus,
       paymentStatusText:
-        PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus, // Convert sang tiếng Việt
-      // Thêm thông tin package
+        PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus,
       package: item.package
         ? {
             name: item.package.name,
@@ -151,9 +165,9 @@ const mapApiDataToFrontend = (apiData) => {
           }
         : null,
       metrics: {
-        rank: Math.floor(Math.random() * 100) + 1, // Tạm thời random, cần API cung cấp
+        rank: Math.floor(Math.random() * 100) + 1,
         categoryLabel: categoryMapping[item.category] || item.category,
-        daysToDelete: 28, // Mặc định
+        daysToDelete: 28,
       },
     };
 
@@ -298,27 +312,24 @@ const ListingItem = ({
 }) => {
   const galleryImage = item.images?.[0];
   const isActive = item.status === "active";
-  const canViewDetail = isActive; // chỉ ACTIVE mới cho xem chi tiết
+  const canViewDetail = isActive; // hiện tại vẫn chỉ ACTIVE mới cho xem chi tiết nếu bạn muốn giữ logic này
 
   const menuRef = useRef(null);
   useOnClickOutside(menuRef, () => {
     if (menuForId === item.id) setMenuForId(null);
   });
 
-  // style nút
   const btnBase =
     "inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
   const btnOutline = "border border-gray-300 text-gray-700 hover:bg-gray-50";
   const btnPrimary = "bg-green-600 hover:bg-green-500 text-white font-semibold";
   const btnSecondary = "bg-blue-600 hover:bg-blue-500 text-white font-semibold";
 
-  // Render actions theo trạng thái
   const renderActions = () => {
     switch (item.status) {
-      case "active": // ĐANG HIỂN THỊ
+      case "active":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3 relative">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -326,7 +337,6 @@ const ListingItem = ({
               <FiEye /> Xem chi tiết
             </button>
 
-            {/* Nút chỉnh sửa */}
             <button
               onClick={() => onEdit(item.id)}
               className={`${btnBase} ${btnOutline}`}
@@ -334,7 +344,6 @@ const ListingItem = ({
               <FiEdit /> Sửa tin
             </button>
 
-            {/* Nút tùy chọn */}
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => {
@@ -369,31 +378,28 @@ const ListingItem = ({
           </div>
         );
 
-      case "rejected": // BỊ TỪ CHỐI
+      case "rejected":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
             >
-              <FiEye /> Xem chi tiết
+              <FiEye /> Xem tin
             </button>
 
-            {/* Nút chỉnh sửa */}
             <button
               onClick={() => onEdit(item.id)}
               className={`${btnBase} ${btnOutline}`}
             >
-              <FiEdit /> Sửa tin
+              <FiEdit /> Sửa tin & gửi lại
             </button>
           </div>
         );
 
-      case "expired": // HẾT HẠN
+      case "expired":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -401,7 +407,6 @@ const ListingItem = ({
               <FiEye /> Xem chi tiết
             </button>
 
-            {/* Nút gia hạn tin */}
             <button
               onClick={() => onPayAgain(item)}
               className={`${btnBase} ${btnPrimary}`}
@@ -411,10 +416,9 @@ const ListingItem = ({
           </div>
         );
 
-      case "payment": // CẦN THANH TOÁN
+      case "payment":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -422,7 +426,6 @@ const ListingItem = ({
               <FiEye /> Xem chi tiết
             </button>
 
-            {/* Nút thanh toán */}
             <PaymentButton
               listingId={item.id}
               className={`${btnBase} ${btnPrimary}`}
@@ -438,10 +441,9 @@ const ListingItem = ({
           </div>
         );
 
-      case "pending": // CHỜ DUYỆT
+      case "pending":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -451,10 +453,9 @@ const ListingItem = ({
           </div>
         );
 
-      case "hidden": // ĐÃ ẨN
+      case "hidden":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -462,7 +463,6 @@ const ListingItem = ({
               <FiEye /> Xem chi tiết
             </button>
 
-            {/* Hiển thị lại tin */}
             <button
               onClick={() => onUnhide?.(item)}
               className={`${btnBase} ${btnPrimary}`}
@@ -470,7 +470,6 @@ const ListingItem = ({
               <FiEye /> Hiện tin lại
             </button>
 
-            {/* Xóa tin */}
             <button
               onClick={() => onDelete(item.id)}
               className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
@@ -483,7 +482,6 @@ const ListingItem = ({
       default:
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {/* Nút xem chi tiết cho các trạng thái khác */}
             <button
               onClick={() => onNavigate(item)}
               className={`${btnBase} ${btnSecondary}`}
@@ -543,9 +541,49 @@ const ListingItem = ({
               <span>{item.location}</span>
             </div>
 
+            {/* BLOCK LÝ DO BỊ TỪ CHỐI - UI MỚI */}
+            {item.status === "rejected" && (
+              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 sm:px-5 sm:py-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <FiAlertTriangle className="text-lg" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="text-sm font-semibold text-red-800">
+                      Tin đăng đã bị từ chối bởi Quản trị viên
+                    </div>
+                    <p className="text-xs sm:text-sm text-red-700">
+                      Vui lòng chỉnh sửa lại nội dung tin theo góp ý bên dưới,
+                      sau đó nhấn{" "}
+                      <span className="font-semibold">
+                        “Sửa tin &amp; gửi lại”
+                      </span>{" "}
+                      để được duyệt lại.
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-red-800">
+                      <span className="font-medium">Lý do chính:</span>
+                      <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold">
+                        {REJECT_REASON_MAPPING[item.resonReject] ||
+                          item.resonReject ||
+                          "Không rõ lý do"}
+                      </span>
+                    </div>
+
+                    {item.descriptionReject && (
+                      <div className="mt-1 flex items-start gap-2 text-sm text-red-800">
+                        <FiInfo className="mt-0.5 flex-shrink-0" />
+                        <span className="italic">{item.descriptionReject}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Ngày đăng & hết hạn */}
             {item.status === "payment" || item.status === "pending" ? (
-              <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
+              <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-2">
                 <span>
                   Ngày đăng tin:{" "}
                   <strong className="font-medium text-gray-700">
@@ -559,7 +597,7 @@ const ListingItem = ({
               </div>
             ) : (
               item.status !== "rejected" && (
-                <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-1">
+                <div className="flex flex-wrap gap-4 text-xs md:text-sm text-gray-500 mt-2">
                   <span>
                     Ngày đăng tin:{" "}
                     <strong className="font-medium text-gray-700">
@@ -641,11 +679,9 @@ const ManageListing = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // lấy tab từ URL, mặc định active
   const urlTab = searchParams.get("tab") || "active";
   const [activeTab, setActiveTab] = useState(urlTab);
 
-  // đồng bộ state <-> URL khi đổi tab
   useEffect(() => {
     if (!TABS.some((t) => t.key === urlTab)) {
       setSearchParams({ tab: "active" }, { replace: true });
@@ -660,11 +696,9 @@ const ManageListing = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // dropdown + modals
   const [menuForId, setMenuForId] = useState(null);
   const [hideFor, setHideFor] = useState(null);
 
-  // Fetch data từ API
   useEffect(() => {
     const fetchListings = async () => {
       try {
@@ -711,7 +745,6 @@ const ManageListing = () => {
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
 
-  // ĐÃ ẨN -> Hiện tin lại
   const onUnhide = (item) =>
     setListings((prev) =>
       (prev || []).map((x) =>
@@ -719,9 +752,24 @@ const ManageListing = () => {
       )
     );
 
-  // Gia hạn tin
-  const onPayAgain = (item) => {
-    navigate("/payment", { state: { listing: item, retry: true } });
+  const onPayAgain = async (item) => {
+    try {
+      if (!item?.id) return;
+      const response = await listingService.getRepaymentUrl(item.id);
+      if (response?.data?.error === 0 && response?.data?.data) {
+        const paymentUrl = response.data.data;
+        window.location.href = paymentUrl;
+      } else {
+        const msg =
+          response?.data?.message ||
+          response?.error ||
+          "Không thể tạo liên kết thanh toán";
+        alert(msg);
+      }
+    } catch (e) {
+      console.error("Repayment error:", e);
+      alert(e?.message || "Có lỗi xảy ra khi tạo liên kết thanh toán.");
+    }
   };
 
   const setTab = (key) => setSearchParams({ tab: key });

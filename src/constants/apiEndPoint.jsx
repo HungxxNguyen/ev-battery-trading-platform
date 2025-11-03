@@ -29,12 +29,15 @@ export const API_ENDPOINTS_LISTING = {
     `/api/Listing/GetByStatus?pageIndex=${pageIndex}&pageSize=${pageSize}&status=${status}`,
   // VNPAY payment URL
   LISTING_VNPAY: (id) => `/api/Listing/VnpayUrl/${id}`,
+  // Repayment URL for extending expired listings
+  LISTING_REPAYMENT: (id) => `/api/Listing/Repayment/${id}`,
 };
 
 // Admin endpoints for listing moderation
 export const API_ENDPOINTS_ADMIN = {
   ACCEPT_LISTING: (id) => `/api/Admin/Accept-Listing/${id}`,
-  REJECT_LISTING: (id) => `/api/Admin/Reject-Listing/${id}`,
+  REJECT_LISTING: (id, reason, descriptionReject) =>
+    `/api/Admin/Reject-Listing/${id}?reason=${reason}&descriptionReject=${descriptionReject}`,
   // Admin: users management
   GET_ALL_USERS: "/api/Admin/Get-All-Users",
 };
@@ -43,8 +46,8 @@ export const API_ENDPOINTS_ADMIN = {
 export const API_ENDPOINTS_USER = {
   GET_USER: "/api/User/GetCurrentUser",
   UPDATE_INFORMATION_USER: "/api/User/UpdateInfoUser",
-  // Guessing pattern similar to Brand/Package; adjust if backend uses another route shape
-  GET_BY_ID: (id) => `/api/User/GetById/id?id=${id}`,
+  // Get user by id (per backend): /api/User/GetUserById?userId={id}
+  GET_BY_ID: (id) => `/api/User/GetUserById?userId=${id}`,
 };
 
 export const API_ENDPOINTS_BRAND = {

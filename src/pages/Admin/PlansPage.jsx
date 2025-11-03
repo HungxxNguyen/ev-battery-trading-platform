@@ -20,6 +20,7 @@ import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
 import { Pencil, Trash2, Plus, RefreshCw } from "lucide-react";
 import packageService from "../../services/apis/packageApi";
+import { useNotification } from "../../contexts/NotificationContext";
 
 const GLASS_CARD4 =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-xl text-slate-100";
@@ -31,6 +32,7 @@ const currency = (v) =>
   }).format(v);
 
 export default function PlansPage() {
+  const { showNotification } = useNotification();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +47,8 @@ export default function PlansPage() {
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState("ElectricCar");
   const [status, setStatus] = useState("Active");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [generalError, setGeneralError] = useState("");
 
   const typeOptions = useMemo(
     () => [
@@ -69,6 +73,8 @@ export default function PlansPage() {
     setDescription("");
     setPackageType("ElectricCar");
     setStatus("Active");
+    setFieldErrors({});
+    setGeneralError("");
   };
 
   const loadPlans = async () => {
@@ -87,9 +93,15 @@ export default function PlansPage() {
         }));
         setPlans(list);
       } else {
+        const errMsg = res?.error || res?.data?.Message || res?.data?.message;
+        if (errMsg) {
+          showNotification(errMsg, "error");
+        }
         console.error("Tải gói thất bại:", res.error || res.data);
       }
     } catch (e) {
+      const errMsg = e?.error || e?.message;
+      if (errMsg) showNotification(errMsg, "error");
       console.error("Lỗi tải danh sách gói:", e);
     } finally {
       setLoading(false);
@@ -101,7 +113,8 @@ export default function PlansPage() {
   }, []);
 
   const onSave = async () => {
-    if (!name.trim() || days <= 0 || price < 0) return;
+    setFieldErrors({});
+    setGeneralError("");
     const form = new FormData();
     if (editingId) form.append("Id", editingId);
     form.append("Name", name.trim());
@@ -117,8 +130,39 @@ export default function PlansPage() {
         ? await packageService.updatePackage(form)
         : await packageService.createPackage(form);
       if (!res.success) {
-        console.error("Lưu gói thất bại:", res.error || res.data);
+        const modelErrors = res?.data?.errors;
+        if (modelErrors && typeof modelErrors === "object") {
+          const mapped = Object.keys(modelErrors).reduce((acc, key) => {
+            const msgArr = modelErrors[key];
+            if (Array.isArray(msgArr) && msgArr.length) acc[key] = msgArr[0];
+            return acc;
+          }, {});
+          setFieldErrors(mapped);
+        } else {
+          setGeneralError(res?.error || "Không thể lưu gói");
+        }
         return;
+      }
+
+      const resultPayload = res?.data;
+      if (
+        resultPayload &&
+        (resultPayload.Error === 1 || resultPayload.error === 1)
+      ) {
+        const msg =
+          resultPayload.Message || resultPayload.message || "Không thể lưu gói";
+        if (/tên|name/i.test(msg)) {
+          setFieldErrors((prev) => ({ ...prev, Name: msg }));
+        } else {
+          setGeneralError(msg);
+        }
+        if (msg) showNotification(msg, "error");
+        return;
+      }
+      // Success: notify using backend message if present
+      const successMsg = resultPayload?.Message || resultPayload?.message;
+      if (successMsg) {
+        showNotification(successMsg, "success");
       }
       await loadPlans();
       resetForm();
@@ -149,13 +193,19 @@ export default function PlansPage() {
       const res = await packageService.deletePackage(id);
       if (!res.success) {
         console.error("Xóa gói thất bại:", res.error || res.data);
-        alert(res?.error || "Không thể xóa gói");
+        const errMsgDel =
+          res?.error || res?.data?.Message || res?.data?.message;
+        if (errMsgDel) showNotification(errMsgDel, "error");
         return;
+      }
+      const msg = res?.data?.Message || res?.data?.message;
+      if (msg) {
+        showNotification(msg, "success");
       }
       await loadPlans();
     } catch (e) {
       console.error(e);
-      alert(e?.error || e?.message || "Không thể xóa gói");
+      showNotification(e?.error || e?.message || "Không thể xóa gói", "error");
     } finally {
       setDeletingId(null);
     }
@@ -164,7 +214,7 @@ export default function PlansPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 text-slate-100">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">
           Quản lý gói đăng bài
         </h2>
         <div className="flex gap-2">
@@ -195,15 +245,33 @@ export default function PlansPage() {
             <CardTitle>{editingId ? "Chỉnh sửa gói" : "Tạo gói mới"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+            {generalError && (
+              <div className="mb-3 text-sm text-rose-400">{generalError}</div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-start">
               <div className="col-span-2">
-                <label className="text-sm text-slate-300">Tên gói</label>
+                <label className="text-sm text-slate-300">
+                  Tên gói <span className="text-rose-400">*</span>
+                </label>
                 <input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setName(v);
+                    if (fieldErrors?.Name && v.trim()) {
+                      const next = { ...fieldErrors };
+                      delete next.Name;
+                      setFieldErrors(next);
+                    }
+                  }}
                   placeholder="VD: Gói 30 ngày"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 />
+                {fieldErrors?.Name && (
+                  <p className="mt-1 text-xs text-rose-400">
+                    {fieldErrors.Name}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-slate-300">Số ngày</label>
@@ -219,6 +287,11 @@ export default function PlansPage() {
                   placeholder="Số ngày"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 />
+                {fieldErrors?.DurationInDays && (
+                  <p className="mt-1 text-xs text-rose-400">
+                    {fieldErrors.DurationInDays}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-slate-300">Số tiền (VND)</label>
@@ -234,15 +307,35 @@ export default function PlansPage() {
                   placeholder="Số tiền (VND)"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-right text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 />
+                {fieldErrors?.Price && (
+                  <p className="mt-1 text-xs text-rose-400">
+                    {fieldErrors.Price}
+                  </p>
+                )}
               </div>
               <div className="col-span-3">
-                <label className="text-sm text-slate-300">Mô tả</label>
+                <label className="text-sm text-slate-300">
+                  Mô tả <span className="text-rose-400">*</span>
+                </label>
                 <input
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDescription(v);
+                    if (fieldErrors?.Description && v.trim()) {
+                      const next = { ...fieldErrors };
+                      delete next.Description;
+                      setFieldErrors(next);
+                    }
+                  }}
                   placeholder="Mô tả ngắn cho gói"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 />
+                {fieldErrors?.Description && (
+                  <p className="mt-1 text-xs text-rose-400">
+                    {fieldErrors.Description}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="text-sm text-slate-300">Loại gói</label>
