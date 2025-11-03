@@ -96,11 +96,7 @@ export const FavoritesProvider = ({ children }) => {
   const toggleFavorite = async (item) => {
     const formatted = sanitizeItem(item);
     if (!formatted) return;
-    if (!userId) {
-      // Not logged in: redirect or no-op
-      window.location.href = "/login";
-      return;
-    }
+    if (!userId) { const current = (typeof window !== "undefined") ? (window.location.pathname + window.location.search + window.location.hash) : "/"; window.location.href = `/login?redirect=${encodeURIComponent(current)}`; return; }
 
     const listingId = formatted.id;
     const already = favoriteIds.has(String(listingId));
@@ -172,3 +168,5 @@ export const FavoritesProvider = ({ children }) => {
 };
 
 export const useFavorites = () => useContext(FavoritesContext);
+
+

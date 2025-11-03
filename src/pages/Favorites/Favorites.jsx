@@ -24,18 +24,17 @@ const Favorites = () => {
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6 flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Trang chu / Tin dang da luu</p>
               <h1 className="text-2xl font-bold text-gray-800">
-                Tin dang da luu ({favorites.length} / 100)
+                Tin đăng đã lưu ({favorites.length} / 100)
               </h1>
             </div>
             <div className="flex items-center gap-3">
               {hasFavorites && (
                 <button
                   onClick={clearFavorites}
-                  className="text-xs uppercase tracking-wide text-gray-400 hover:text-red-500"
+                  className="text-xs uppercase font-bold tracking-wide text-gray-400 hover:text-red-500 cursor-pointer"
                 >
-                  Xoa tat ca
+                  Xóa tất cả
                 </button>
               )}
               <FiHeart className="w-8 h-8 text-red-500" />
@@ -89,8 +88,8 @@ const Favorites = () => {
                         <FiMessageSquare />
                         Chat
                       </Link>
-                      <span className="text-xs text-gray-400">
-                        Da luu: {formatDate(fav.savedAt)}
+                      <span className="text-xs text-gray-400 font-bold">
+                        Đã lưu: {formatDate(fav.savedAt)}
                       </span>
                     </div>
                   </div>
@@ -99,15 +98,18 @@ const Favorites = () => {
             </div>
           ) : (
             <div className="bg-white border border-dashed border-gray-300 rounded-xl p-12 text-center">
-              <h2 className="text-xl font-semibold text-gray-700">Chua co tin dang nao duoc luu</h2>
+              <h2 className="text-xl font-semibold text-gray-700">
+                Chưa có tin đăng nào được lưu
+              </h2>
               <p className="mt-2 text-gray-500">
-                Bam vao bieu tuong trai tim tren cac tin dang de them vao danh sach yeu thich.
+                Ấn vào biểu tượng trái tim trên các tin đăng để thêm vào danh
+                sách yêu thích.
               </p>
               <Link
                 to="/"
                 className="inline-block mt-4 px-5 py-2 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
               >
-                Ve trang chu
+                Về trang chủ
               </Link>
             </div>
           )}

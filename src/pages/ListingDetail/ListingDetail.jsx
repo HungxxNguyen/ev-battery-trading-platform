@@ -66,7 +66,11 @@ const ListingDetail = () => {
       setError("");
 
       try {
-        const response = await listingService.getListingDetail(id);
+        // Prefer the stable GetById endpoint; fall back to GetDetail
+        let response = await listingService.getById(id);
+        if (!response?.success || response?.status === 404) {
+          response = await listingService.getListingDetail(id);
+        }
 
         if (!active) {
           return;
@@ -274,7 +278,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handlePrevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800 cursor-pointer"
                 aria-label="Ảnh trước"
               >
                 {"<"}
@@ -283,7 +287,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={openLightbox}
-                className="block w-full"
+                className="block w-full cursor-pointer"
                 aria-label="Xem ảnh kích thước đầy đủ"
               >
                 <img
@@ -296,7 +300,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handleNextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-800/60 text-white p-2 rounded-full hover:bg-gray-800 cursor-pointer"
                 aria-label="Ảnh tiếp theo"
               >
                 {">"}
@@ -310,7 +314,7 @@ const ListingDetail = () => {
                     type="button"
                     key={`${imgSrc}-${idx}`}
                     onClick={() => setCurrentImage(idx)}
-                    className={`h-20 w-28 flex-shrink-0 border rounded-md overflow-hidden ${
+                    className={`h-20 w-28 flex-shrink-0 border rounded-md overflow-hidden cursor-pointer ${
                       currentImage === idx
                         ? "border-blue-500"
                         : "border-transparent"
@@ -381,7 +385,9 @@ const ListingDetail = () => {
                 aria-label="Lưu tin yêu thích"
               >
                 <FiHeart
-                  className={`w-5 h-5 ${favActive ? "fill-current" : ""}`}
+                  className={`w-5 h-5 cursor-pointer ${
+                    favActive ? "fill-current" : ""
+                  }`}
                 />
               </button>
             </div>

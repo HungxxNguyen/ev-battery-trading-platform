@@ -2,11 +2,14 @@
 import "./index.css";
 import AppRouter from "./router";
 import { AuthProvider } from "./contexts/AuthContext";
+import { FavoritesProvider } from "./contexts/FavoritesContext";
 
 function App() {
   return (
     <AuthProvider>
-      <AppRouter />
+      <FavoritesProvider>
+        <AppRouter />
+      </FavoritesProvider>
     </AuthProvider>
   );
 }
