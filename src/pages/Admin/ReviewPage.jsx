@@ -54,12 +54,13 @@ export default function ReviewPage() {
       ElectricMotorbike: "Xe máy điện",
       ElectricCar: "Xe ô tô điện",
     }[value] || value);
+
   // List state
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Pending");
-  const [pageIndex, setPageIndex] = useState(1);
+  const [pageIndex] = useState(1);
   const [pageSize] = useState(10);
 
   // Selection + details
@@ -123,12 +124,12 @@ export default function ReviewPage() {
 
   // Reject flow
   const [rejectMode, setRejectMode] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
+  const [rejectReason, setRejectReason] = useState(""); // now stores the key, e.g. "CATEGORY_MISMATCH"
+  const [descriptionReject, setDescriptionReject] = useState("");
 
   const { showNotification } = useNotification() || { showNotification: null };
 
   const rejectCardRef = useRef(null);
-  const rejectTextareaRef = useRef(null);
 
   useEffect(() => {
     if (rejectMode) {
@@ -138,10 +139,6 @@ export default function ReviewPage() {
           behavior: "smooth",
           block: "start",
         });
-        // focus sau khi cuộn để tránh giật
-        setTimeout(() => {
-          rejectTextareaRef.current?.focus({ preventScroll: true });
-        }, 250);
       });
     }
   }, [rejectMode]);
@@ -156,13 +153,7 @@ export default function ReviewPage() {
   const fetchData = async () => {
     setLoading(true);
     setError("");
-    const res = await listingService.getByStatus({
-      pageIndex,
-      pageSize,
-      from: 0,
-      to: 1000000000,
-      status,
-    });
+    const res = await listingService.getByStatus(pageIndex, pageSize, status);
     if (res.success && res.data?.error === 0) {
       setItems(res.data.data || []);
     } else {
@@ -215,11 +206,15 @@ export default function ReviewPage() {
   };
 
   const doReject = async (id) => {
-    if (!rejectReason.trim()) {
-      showNotification?.("Vui lòng nhập lý do từ chối", "warning");
+    if (!rejectReason) {
+      showNotification?.("Vui lòng chọn lý do từ chối", "warning");
       return;
     }
-    const res = await listingService.rejectListing(id, rejectReason.trim());
+    const res = await listingService.rejectListing(
+      id,
+      rejectReason,
+      descriptionReject
+    );
     if (res.success && res.data?.error === 0) {
       showNotification?.("Từ chối bài đăng thành công", "success");
       backToList();
@@ -673,14 +668,30 @@ export default function ReviewPage() {
                 <CardHeader className="pb-3">
                   <CardTitle>Lý do từ chối</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <textarea
-                    ref={rejectTextareaRef}
+                <CardContent className="space-y-4">
+                  <select
                     value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
-                    placeholder="Nhập lý do từ chối..."
-                    className="w-full rounded-lg bg-slate-950/60 border border-slate-800/60 p-3 outline-none text-slate-200"
+                    className="w-full rounded-lg bg-slate-950/60 border border-slate-800/60 px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/60"
+                  >
+                    <option value="">-- Chọn lý do từ chối --</option>
+                    <option value="CATEGORY_MISMATCH">
+                      Đăng sai danh mục (ô tô/xe máy/pin rời)
+                    </option>
+                    <option value="INFORMATION_MISSING">
+                      Thiếu thông tin cụ thể
+                    </option>
+                  </select>
+                  <label htmlFor="descriptionReject" className="font-medium">
+                    Mô tả thêm (không bắt buộc):
+                  </label>
+                  <textarea
+                    id="descriptionReject"
+                    value={descriptionReject}
+                    onChange={(e) => setDescriptionReject(e.target.value)}
+                    className="mt-1 w-full rounded-lg bg-slate-950/60 border border-slate-800/60 px-3 py-2 text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/60"
                     rows={3}
+                    placeholder="Bạn có thể mô tả thêm lý do từ chối để người đăng hiểu rõ hơn."
                   />
                   <div className="flex items-center gap-2">
                     <Button
