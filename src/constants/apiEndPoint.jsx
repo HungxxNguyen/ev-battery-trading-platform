@@ -43,6 +43,8 @@ export const API_ENDPOINTS_ADMIN = {
 export const API_ENDPOINTS_USER = {
   GET_USER: "/api/User/GetCurrentUser",
   UPDATE_INFORMATION_USER: "/api/User/UpdateInfoUser",
+  // Guessing pattern similar to Brand/Package; adjust if backend uses another route shape
+  GET_BY_ID: (id) => `/api/User/GetById/id?id=${id}`,
 };
 
 export const API_ENDPOINTS_BRAND = {
