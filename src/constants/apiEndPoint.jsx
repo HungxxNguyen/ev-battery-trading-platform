@@ -67,3 +67,13 @@ export const API_ENDPOINTS_PACKAGE = {
   UPDATE_PACKAGE: "/api/Package/Update",
   DELETE_PACKAGE: (id) => `/api/Package/Delete/id?id=${id}`,
 };
+
+// Favourite endpoints (per provided backend)
+export const API_ENDPOINTS_FAVOURITE = {
+  ADD: "/api/Favourite/AddFavourite",
+  CHECK: (userId, listingId) =>
+    `/api/Favourite/CheckFavourite?userId=${userId}&listingId=${listingId}`,
+  LIST: (userId) => `/api/Favourite/GetFavourites/${userId}`,
+  DELETE: (userId, listingId) =>
+    `/api/Favourite/DeleteFavourite?userId=${userId}&listingId=${listingId}`,
+};
