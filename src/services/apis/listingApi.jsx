@@ -82,15 +82,13 @@ const listingService = {
     });
   },
 
-  async rejectListing(id, reason = "") {
+  async rejectListing(id, reason = "", descriptionReject = "") {
     if (!id) {
       return { success: false, error: "Listing id is required", status: null };
     }
     // Backend expects reason as query param
     return await performApiRequest(
-      `${API_ENDPOINTS_ADMIN.REJECT_LISTING(id)}?reason=${encodeURIComponent(
-        reason || ""
-      )}`,
+      API_ENDPOINTS_ADMIN.REJECT_LISTING(id, reason, descriptionReject),
       {
         method: "post",
       }
@@ -107,6 +105,21 @@ const listingService = {
     return await performApiRequest(API_ENDPOINTS_LISTING.LISTING_VNPAY(id), {
       method: "get",
     });
+  },
+  async getRepaymentUrl(id) {
+    if (!id) {
+      return {
+        success: false,
+        error: "Listing id is required",
+        status: null,
+      };
+    }
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.LISTING_REPAYMENT(id),
+      {
+        method: "get",
+      }
+    );
   },
 };
 
