@@ -25,7 +25,8 @@ export const API_ENDPOINTS_LISTING = {
   // Update existing listing (multipart form)
   UPDATE_LISTING: "/api/Listing/UpdateListing",
   // Admin: get listings filtered by status/price range/pagination
-  GET_BY_STATUS: "/api/Listing/GetByStatus",
+  GET_BY_STATUS: (pageIndex, pageSize, status) =>
+    `/api/Listing/GetByStatus?pageIndex=${pageIndex}&pageSize=${pageSize}&status=${status}`,
   // VNPAY payment URL
   LISTING_VNPAY: (id) => `/api/Listing/VnpayUrl/${id}`,
 };
