@@ -27,7 +27,6 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useContext(AuthContext);
-
   // Xác định trang hiện tại theo URL: /admin/:tab
   const currentPage = (() => {
     const seg = location.pathname.split("/")[2] || "";
@@ -64,7 +63,6 @@ export default function AdminLayout() {
               onClick={() => navigate("/admin")}
             />
 
-
             <SideItem
               icon={<FileText className="h-4 w-4" />}
               label="Plans"
@@ -92,12 +90,7 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <main className="ml-72 min-h-screen overflow-y-auto px-10 pb-12 pt-24">
-        {currentPage === "dashboard" && (
-          <DashboardPage
-            onSelectListing={goToReviewWith}
-            onSelectTicket={goToSupportWith}
-          />
-        )}
+        {currentPage === "dashboard" && <DashboardPage />}
         {currentPage === "plans" && <PlansPage />}
         {currentPage === "brands" && <BrandPage />}
       </main>
