@@ -1,3 +1,6 @@
+// ===============================
+// File: src/pages/Staff/StaffReports.jsx
+// ===============================
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -6,6 +9,8 @@ import {
   REPORT_REASONS,
 } from "../../services/apis/reportApi";
 import listingService from "../../services/apis/listingApi";
+import userService from "../../services/apis/userApi";
+import { Button } from "../../components/Button/button";
 import {
   X,
   ChevronLeft,
@@ -15,10 +20,10 @@ import {
   Search,
   AlertTriangle,
   User,
+  UserX,
 } from "lucide-react";
-import userService from "../../services/apis/userApi";
 
-export default function ReportsAdminPage() {
+export default function StaffReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState([]);
@@ -36,13 +41,9 @@ export default function ReportsAdminPage() {
 
   const filtered = useMemo(() => {
     let result = data;
-
-    if (reasonFilter !== "All") {
+    if (reasonFilter !== "All")
       result = result.filter((x) => x.reason === reasonFilter);
-    }
-
     if (!searchTerm.trim()) return result;
-
     const q = searchTerm.trim().toLowerCase();
     return result.filter((x) => {
       const id = String(x.id || "").toLowerCase();
@@ -66,7 +67,6 @@ export default function ReportsAdminPage() {
       if (res?.error === 0) {
         const arr = Array.isArray(res?.data) ? res.data : [];
         setData(arr);
-
         // Prefetch reporter info
         const ids = [...new Set(arr.map((x) => x.userId).filter(Boolean))];
         const missing = ids.filter((id) => !userMap[id]);
@@ -102,16 +102,12 @@ export default function ReportsAdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageIndex, pageSize]);
 
-  // Sync selected report id with URL (?id=)
   useEffect(() => {
     const idParam = searchParams.get("id");
-    if ((idParam || null) !== (selectedId || null)) {
-      setSelectedId(idParam);
-    }
+    if ((idParam || null) !== (selectedId || null)) setSelectedId(idParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Fetch selected report + listing detail
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -132,7 +128,6 @@ export default function ReportsAdminPage() {
         if (!active) return;
         setSelectedReport(repData);
 
-        // Ensure reporter info is cached
         if (repData.userId && !userMap[repData.userId]) {
           try {
             const ures = await userService.getById(repData.userId);
@@ -142,7 +137,6 @@ export default function ReportsAdminPage() {
           } catch {}
         }
 
-        // Fetch listing
         if (repData.listingId) {
           const lres = await listingService.getById(repData.listingId);
           const payload = lres?.data;
@@ -167,6 +161,23 @@ export default function ReportsAdminPage() {
       active = false;
     };
   }, [selectedId]);
+
+  // Helper to resolve Seller of the reported listing
+  const sellerInfo = (() => {
+    const u = selectedListing?.user || null;
+    const id =
+      u?.id ?? selectedListing?.userId ?? selectedListing?.sellerId ?? null;
+    const name = u?.userName || u?.name || selectedListing?.sellerName || "-";
+    const email = u?.email || selectedListing?.sellerEmail || "-";
+    const phone = u?.phoneNumber || selectedListing?.sellerPhone || "-";
+    return { id, name, email, phone };
+  })();
+
+  const onBanClick = () => {
+    if (!sellerInfo.id) return;
+    // Stub only: no API call per requirement
+    alert(`(Stub) Ban người bán với ID: ${sellerInfo.id}.\nChưa kết nối API.`);
+  };
 
   return (
     <div className="space-y-6">
@@ -259,9 +270,8 @@ export default function ReportsAdminPage() {
               ))}
             </select>
           </div>
-
           <p className="text-xs text-slate-500">
-            Nhấp vào một dòng để xem chi tiết báo cáo &amp; bài đăng ở bên dưới.
+            Nhấp vào một dòng để xem chi tiết báo cáo & bài đăng ở bên dưới.
           </p>
         </div>
 
@@ -332,7 +342,7 @@ export default function ReportsAdminPage() {
                     <TdMono>
                       {r.listingId ? (
                         <Link
-                          to={`/admin/reports?id=${r.id}`}
+                          to={`/staff/reports?id=${r.id}`}
                           className="text-xs text-emerald-300 underline-offset-2 hover:text-emerald-200 hover:underline"
                           onClick={(e) => e.stopPropagation()}
                           title="Xem chi tiết báo cáo"
@@ -389,7 +399,6 @@ export default function ReportsAdminPage() {
             </tbody>
           </table>
         </div>
-
         {/* Pagination */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <button
@@ -414,7 +423,7 @@ export default function ReportsAdminPage() {
           </button>
         </div>
 
-        {/* Detail section (same page) */}
+        {/* Detail section */}
         {selectedId && (
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
             {/* Listing detail */}
@@ -447,7 +456,7 @@ export default function ReportsAdminPage() {
               )}
             </div>
 
-            {/* Report info */}
+            {/* Report info + Ban button */}
             <div className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4 shadow-md space-y-4">
               <h3 className="text-lg font-semibold text-slate-50">
                 Thông tin báo cáo
@@ -513,6 +522,54 @@ export default function ReportsAdminPage() {
                       mono
                     />
                   )}
+
+                  {/* Ban Seller (stub) */}
+                  <div className="pt-2 border-t border-slate-800/70">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+                      Hành động
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={onBanClick}
+                        disabled={!sellerInfo.id}
+                        className="rounded-xl bg-rose-500/90 text-white hover:bg-rose-500 gap-2 px-4 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        title={
+                          sellerInfo.id
+                            ? `Cấm người bán (${sellerInfo.id})`
+                            : "Không tìm thấy ID người bán"
+                        }
+                      >
+                        <UserX className="h-4 w-4" /> Ban người bán
+                      </Button>
+                      <span className="text-xs text-slate-400">
+                        (Chưa kết nối API)
+                      </span>
+                    </div>
+                    {sellerInfo?.id && (
+                      <div className="mt-2 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
+                        <div className="flex items-center justify-between">
+                          <span>Seller ID</span>
+                          <span className="font-mono text-[11px]">
+                            {sellerInfo.id}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Tên</span>
+                          <span>{sellerInfo.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>Email</span>
+                          <span className="font-mono text-[11px]">
+                            {sellerInfo.email}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span>SĐT</span>
+                          <span>{sellerInfo.phone}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="text-sm text-slate-300">
@@ -527,8 +584,7 @@ export default function ReportsAdminPage() {
   );
 }
 
-/* Small helpers */
-
+/* Small helpers (kept same as Admin/Reports) */
 function Th({ children }) {
   return (
     <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -536,7 +592,6 @@ function Th({ children }) {
     </th>
   );
 }
-
 function Td({ children, className = "" }) {
   return (
     <td className={`px-4 py-2 align-top text-sm text-slate-200 ${className}`}>
@@ -544,7 +599,6 @@ function Td({ children, className = "" }) {
     </td>
   );
 }
-
 function TdMono({ children }) {
   return (
     <td className="px-4 py-2 align-top font-mono text-[11px] text-slate-300 break-all">
@@ -552,17 +606,12 @@ function TdMono({ children }) {
     </td>
   );
 }
-
 function ReasonBadge({ value }) {
-  if (!value) {
-    return <span className="text-xs text-slate-400">-</span>;
-  }
-
+  if (!value) return <span className="text-xs text-slate-400">-</span>;
   const text = String(value);
   const lower = text.toLowerCase();
   let classes =
     "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium";
-
   if (lower.includes("lừa") || lower.includes("scam")) {
     classes +=
       " border-rose-500/60 bg-rose-500/10 text-rose-200 shadow-[0_0_10px_rgba(248,113,113,0.25)]";
@@ -575,7 +624,6 @@ function ReasonBadge({ value }) {
   } else {
     classes += " border-slate-600/70 bg-slate-800/70 text-slate-100";
   }
-
   return <span className={classes}>{text}</span>;
 }
 
@@ -593,7 +641,6 @@ function ReportListingDetail({ listing }) {
   const [lightboxIndex, setLightboxIndex] = React.useState(0);
   const [isZoomed, setIsZoomed] = React.useState(false);
 
-  // Keyboard controls when lightbox open
   React.useEffect(() => {
     if (!lightboxOpen) return;
     const onKey = (e) => {
@@ -608,7 +655,6 @@ function ReportListingDetail({ listing }) {
   }, [lightboxOpen, images.length]);
 
   const brandName = listing?.brand?.name || listing?.brandName || "-";
-
   const specFields = (() => {
     switch (listing?.category) {
       case "ElectricCar":
@@ -676,7 +722,6 @@ function ReportListingDetail({ listing }) {
           ))}
         </div>
       )}
-
       {/* Title + price */}
       <div className="flex items-start justify-between gap-3">
         <h4 className="text-lg font-semibold text-slate-50">
@@ -758,7 +803,6 @@ function ReportListingDetail({ listing }) {
           >
             <X className="h-5 w-5" />
           </button>
-
           {/* Prev */}
           {images.length > 1 && (
             <button
@@ -798,7 +842,6 @@ function ReportListingDetail({ listing }) {
               </div>
             )}
           </div>
-
           {/* Next */}
           {images.length > 1 && (
             <button
@@ -827,7 +870,6 @@ function Field({ label, value }) {
     </div>
   );
 }
-
 function Info({ label, value, mono }) {
   return (
     <div className="space-y-1">
