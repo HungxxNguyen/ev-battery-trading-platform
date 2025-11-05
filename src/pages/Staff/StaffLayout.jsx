@@ -1,37 +1,27 @@
 // ===============================
-// File: src/pages/Admin/AdminLayout.jsx
+// File: src/pages/Staff/StaffLayout.jsx
 // ===============================
 import React, { useContext } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../../components/Button/button";
 import logo3 from "../../assets/logo3.png";
-import {
-  LayoutDashboard,
-  ClipboardCheck,
-  Headphones,
-  FileText,
-  Users,
-  Building2,
-  LogOut,
-  Flag,
-} from "lucide-react";
-import DashboardPage from "./DashboardPage";
-import PlansPage from "./PlansPage";
-import BrandPage from "./BrandPage";
+import { ClipboardCheck, Flag, LogOut } from "lucide-react";
+import StaffReviewPage from "../Staff/StaffReview"; // reuse as-is
+import StaffReportsPage from "./StaffReports"; // reports with Ban button
 import { AuthContext } from "../../contexts/AuthContext";
 
 const GLASS_PANEL =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-2xl";
 
-export default function AdminLayout() {
+export default function StaffLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useContext(AuthContext);
 
-  // Xác định trang hiện tại theo URL: /admin/:tab
+  // current tab by URL: /staff/:tab
   const currentPage = (() => {
     const seg = location.pathname.split("/")[2] || "";
-    return seg === "" ? "dashboard" : seg;
+    return seg === "" ? "review" : seg; // default to Review
   })();
 
   const handleLogout = () => {
@@ -51,31 +41,23 @@ export default function AdminLayout() {
                 VoltX Control
               </p>
               <h1 className="text-lg font-semibold text-white leading-tight">
-                Admin Panel
+                Staff Panel
               </h1>
             </div>
           </div>
 
           <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
             <SideItem
-              icon={<LayoutDashboard className="h-4 w-4" />}
-              label="Dashboard"
-              active={currentPage === "dashboard"}
-              onClick={() => navigate("/admin")}
-            />
-
-
-            <SideItem
-              icon={<FileText className="h-4 w-4" />}
-              label="Plans"
-              active={currentPage === "plans"}
-              onClick={() => navigate("/admin/plans")}
+              icon={<ClipboardCheck className="h-4 w-4" />}
+              label="Review"
+              active={currentPage === "review"}
+              onClick={() => navigate("/staff/review")}
             />
             <SideItem
-              icon={<Building2 className="h-4 w-4" />}
-              label="Brands"
-              active={currentPage === "brands"}
-              onClick={() => navigate("/admin/brands")}
+              icon={<Flag className="h-4 w-4" />}
+              label="Reports"
+              active={currentPage === "reports"}
+              onClick={() => navigate("/staff/reports")}
             />
           </nav>
 
@@ -90,16 +72,10 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <main className="ml-72 min-h-screen overflow-y-auto px-10 pb-12 pt-24">
-        {currentPage === "dashboard" && (
-          <DashboardPage
-            onSelectListing={goToReviewWith}
-            onSelectTicket={goToSupportWith}
-          />
-        )}
-        {currentPage === "plans" && <PlansPage />}
-        {currentPage === "brands" && <BrandPage />}
+        {currentPage === "review" && <StaffReviewPage />}
+        {currentPage === "reports" && <StaffReportsPage />}
       </main>
     </div>
   );

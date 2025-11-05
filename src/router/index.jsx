@@ -31,12 +31,13 @@ import PaymentSuccess from "../pages/PaymentStatus/PaymentSuccess.jsx";
 // Admin pages
 import AdminLayout from "../pages/Admin/AdminLayout.jsx";
 import DashboardPage from "../pages/Admin/DashboardPage.jsx";
-import ReviewPage from "../pages/Admin/ReviewPage.jsx";
-import SupportPage from "../pages/Admin/SupportPage.jsx";
 import PlansPage from "../pages/Admin/PlansPage.jsx";
 import BrandPage from "../pages/Admin/BrandPage.jsx";
-import UsersModeration from "../pages/Admin/UsersModeration.jsx";
-import ReportsAdminPage from "../pages/Admin/Reports.jsx";
+
+// Staff pages
+import StaffLayout from "../pages/Staff/StaffLayout.jsx";
+import StaffReview from "../pages/Staff/StaffReview.jsx";
+import StaffReports from "../pages/Staff/StaffReports.jsx";
 
 // Guards
 import ProtectedRoute from "./ProtectedRoute";
@@ -62,6 +63,11 @@ const AppRouter = () => {
           <Route path="/forbidden" element={<Forbidden />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failed" element={<PaymentFailed />} />
+          {/* Staff-only -> no role in db */}
+          <Route path="/staff" element={<StaffLayout />}>
+                <Route path="review" element={<StaffReview />} />
+                <Route path="reports" element={<StaffReports />} />
+            </Route>
 
           {/* User-authenticated (không yêu cầu role cụ thể) */}
           <Route element={<ProtectedRoute />}>
@@ -80,13 +86,10 @@ const AppRouter = () => {
           <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<DashboardPage />} />
-              <Route path="review" element={<ReviewPage />} />
-              <Route path="support" element={<SupportPage />} />
               <Route path="plans" element={<PlansPage />} />
               <Route path="brands" element={<BrandPage />} />
-              <Route path="users" element={<UsersModeration />} />
-              <Route path="reports" element={<ReportsAdminPage />} />
             </Route>
+
           </Route>
         </Routes>
       </AnimatePresence>

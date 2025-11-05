@@ -1,5 +1,5 @@
 // ===============================
-// File: src/pages/Admin/ReviewPage.jsx
+// File: src/pages/Staff/StaffReview.jsx
 // ===============================
 import React, {
   useEffect,
@@ -60,7 +60,7 @@ const formatDateTime = (value) => {
   return `${dd}-${mm}-${yyyy}, ${HH}:${Min}`;
 };
 
-export default function ReviewPage() {
+export default function StaffReview() {
   const translateCategory = (value) =>
     ({
       RemovableBattery: "Pin điện rời",
