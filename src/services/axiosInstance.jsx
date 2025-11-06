@@ -1,11 +1,11 @@
-import axios from 'axios';
-import { API_BASE_URL } from '../constants/apiEndPoint';
+import axios from "axios";
+import { API_BASE_URL } from "../constants/apiEndPoint";
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    Accept: '*/*',
+    "Content-Type": "application/json",
+    Accept: "*/*",
   },
   // Thêm cấu hình để xử lý HTTP/HTTPS
   httpsAgent: false,
@@ -14,7 +14,7 @@ const axiosInstance = axios.create({
 // Thêm interceptor để tự động thêm token vào header
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,7 +31,7 @@ axiosInstance.interceptors.request.use(
 
     // Thêm headers
     for (const [key, value] of Object.entries(config.headers)) {
-      if (value && key !== 'Content-Type') {
+      if (value && key !== "Content-Type") {
         curlCommand += ` -H '${key}: ${value}'`;
       }
     }
@@ -40,7 +40,7 @@ axiosInstance.interceptors.request.use(
     if (config.data) {
       if (config.data instanceof FormData) {
         // Xóa Content-Type nếu là FormData
-        delete config.headers['Content-Type'];
+        delete config.headers["Content-Type"];
         // Thêm các field từ FormData
         for (let [key, value] of config.data.entries()) {
           if (value instanceof File) {
@@ -55,7 +55,7 @@ axiosInstance.interceptors.request.use(
       }
     }
 
-    console.log('Generated cURL command:', curlCommand);
+    console.log("Generated cURL command:", curlCommand);
     return config;
   },
   (error) => Promise.reject(error)
@@ -65,10 +65,10 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('Axios Error:', error); // Thêm log để debug
+    console.error("Axios Error:", error); // Thêm log để debug
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

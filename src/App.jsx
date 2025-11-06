@@ -3,13 +3,16 @@ import "./index.css";
 import AppRouter from "./router";
 import { AuthProvider } from "./contexts/AuthContext";
 import { FavoritesProvider } from "./contexts/FavoritesContext";
+import { MessageProvider } from "./contexts/MessageContext";
 
 function App() {
   return (
     <AuthProvider>
-      <FavoritesProvider>
-        <AppRouter />
-      </FavoritesProvider>
+      <MessageProvider>
+        <FavoritesProvider>
+          <AppRouter />
+        </FavoritesProvider>
+      </MessageProvider>
     </AuthProvider>
   );
 }
