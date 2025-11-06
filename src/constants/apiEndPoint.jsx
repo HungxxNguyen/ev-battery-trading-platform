@@ -77,3 +77,16 @@ export const API_ENDPOINTS_FAVOURITE = {
   DELETE: (userId, listingId) =>
     `/api/Favourite/DeleteFavourite?userId=${userId}&listingId=${listingId}`,
 };
+
+// Message/chat endpoints (per provided backend cURL)
+export const API_ENDPOINTS_MESSAGE = {
+  START_THREAD: "/api/Message/start-thread",
+  SEND_MESSAGE: "/api/Message/send-message",
+  GET_THREAD_BY_ID: (id) => `/api/Message/get-chat-thread-by-id/${id}`,
+  GET_THREADS_BY_USER_ID: (userId) =>
+    `/api/Message/get-chat-thread-by-user-id/${userId}`,
+  SOFT_DELETE_MESSAGE: (messageId) =>
+    `/api/Message/soft-delete-message/${messageId}`,
+  SOFT_DELETE_THREAD: (threadId) =>
+    `/api/Message/soft-delete-chat-thread/${threadId}`,
+};

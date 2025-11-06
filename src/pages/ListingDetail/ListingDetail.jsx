@@ -1,6 +1,6 @@
 // src/pages/ListingDetail/ListingDetail.jsx
 import React, { useEffect, useMemo, useState, useContext } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { FiHeart, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
@@ -37,6 +37,7 @@ const ListingDetail = () => {
   const currentUserId = auth?.user?.id;
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const locationListing = location.state?.listing;
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -229,7 +230,14 @@ const ListingDetail = () => {
     seller?.userID ??
     seller?.user_id ??
     null;
+  const isSellerSelf = sellerId && currentUserId && String(sellerId) === String(currentUserId);
   const packageInfo = listing?.package;
+
+  const handleChatWithSeller = () => {
+    if (!sellerId || isSellerSelf) return;
+    // Route to chat and pass participantId (seller) to start/select thread
+    navigate("/chat", { state: { participantId: sellerId } });
+  };
 
   const renderContent = () => {
     if (loading) {
@@ -426,9 +434,10 @@ const ListingDetail = () => {
             <div className="flex gap-3 mt-5">
               <button
                 type="button"
-                className="flex-1 px-4 py-2 bg-gray-200 rounded-lg text-gray-700"
+                onClick={handleChatWithSeller}
+                className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
               >
-                Chat
+                Chat với người bán
               </button>
               {listing?.id && (
                 <ReportButton
