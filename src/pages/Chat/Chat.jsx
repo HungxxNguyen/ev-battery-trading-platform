@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  useCallback,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FiSearch, FiSend } from "react-icons/fi";
@@ -24,10 +25,18 @@ const generateGuid = () =>
   });
 
 const toIso = (value) => {
-  if (!value) return new Date().toISOString();
+  // Normalize various date inputs to ISO string.
+  // Treat missing/invalid/placeholder dates (e.g., year 1 or epoch) as "now"
+  // to avoid showing 12:00 AM until the server updates the value.
   try {
+    if (!value) return new Date().toISOString();
     const d = new Date(value);
-    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    if (isNaN(d.getTime())) return new Date().toISOString();
+    const year = d.getUTCFullYear();
+    // Some backends return default dates like 0001-01-01T00:00:00 or 1970-01-01.
+    // Consider anything earlier than 2000 as a placeholder and use current time instead.
+    if (year < 2000) return new Date().toISOString();
+    return d.toISOString();
   } catch {
     return new Date().toISOString();
   }
@@ -127,6 +136,7 @@ const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [startingThread, setStartingThread] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fetchingThreadIds = useRef(new Set());
   const fetchingPairs = useRef(new Set());
 
@@ -196,6 +206,11 @@ const Chat = () => {
   }, [participantIdFromRoute, currentUserId]);
 
   const ensureThreadWith = async (otherUserId, existingMap) => {
+    // Prevent starting a thread with self
+    if (String(otherUserId) === String(currentUserId)) {
+      console.warn("Attempt to create thread with self blocked");
+      return;
+    }
     const entries = Array.from((existingMap || threadsById).values());
     const found = entries.find((t) => t.otherId === String(otherUserId));
     if (found) {
@@ -267,9 +282,7 @@ const Chat = () => {
         map.set(threadId, updated);
         setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
         if (selectedThreadId === threadId) {
-          requestAnimationFrame(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          });
+          requestAnimationFrame(scrollMessagesToBottom);
         }
         return map;
       });
@@ -333,6 +346,8 @@ const Chat = () => {
     if (!normalized || normalized.chatThreadId) return; // handled in other effect
     const senderId = normalized.senderId;
     if (!senderId) return;
+    // Ignore our own outbound messages without thread id to avoid creating self-threads
+    if (String(senderId) === String(currentUserId)) return;
 
     // Try to find existing thread with this sender
     const existing = Array.from(threadsById.values()).find(
@@ -358,9 +373,7 @@ const Chat = () => {
       });
       setThreadOrder((old) => [existing.id, ...old.filter((x) => x !== existing.id)]);
       if (selectedThreadId === existing.id) {
-        requestAnimationFrame(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        });
+        requestAnimationFrame(scrollMessagesToBottom);
       }
       return;
     }
@@ -407,9 +420,7 @@ const Chat = () => {
           setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
           if (matched.otherId) preloadUser(matched.otherId);
           if (selectedThreadId === threadId) {
-            requestAnimationFrame(() => {
-              messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            });
+            requestAnimationFrame(scrollMessagesToBottom);
           }
         } else {
           // As a last resort, create a transient local thread to display
@@ -472,6 +483,38 @@ const Chat = () => {
     });
   }, [threadOrder, threadsById, participants, search]);
 
+  const scrollMessagesToBottom = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (el) {
+      try {
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      } catch {
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  }, []);
+
+  // Auto-scroll to bottom when switching threads or when messages in the selected thread load
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const timer = setTimeout(() => {
+      requestAnimationFrame(scrollMessagesToBottom);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedThreadId, selectedThread?.messages?.length, scrollMessagesToBottom]);
+
+  const getAvatarUrl = useCallback(
+    (uid) => {
+      if (!uid) return FALLBACK_AVATAR;
+      if (String(uid) === String(currentUserId)) {
+        return user?.thumbnail || user?.avatar || FALLBACK_AVATAR;
+      }
+      const p = participants[String(uid)] || (selectedThread?.otherId && participants[selectedThread.otherId]);
+      return (p?.thumbnail || p?.avatar || FALLBACK_AVATAR);
+    },
+    [currentUserId, participants, selectedThread, user]
+  );
+
   const handleSend = async () => {
     const text = inputValue.trim();
     if (!text || !selectedThread) return;
@@ -503,40 +546,13 @@ const Chat = () => {
         map.set(selectedThread.id, updated);
         return map;
       });
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
+      requestAnimationFrame(scrollMessagesToBottom);
     } catch (e) {
       console.error("Failed to send message", e);
     }
   };
 
-  const statusBadge = (
-    <span
-      className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
-        isConnected
-          ? "bg-green-50 text-green-700 border border-green-200"
-          : connectionStatus === "connecting"
-          ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-          : "bg-gray-50 text-gray-600 border border-gray-200"
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          isConnected
-            ? "bg-green-500"
-            : connectionStatus === "connecting"
-            ? "bg-yellow-500"
-            : "bg-gray-400"
-        }`}
-      />
-      {isConnected
-        ? "Truc tuyen"
-        : connectionStatus === "connecting"
-        ? "Dang ket noi..."
-        : "Ngoai tuyen"}
-    </span>
-  );
+  // Online/offline UI removed per request
 
   return (
     <MainLayout>
@@ -550,7 +566,7 @@ const Chat = () => {
                   <h1 className="text-2xl font-bold text-gray-800">Chat</h1>
                   <p className="text-sm text-gray-500">Trao doi nhanh voi nguoi ban</p>
                 </div>
-                {statusBadge}
+                {/* status removed */}
               </div>
               <div className="mt-4 relative">
                 <FiSearch className="absolute left-3 top-3 text-gray-400" />
@@ -598,9 +614,7 @@ const Chat = () => {
                         alt={name}
                         className="w-12 h-12 rounded-full object-cover"
                       />
-                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                        isConnected ? "bg-green-400" : "bg-gray-300"
-                      }`} />
+                      {/* online dot removed */}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-800 truncate">{name}</p>
@@ -613,7 +627,7 @@ const Chat = () => {
           </div>
 
           {/* Right column */}
-          <div className="flex flex-col min-h-[520px]">
+          <div className="flex flex-col h-[calc(100vh-220px)]">
             {selectedThread ? (
               <>
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
@@ -634,30 +648,56 @@ const Chat = () => {
                         {(selectedThread.otherId && participants[selectedThread.otherId]?.userName) ||
                           (selectedThread.otherId ? `User ${selectedThread.otherId}` : "")}
                       </p>
-                      <p className="text-xs text-gray-500">{isConnected ? "Dang truc tuyen" : "Ngoai tuyen"}</p>
+                      {/* online text removed */}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
                   <div className="space-y-4">
                     {selectedThread.messages.length === 0 ? (
                       <div className="text-center text-sm text-gray-500">
                         Bat dau cuoc tro chuyen voi nguoi ban.
                       </div>
                     ) : (
-                      selectedThread.messages.map((m) => {
+                      selectedThread.messages.map((m, idx) => {
                         const isMe = String(m.senderId) === String(currentUserId);
+                        const next = selectedThread.messages[idx + 1];
+                        const lastInGroup = !next || String(next.senderId) !== String(m.senderId);
+                        const showAvatar = lastInGroup;
+                        const avatarUrl = getAvatarUrl(m.senderId);
+                        const altText = isMe
+                          ? (user?.userName || user?.name || "Me")
+                          : (participants[selectedThread.otherId]?.userName || participants[selectedThread.otherId]?.name || "User");
                         return (
-                          <div key={m.id || `${m.createdAt}-${m.senderId}`} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                            <div className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                              isMe ? "bg-blue-50 text-gray-800" : "bg-white border border-gray-200 text-gray-800"
-                            }`}>
+                          <div
+                            key={m.id || `${m.createdAt}-${m.senderId}`}
+                            className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
+                          >
+                            {!isMe && (
+                              showAvatar ? (
+                                <img
+                                  src={avatarUrl}
+                                  alt={altText}
+                                  className="w-7 h-7 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-7 h-7" />
+                              )
+                            )}
+                            <div
+                              className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                isMe
+                                  ? "bg-blue-50 text-gray-800"
+                                  : "bg-white border border-gray-200 text-gray-800"
+                              }`}
+                            >
                               <p className="leading-relaxed whitespace-pre-wrap break-words">{m.messageText}</p>
                               <div className="mt-2 text-xs text-gray-400">
                                 {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </div>
                             </div>
+                            {/* No avatar for right side (me) */}
                           </div>
                         );
                       })

@@ -432,6 +432,7 @@ const ListingDetail = () => {
             </div>
 
             <div className="flex gap-3 mt-5">
+              {(!isSellerSelf && sellerId) && (
               <button
                 type="button"
                 onClick={handleChatWithSeller}
@@ -439,6 +440,7 @@ const ListingDetail = () => {
               >
                 Chat với người bán
               </button>
+              )}
               {listing?.id && (
                 <ReportButton
                   listingId={listing.id}
