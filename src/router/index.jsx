@@ -18,7 +18,6 @@ import Search from "../pages/Search/Search";
 import Listings from "../pages/Listings/Listings";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
-import Notifications from "../pages/Notifications/Notifications";
 import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
@@ -80,7 +79,6 @@ const AppRouter = () => {
             <Route path="/manage-listing/:id" element={<ManageDetail />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/favorites" element={<Favorites />} />
-            <Route path="/notifications" element={<Notifications />} />
             <Route path="/profile" element={<ProfileTab />} />
             <Route path="/transactions" element={<Transaction />} />
           </Route>
