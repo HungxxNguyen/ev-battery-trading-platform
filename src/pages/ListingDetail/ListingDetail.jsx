@@ -237,8 +237,17 @@ const ListingDetail = () => {
 
   const handleChatWithSeller = () => {
     if (!sellerId || isSellerSelf) return;
-    // Route to chat and pass participantId (seller) to start/select thread
-    navigate("/chat", { state: { participantId: sellerId } });
+    // Pass seller id and a minimal listing snapshot so chat can pin it
+    const listingForChat = listing
+      ? {
+          id: listing.id,
+          title: listing.title,
+          price: listing.price,
+          thumbnail: images?.[0] || FALLBACK_IMAGE,
+        }
+      : null;
+
+    navigate("/chat", { state: { participantId: sellerId, listingForChat } });
   };
 
   const renderContent = () => {
