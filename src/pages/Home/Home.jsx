@@ -210,6 +210,7 @@ const Home = () => {
                               title: listing.title,
                               price: listing.price,
                               location: listing.area,
+                              area: listing.area,
                               image: coverImage,
                             });
                           }}
