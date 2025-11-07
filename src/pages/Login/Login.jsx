@@ -27,10 +27,17 @@ const Login = () => {
     try {
       if (role === "Admin") {
         target = "/admin";
+      } else if (role === "Staff") {
+        target = "/staff";
       } else {
         const params = new URLSearchParams(window.location.search);
         const qsRedirect = params.get("redirect");
-        if (qsRedirect && typeof qsRedirect === "string" && qsRedirect.startsWith("/") && !qsRedirect.startsWith("//")) {
+        if (
+          qsRedirect &&
+          typeof qsRedirect === "string" &&
+          qsRedirect.startsWith("/") &&
+          !qsRedirect.startsWith("//")
+        ) {
           target = qsRedirect;
         } else if (location?.state?.from) {
           const from = location.state.from;
@@ -271,5 +278,3 @@ const Footer = () => (
 );
 
 export default Login;
-
-
