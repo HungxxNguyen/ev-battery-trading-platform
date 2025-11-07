@@ -35,11 +35,11 @@ export const API_ENDPOINTS_LISTING = {
 
 // Admin endpoints for listing moderation
 export const API_ENDPOINTS_ADMIN = {
-  ACCEPT_LISTING: (id) => `/api/Admin/Accept-Listing/${id}`,
+  ACCEPT_LISTING: (id) => `/api/Staff/Accept-Listing/${id}`,
   REJECT_LISTING: (id, reason, descriptionReject) =>
-    `/api/Admin/Reject-Listing/${id}?reason=${reason}&descriptionReject=${descriptionReject}`,
+    `/api/Staff/Reject-Listing/${id}?reason=${reason}&descriptionReject=${descriptionReject}`,
   // Admin: users management
-  GET_ALL_USERS: "/api/Admin/Get-All-Users",
+  GET_ALL_USERS: "/api/Staff/Get-All-Users",
 };
 
 // Các endpoint cho user

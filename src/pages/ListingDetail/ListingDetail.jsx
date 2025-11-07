@@ -447,7 +447,7 @@ const ListingDetail = () => {
                 <button
                   type="button"
                   onClick={handleChatWithSeller}
-                  className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
+                  className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 cursor-pointer"
                 >
                   Chat với người bán
                 </button>
