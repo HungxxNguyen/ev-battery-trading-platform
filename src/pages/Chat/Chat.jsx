@@ -14,6 +14,7 @@ import messageService from "../../services/apis/messageApi";
 import userService from "../../services/apis/userApi";
 import { useMessages } from "../../utils/useMessages";
 import { AuthContext } from "../../contexts/AuthContext";
+import { currency } from "../../utils/currency";
 
 const FALLBACK_AVATAR = "https://placehold.co/80x80?text=U";
 
@@ -119,6 +120,7 @@ const Chat = () => {
   const currentUserId =
     user?.id?.toString?.() || localStorage.getItem("userId") || "";
   const participantIdFromRoute = location.state?.participantId?.toString?.();
+  const listingFromRoute = location.state?.listingForChat;
 
   const {
     connection,
@@ -139,6 +141,52 @@ const Chat = () => {
   const messagesContainerRef = useRef(null);
   const fetchingThreadIds = useRef(new Set());
   const fetchingPairs = useRef(new Set());
+
+  // Persist mapping: chatThreadId -> listing snapshot {id,title,price,thumbnail}
+  const [threadListings, setThreadListings] = useState(() => {
+    try {
+      const raw = localStorage.getItem("chat.threadListings");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("chat.threadListings", JSON.stringify(threadListings));
+    } catch {}
+  }, [threadListings]);
+
+  const toListingSummary = useCallback((l) => {
+    if (!l || typeof l !== "object") return null;
+    const id = l.id ?? l.listingId ?? l._id;
+    if (!id) return null;
+    const price =
+      typeof l.price === "number" || typeof l.price === "string"
+        ? l.price
+        : l.priceAmount ?? undefined;
+    const thumb =
+      l.thumbnail ||
+      l.image ||
+      l.imageUrl ||
+      (Array.isArray(l.images) && l.images[0]) ||
+      (Array.isArray(l.listingImages) && l.listingImages[0]?.imageUrl) ||
+      "https://placehold.co/80x80?text=IMG";
+    return { id: String(id), title: l.title || l.name || "Tin đăng", price, thumbnail: thumb };
+  }, []);
+
+  const attachListingToThread = useCallback((threadId, listing) => {
+    const snap = toListingSummary(listing);
+    if (!threadId || !snap) return;
+    setThreadListings((prev) => {
+      const next = { ...prev };
+      if (!next[threadId]) {
+        next[threadId] = snap;
+      }
+      return next;
+    });
+  }, [toListingSummary]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -216,6 +264,8 @@ const Chat = () => {
     if (found) {
       setSelectedThreadId(found.id);
       preloadUser(otherUserId);
+      // If we came from a listing, remember it for this thread
+      if (listingFromRoute) attachListingToThread(found.id, listingFromRoute);
       return;
     }
     // Create thread via API
@@ -246,6 +296,7 @@ const Chat = () => {
       setThreadOrder((prev) => [id, ...prev.filter((x) => x !== id)]);
       setSelectedThreadId(id);
       preloadUser(otherUserId);
+      if (listingFromRoute) attachListingToThread(id, listingFromRoute);
     } finally {
       setStartingThread(false);
     }
@@ -705,6 +756,52 @@ const Chat = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Pinned listing banner */}
+                {(() => {
+                  const pinned = (() => {
+                    if (!selectedThread) return null;
+                    const m = threadListings[selectedThread.id];
+                    if (m) return m;
+                    if (
+                      listingFromRoute &&
+                      participantIdFromRoute &&
+                      selectedThread.otherId &&
+                      String(selectedThread.otherId) === String(participantIdFromRoute)
+                    ) {
+                      return toListingSummary(listingFromRoute);
+                    }
+                    return null;
+                  })();
+                  if (!pinned) return null;
+                  return (
+                    <div className="px-6 py-3 bg-white border-b border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/listing/${pinned.id}`)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                          <img
+                            src={pinned.thumbnail || "https://placehold.co/80x80?text=IMG"}
+                            alt={pinned.title}
+                            className="w-16 h-16 rounded-md object-cover"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-800 truncate">
+                              {pinned.title}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {typeof pinned.price === "number"
+                                ? currency(pinned.price)
+                                : pinned.price || ""}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 <div
                   ref={messagesContainerRef}

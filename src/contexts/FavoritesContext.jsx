@@ -27,15 +27,6 @@ const sanitizeItem = (item) => {
     const l = item.listing;
     const id = l.id ?? l.listingId;
     if (!id && id !== 0) return null;
-    // Try to extract sellerId if present on listing
-    const sellerObj = l.user || l.owner || l.seller || l.account || l.author || null;
-    const sellerId = sellerObj
-      ? sellerObj.id ??
-        sellerObj.userId ??
-        sellerObj.accountId ??
-        sellerObj.userID ??
-        sellerObj.user_id
-      : l.userId ?? l.ownerId ?? l.accountId ?? l.sellerId ?? null;
     const image =
       Array.isArray(l.listingImages) && l.listingImages.length > 0
         ? l.listingImages[0]?.imageUrl
@@ -61,8 +52,6 @@ const sanitizeItem = (item) => {
       location,
       area,
       image,
-      // Persist sellerId when available to enable direct chat from favourites
-      sellerId: sellerId != null ? String(sellerId) : undefined,
       savedAt: item.savedAt || new Date().toISOString(),
     };
   }
@@ -80,14 +69,6 @@ const sanitizeItem = (item) => {
     item.addressLine ??
     item.city ??
     "";
-  const sellerObj = item.user || item.owner || item.seller || item.account || item.author || null;
-  const sellerId = sellerObj
-    ? sellerObj.id ??
-      sellerObj.userId ??
-      sellerObj.accountId ??
-      sellerObj.userID ??
-      sellerObj.user_id
-    : item.userId ?? item.ownerId ?? item.accountId ?? item.sellerId ?? null;
   return {
     id: String(baseId),
     title: item.title || "Tin dang",
@@ -99,7 +80,6 @@ const sanitizeItem = (item) => {
       item.thumbnail ||
       (Array.isArray(item.images) ? item.images[0] : undefined) ||
       "https://placehold.co/200x140?text=Listing",
-    sellerId: sellerId != null ? String(sellerId) : undefined,
     savedAt: item.savedAt || new Date().toISOString(),
   };
 };
@@ -127,19 +107,8 @@ export const FavoritesProvider = ({ children }) => {
     obj?.city ??
     "";
 
-  const extractSellerId = (obj) => {
-    if (!obj || typeof obj !== "object") return null;
-    const sellerObj = obj.user || obj.owner || obj.seller || obj.account || obj.author;
-    const fromNested = sellerObj
-      ? sellerObj.id ?? sellerObj.userId ?? sellerObj.accountId ?? sellerObj.userID ?? sellerObj.user_id
-      : null;
-    return fromNested ?? obj.userId ?? obj.ownerId ?? obj.accountId ?? obj.sellerId ?? null;
-  };
-
   const enrichMissingLocations = async (items) => {
-    const missing = items.filter(
-      (it) => (!it?.area && !it?.location) || !it?.sellerId
-    );
+    const missing = items.filter((it) => !it?.area && !it?.location);
     if (missing.length === 0) return items;
     try {
       const pairs = await Promise.all(
@@ -162,24 +131,21 @@ export const FavoritesProvider = ({ children }) => {
                   ? payload
                   : null;
               const area = extractArea(detail);
-              const sellerId = extractSellerId(detail);
-              return [String(it.id), { area, sellerId }];
+              return [String(it.id), { area }];
             }
           } catch {
             // ignore individual failure
           }
-          return [String(it.id), { area: "", sellerId: null }];
+          return [String(it.id), { area: "" }];
         })
       );
       const byId = Object.fromEntries(pairs);
       return items.map((it) => {
         const enriched = byId[String(it.id)] || {};
         const area = enriched.area || it.area || it.location || "";
-        const sellerId = enriched.sellerId || it.sellerId;
         const needsArea = area && (!it.area || !it.location);
-        const needsSeller = sellerId && !it.sellerId;
-        return needsArea || needsSeller
-          ? { ...it, area, location: area, sellerId: sellerId ? String(sellerId) : it.sellerId }
+        return needsArea
+          ? { ...it, area, location: area }
           : it;
       });
     } catch {
