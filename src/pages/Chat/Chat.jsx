@@ -229,7 +229,12 @@ const Chat = () => {
       });
       const raw = res?.success ? res.data?.data ?? res.data : null;
       const parsed = parseThread(
-        raw || { id: newId, userId: currentUserId, participantId: otherUserId, messages: [] },
+        raw || {
+          id: newId,
+          userId: currentUserId,
+          participantId: otherUserId,
+          messages: [],
+        },
         currentUserId
       );
       const id = parsed.id || newId;
@@ -280,7 +285,10 @@ const Chat = () => {
         };
         const map = new Map(prev);
         map.set(threadId, updated);
-        setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
+        setThreadOrder((old) => [
+          threadId,
+          ...old.filter((x) => x !== threadId),
+        ]);
         if (selectedThreadId === threadId) {
           requestAnimationFrame(scrollMessagesToBottom);
         }
@@ -329,7 +337,10 @@ const Chat = () => {
             map.set(threadId, updated);
             return map;
           });
-          setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
+          setThreadOrder((old) => [
+            threadId,
+            ...old.filter((x) => x !== threadId),
+          ]);
           if (parsed.otherId) preloadUser(parsed.otherId);
         } finally {
           fetchingThreadIds.current.delete(threadId);
@@ -371,7 +382,10 @@ const Chat = () => {
         map.set(threadId, updated);
         return map;
       });
-      setThreadOrder((old) => [existing.id, ...old.filter((x) => x !== existing.id)]);
+      setThreadOrder((old) => [
+        existing.id,
+        ...old.filter((x) => x !== existing.id),
+      ]);
       if (selectedThreadId === existing.id) {
         requestAnimationFrame(scrollMessagesToBottom);
       }
@@ -404,7 +418,8 @@ const Chat = () => {
           setThreadsById((prev) => {
             const base = prev.get(threadId) || matched;
             const exists = base.messages.some(
-              (m) => m.id && normalized.id && String(m.id) === String(normalized.id)
+              (m) =>
+                m.id && normalized.id && String(m.id) === String(normalized.id)
             );
             const updated = exists
               ? base
@@ -417,7 +432,10 @@ const Chat = () => {
             map.set(threadId, updated);
             return map;
           });
-          setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
+          setThreadOrder((old) => [
+            threadId,
+            ...old.filter((x) => x !== threadId),
+          ]);
           if (matched.otherId) preloadUser(matched.otherId);
           if (selectedThreadId === threadId) {
             requestAnimationFrame(scrollMessagesToBottom);
@@ -444,7 +462,10 @@ const Chat = () => {
             map.set(threadId, updated);
             return map;
           });
-          setThreadOrder((old) => [threadId, ...old.filter((x) => x !== threadId)]);
+          setThreadOrder((old) => [
+            threadId,
+            ...old.filter((x) => x !== threadId),
+          ]);
           preloadUser(senderId);
         }
       } finally {
@@ -477,8 +498,14 @@ const Chat = () => {
     return threadOrder.filter((tid) => {
       const t = threadsById.get(tid);
       const other = t?.otherId && participants[t.otherId];
-      const name = (other?.userName || other?.name || `User ${t?.otherId || ""}`).toLowerCase();
-      const lastMsg = t?.messages?.[t.messages.length - 1]?.messageText?.toLowerCase?.() || "";
+      const name = (
+        other?.userName ||
+        other?.name ||
+        `User ${t?.otherId || ""}`
+      ).toLowerCase();
+      const lastMsg =
+        t?.messages?.[t.messages.length - 1]?.messageText?.toLowerCase?.() ||
+        "";
       return name.includes(term) || lastMsg.includes(term);
     });
   }, [threadOrder, threadsById, participants, search]);
@@ -501,7 +528,11 @@ const Chat = () => {
       requestAnimationFrame(scrollMessagesToBottom);
     }, 0);
     return () => clearTimeout(timer);
-  }, [selectedThreadId, selectedThread?.messages?.length, scrollMessagesToBottom]);
+  }, [
+    selectedThreadId,
+    selectedThread?.messages?.length,
+    scrollMessagesToBottom,
+  ]);
 
   const getAvatarUrl = useCallback(
     (uid) => {
@@ -509,8 +540,10 @@ const Chat = () => {
       if (String(uid) === String(currentUserId)) {
         return user?.thumbnail || user?.avatar || FALLBACK_AVATAR;
       }
-      const p = participants[String(uid)] || (selectedThread?.otherId && participants[selectedThread.otherId]);
-      return (p?.thumbnail || p?.avatar || FALLBACK_AVATAR);
+      const p =
+        participants[String(uid)] ||
+        (selectedThread?.otherId && participants[selectedThread.otherId]);
+      return p?.thumbnail || p?.avatar || FALLBACK_AVATAR;
     },
     [currentUserId, participants, selectedThread, user]
   );
@@ -564,7 +597,9 @@ const Chat = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-800">Chat</h1>
-                  <p className="text-sm text-gray-500">Trao doi nhanh voi nguoi ban</p>
+                  <p className="text-sm text-gray-500">
+                    Trao đổi nhanh với người bạn
+                  </p>
                 </div>
                 {/* status removed */}
               </div>
@@ -574,29 +609,38 @@ const Chat = () => {
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Nhap 3 ky tu de bat dau tim kiem"
+                  placeholder="Nhập 3 ký tự để bắt đầu tìm kiếm"
                   className="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
             </div>
 
             <div className="px-5 flex items-center justify-between text-xs text-gray-500 uppercase tracking-wide">
-              <span className="font-semibold text-gray-800">Tat ca tin nhan</span>
+              <span className="font-semibold text-gray-800">
+                Tất cả tin nhắn
+              </span>
             </div>
 
             <div className="mt-3 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
               {loading && (
-                <div className="px-5 py-3 text-sm text-gray-500">Dang tai danh sach chat...</div>
+                <div className="px-5 py-3 text-sm text-gray-500">
+                  Đang tải danh sách chat...
+                </div>
               )}
               {!loading && filteredThreadOrder.length === 0 && (
-                <div className="px-5 py-3 text-sm text-gray-500">Chua co cuoc tro chuyen nao</div>
+                <div className="px-5 py-3 text-sm text-gray-500">
+                  Chưa có cuộc trò chuyện nào
+                </div>
               )}
               {filteredThreadOrder.map((tid) => {
                 const t = threadsById.get(tid);
                 const other = t?.otherId && participants[t.otherId];
-                const name = other?.userName || other?.name || `User ${t?.otherId || ""}`;
-                const avatar = other?.thumbnail || other?.avatar || FALLBACK_AVATAR;
-                const last = t?.messages?.[t.messages.length - 1]?.messageText || "";
+                const name =
+                  other?.userName || other?.name || `User ${t?.otherId || ""}`;
+                const avatar =
+                  other?.thumbnail || other?.avatar || FALLBACK_AVATAR;
+                const last =
+                  t?.messages?.[t.messages.length - 1]?.messageText || "";
                 const isActive = selectedThreadId === tid;
                 return (
                   <button
@@ -617,8 +661,12 @@ const Chat = () => {
                       {/* online dot removed */}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 truncate">{name}</p>
-                      <p className="text-sm text-gray-500 truncate">{last || "Chua co tin nhan"}</p>
+                      <p className="font-semibold text-gray-800 truncate">
+                        {name}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {last || "Chưa có tin nhắn"}
+                      </p>
                     </div>
                   </button>
                 );
@@ -634,48 +682,62 @@ const Chat = () => {
                   <div className="flex items-center gap-3">
                     <img
                       src={
-                        (selectedThread.otherId && participants[selectedThread.otherId]?.thumbnail) ||
+                        (selectedThread.otherId &&
+                          participants[selectedThread.otherId]?.thumbnail) ||
                         FALLBACK_AVATAR
                       }
                       alt={
-                        (selectedThread.otherId && participants[selectedThread.otherId]?.userName) ||
+                        (selectedThread.otherId &&
+                          participants[selectedThread.otherId]?.userName) ||
                         "User"
                       }
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     <div>
                       <p className="font-semibold text-gray-800">
-                        {(selectedThread.otherId && participants[selectedThread.otherId]?.userName) ||
-                          (selectedThread.otherId ? `User ${selectedThread.otherId}` : "")}
+                        {(selectedThread.otherId &&
+                          participants[selectedThread.otherId]?.userName) ||
+                          (selectedThread.otherId
+                            ? `User ${selectedThread.otherId}`
+                            : "")}
                       </p>
                       {/* online text removed */}
                     </div>
                   </div>
                 </div>
 
-                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+                <div
+                  ref={messagesContainerRef}
+                  className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50"
+                >
                   <div className="space-y-4">
                     {selectedThread.messages.length === 0 ? (
                       <div className="text-center text-sm text-gray-500">
-                        Bat dau cuoc tro chuyen voi nguoi ban.
+                        Bắt đầu cuộc trò chuyện với người bạn.
                       </div>
                     ) : (
                       selectedThread.messages.map((m, idx) => {
-                        const isMe = String(m.senderId) === String(currentUserId);
+                        const isMe =
+                          String(m.senderId) === String(currentUserId);
                         const next = selectedThread.messages[idx + 1];
-                        const lastInGroup = !next || String(next.senderId) !== String(m.senderId);
+                        const lastInGroup =
+                          !next || String(next.senderId) !== String(m.senderId);
                         const showAvatar = lastInGroup;
                         const avatarUrl = getAvatarUrl(m.senderId);
                         const altText = isMe
-                          ? (user?.userName || user?.name || "Me")
-                          : (participants[selectedThread.otherId]?.userName || participants[selectedThread.otherId]?.name || "User");
+                          ? user?.userName || user?.name || "Me"
+                          : participants[selectedThread.otherId]?.userName ||
+                            participants[selectedThread.otherId]?.name ||
+                            "User";
                         return (
                           <div
                             key={m.id || `${m.createdAt}-${m.senderId}`}
-                            className={`flex items-end gap-2 ${isMe ? "justify-end" : "justify-start"}`}
+                            className={`flex items-end gap-2 ${
+                              isMe ? "justify-end" : "justify-start"
+                            }`}
                           >
-                            {!isMe && (
-                              showAvatar ? (
+                            {!isMe &&
+                              (showAvatar ? (
                                 <img
                                   src={avatarUrl}
                                   alt={altText}
@@ -683,8 +745,7 @@ const Chat = () => {
                                 />
                               ) : (
                                 <div className="w-7 h-7" />
-                              )
-                            )}
+                              ))}
                             <div
                               className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                                 isMe
@@ -692,9 +753,14 @@ const Chat = () => {
                                   : "bg-white border border-gray-200 text-gray-800"
                               }`}
                             >
-                              <p className="leading-relaxed whitespace-pre-wrap break-words">{m.messageText}</p>
+                              <p className="leading-relaxed whitespace-pre-wrap break-words">
+                                {m.messageText}
+                              </p>
                               <div className="mt-2 text-xs text-gray-400">
-                                {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {new Date(m.createdAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
                               </div>
                             </div>
                             {/* No avatar for right side (me) */}
@@ -711,7 +777,7 @@ const Chat = () => {
                     <textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Nhap tin nhan"
+                      placeholder="Nhập tin nhắn"
                       className="flex-1 min-h-[60px] max-h-32 resize-none rounded-2xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
@@ -733,8 +799,8 @@ const Chat = () => {
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
                 {startingThread
-                  ? "Dang tao cuoc tro chuyen..."
-                  : "Chon mot hoi thoai de bat dau chat."}
+                  ? "Đang tạo cuộc trò chuyện..."
+                  : "Chọn một hội thoại để bắt đầu chat."}
               </div>
             )}
           </div>

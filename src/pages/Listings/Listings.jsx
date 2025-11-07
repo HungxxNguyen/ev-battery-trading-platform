@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "../../components/layout/MainLayout";
 import { Link, useSearchParams } from "react-router-dom";
-import { FiChevronDown, FiHeart, FiMapPin, FiSearch, FiX } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiHeart,
+  FiMapPin,
+  FiSearch,
+  FiX,
+} from "react-icons/fi";
 import listingService from "../../services/apis/listingApi";
 import brandService from "../../services/apis/brandApi";
 import { useFavorites } from "../../contexts/FavoritesContext";
@@ -41,7 +47,8 @@ const formatCurrency = (value) => {
   }
 };
 
-const statusLabel = (s) => (s === "New" ? "Mới" : s === "Used" ? "Đã sử dụng" : s || "");
+const statusLabel = (s) =>
+  s === "New" ? "Mới" : s === "Used" ? "Đã sử dụng" : s || "";
 
 // Normalize brand "type" to stable values used across the app
 const normalizeBrandType = (t) => {
@@ -62,7 +69,9 @@ const toBrandModel = (b) => ({
   name: String(
     b.name ?? b.Name ?? b.brandName ?? b.BrandName ?? b.title ?? b.Title ?? ""
   ),
-  type: normalizeBrandType(b.type ?? b.Type ?? b.category ?? b.Category ?? b.kind),
+  type: normalizeBrandType(
+    b.type ?? b.Type ?? b.category ?? b.Category ?? b.kind
+  ),
 });
 
 function useDebouncedValue(value, delay = 450) {
@@ -102,8 +111,12 @@ export default function Listings() {
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const debouncedQuery = useDebouncedValue(query, 450);
   const [category, setCategory] = useState(searchParams.get("cat") || "");
-  const [priceFrom, setPriceFrom] = useState(Number(searchParams.get("from")) || 0);
-  const [priceTo, setPriceTo] = useState(Number(searchParams.get("to")) || 5_000_000_000);
+  const [priceFrom, setPriceFrom] = useState(
+    Number(searchParams.get("from")) || 0
+  );
+  const [priceTo, setPriceTo] = useState(
+    Number(searchParams.get("to")) || 5_000_000_000
+  );
   const [yearFrom, setYearFrom] = useState(searchParams.get("yfrom") || "");
   const [yearTo, setYearTo] = useState(searchParams.get("yto") || "");
   const [brandId, setBrandId] = useState(searchParams.get("brandId") || "");
@@ -129,8 +142,14 @@ export default function Listings() {
   useOnClickOutside(priceRef, () => openMenu === "price" && setOpenMenu(null));
   useOnClickOutside(yearRef, () => openMenu === "year" && setOpenMenu(null));
   useOnClickOutside(brandRef, () => openMenu === "brand" && setOpenMenu(null));
-  useOnClickOutside(statusRef, () => openMenu === "status" && setOpenMenu(null));
-  useOnClickOutside(categoryRef, () => openMenu === "category" && setOpenMenu(null));
+  useOnClickOutside(
+    statusRef,
+    () => openMenu === "status" && setOpenMenu(null)
+  );
+  useOnClickOutside(
+    categoryRef,
+    () => openMenu === "category" && setOpenMenu(null)
+  );
 
   // Brands
   const [brands, setBrands] = useState([]);
@@ -232,7 +251,20 @@ export default function Listings() {
     sortBy ? next.set("sort", String(sortBy)) : next.delete("sort");
     next.set("pageSize", String(pageSize));
     setSearchParams(next, { replace: true });
-  }, [query, category, priceFrom, priceTo, yearFrom, yearTo, brandId, status, area, sortBy, pageSize, openMenu]);
+  }, [
+    query,
+    category,
+    priceFrom,
+    priceTo,
+    yearFrom,
+    yearTo,
+    brandId,
+    status,
+    area,
+    sortBy,
+    pageSize,
+    openMenu,
+  ]);
 
   // Client filter + sort + slice (robust to backend param mismatches)
   const clientFilteredSorted = useMemo(() => {
@@ -244,17 +276,26 @@ export default function Listings() {
     const yTo = Number(yearTo) || 0;
 
     const getNum = (v) => (isNaN(Number(v)) ? 0 : Number(v));
-    const getYear = (it) => getNum(it.yearOfManufacture ?? it.YearOfManufacture ?? 0);
+    const getYear = (it) =>
+      getNum(it.yearOfManufacture ?? it.YearOfManufacture ?? 0);
     const getPrice = (it) => getNum(it.price ?? it.Price ?? 0);
-    const getStatus = (it) => String(it.listingStatus ?? it.ListingStatus ?? "");
+    const getStatus = (it) =>
+      String(it.listingStatus ?? it.ListingStatus ?? "");
     const getCat = (it) => normalizeBrandType(it.category ?? it.Category ?? "");
-    const getBrandId = (it) => String(it.brand?.id ?? it.brandId ?? it.BrandId ?? it.BrandID ?? "");
+    const getBrandId = (it) =>
+      String(it.brand?.id ?? it.brandId ?? it.BrandId ?? it.BrandID ?? "");
     const getArea = (it) => String(it.area ?? it.Area ?? "");
     const getTitle = (it) => String(it.title ?? it.Title ?? "");
     const getModel = (it) => String(it.model ?? it.Model ?? "");
-    const getBrandName = (it) => String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
+    const getBrandName = (it) =>
+      String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
     const getDateVal = (it) => {
-      const d = it.activatedAt ?? it.creationDate ?? it.createdAt ?? it.postedOn ?? null;
+      const d =
+        it.activatedAt ??
+        it.creationDate ??
+        it.createdAt ??
+        it.postedOn ??
+        null;
       const t = d ? new Date(d).getTime() : 0;
       return Number.isFinite(t) ? t : 0;
     };
@@ -430,8 +471,18 @@ export default function Listings() {
           ))}
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <button onClick={reset} className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">Xóa lọc</button>
-          <button onClick={apply} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer">Áp dụng</button>
+          <button
+            onClick={reset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            onClick={apply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
         </div>
       </div>
     );
@@ -450,8 +501,13 @@ export default function Listings() {
       setLocalTo("");
     };
     return (
-      <div ref={yearRef} className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
-        <div className="mb-3 text-sm text-gray-700 font-medium">Năm sản xuất</div>
+      <div
+        ref={yearRef}
+        className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      >
+        <div className="mb-3 text-sm text-gray-700 font-medium">
+          Năm sản xuất
+        </div>
         <div className="flex items-center gap-2">
           <input
             type="number"
@@ -484,8 +540,18 @@ export default function Listings() {
           ))}
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <button onClick={reset} className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">Xóa lọc</button>
-          <button onClick={apply} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer">Áp dụng</button>
+          <button
+            onClick={reset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            onClick={apply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
         </div>
       </div>
     );
@@ -499,8 +565,13 @@ export default function Listings() {
     };
     const reset = () => setLocalBrandId("");
     return (
-      <div ref={brandRef} className="absolute z-20 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
-        <div className="mb-2 text-sm text-gray-700 font-medium">Thương hiệu</div>
+      <div
+        ref={brandRef}
+        className="absolute z-20 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      >
+        <div className="mb-2 text-sm text-gray-700 font-medium">
+          Thương hiệu
+        </div>
         <input
           value={brandSearch}
           onChange={(e) => setBrandSearch(e.target.value)}
@@ -509,7 +580,10 @@ export default function Listings() {
         />
         <div className="max-h-64 overflow-auto space-y-1">
           {filteredBrandList.map((b) => (
-            <label key={b.id} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer">
+            <label
+              key={b.id}
+              className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
+            >
               <span>{b.name}</span>
               <input
                 type="radio"
@@ -525,8 +599,18 @@ export default function Listings() {
           )}
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <button onClick={reset} className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">Xóa lọc</button>
-          <button onClick={apply} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer">Áp dụng</button>
+          <button
+            onClick={reset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            onClick={apply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
         </div>
       </div>
     );
@@ -540,10 +624,19 @@ export default function Listings() {
     };
     const reset = () => setLocalStatus("");
     return (
-      <div ref={statusRef} className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+      <div
+        ref={statusRef}
+        className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      >
         <div className="mb-2 text-sm text-gray-700 font-medium">Tình trạng</div>
-        {[{ value: "New", label: "Mới" }, { value: "Used", label: "Đã sử dụng" }].map((opt) => (
-          <label key={opt.value} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer">
+        {[
+          { value: "New", label: "Mới" },
+          { value: "Used", label: "Đã sử dụng" },
+        ].map((opt) => (
+          <label
+            key={opt.value}
+            className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
+          >
             <span>{opt.label}</span>
             <input
               type="radio"
@@ -555,8 +648,18 @@ export default function Listings() {
           </label>
         ))}
         <div className="mt-2 pt-2 flex items-center justify-between border-t">
-          <button onClick={reset} className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">Xóa lọc</button>
-          <button onClick={apply} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer">Áp dụng</button>
+          <button
+            onClick={reset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            onClick={apply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
         </div>
       </div>
     );
@@ -570,10 +673,16 @@ export default function Listings() {
     };
     const reset = () => setLocalCat("");
     return (
-      <div ref={categoryRef} className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+      <div
+        ref={categoryRef}
+        className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+      >
         <div className="mb-2 text-sm text-gray-700 font-medium">Danh mục</div>
         {CATEGORY_OPTIONS.map((opt) => (
-          <label key={opt.value || "all"} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer">
+          <label
+            key={opt.value || "all"}
+            className="flex items-center justify-between p-2 rounded hover:bg-gray-50 cursor-pointer"
+          >
             <span>{opt.label}</span>
             <input
               type="radio"
@@ -585,15 +694,26 @@ export default function Listings() {
           </label>
         ))}
         <div className="mt-2 pt-2 flex items-center justify-between border-t">
-          <button onClick={reset} className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">Xóa lọc</button>
-          <button onClick={apply} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer">Áp dụng</button>
+          <button
+            onClick={reset}
+            className="rounded border border-gray-300 px-3 py-1.5 text-sm cursor-pointer"
+          >
+            Xóa lọc
+          </button>
+          <button
+            onClick={apply}
+            className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white cursor-pointer"
+          >
+            Áp dụng
+          </button>
         </div>
       </div>
     );
   };
 
   const ListingCard = ({ listing }) => {
-    const coverImage = listing?.listingImages?.[0]?.imageUrl || FALLBACK_LISTING_IMAGE;
+    const coverImage =
+      listing?.listingImages?.[0]?.imageUrl || FALLBACK_LISTING_IMAGE;
     const metaParts = [listing?.brand?.name, listing?.model].filter(Boolean);
     const secondaryParts = [
       listing?.yearOfManufacture ? `Năm ${listing.yearOfManufacture}` : null,
@@ -631,27 +751,38 @@ export default function Listings() {
                 title: listing?.title,
                 price: listing?.price,
                 location: listing?.area,
+                area: listing?.area,
                 image: coverImage,
               });
             }}
             aria-label={favActive ? "Bỏ yêu thích" : "Lưu tin yêu thích"}
             aria-pressed={favActive}
             className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
-              favActive ? "bg-white text-red-500" : "bg-white/90 text-gray-600 hover:text-red-500"
+              favActive
+                ? "bg-white text-red-500"
+                : "bg-white/90 text-gray-600 hover:text-red-500"
             }`}
           >
             <FiHeart className={`w-5 h-5 ${favActive ? "fill-current" : ""}`} />
           </button>
         </div>
         <div className="p-3">
-          <h3 className="font-semibold text-base mb-1 line-clamp-2 min-h-[2.75rem]">{listing?.title}</h3>
+          <h3 className="font-semibold text-base mb-1 line-clamp-2 min-h-[2.75rem]">
+            {listing?.title}
+          </h3>
           {metaParts.length > 0 && (
-            <p className="text-gray-500 text-xs mb-1">{metaParts.join(" / ")}</p>
+            <p className="text-gray-500 text-xs mb-1">
+              {metaParts.join(" / ")}
+            </p>
           )}
           {secondaryParts.length > 0 && (
-            <p className="text-gray-500 text-xs mb-1">{secondaryParts.join(" · ")}</p>
+            <p className="text-gray-500 text-xs mb-1">
+              {secondaryParts.join(" · ")}
+            </p>
           )}
-          <p className="text-red-600 font-bold text-lg mb-2">{formatCurrency(listing?.price)}</p>
+          <p className="text-red-600 font-bold text-lg mb-2">
+            {formatCurrency(listing?.price)}
+          </p>
           <div className="flex items-center gap-1 text-gray-500 text-xs">
             <FiMapPin className="shrink-0" />
             <span className="truncate">{listing?.area || "Chưa cập nhật"}</span>
@@ -674,7 +805,18 @@ export default function Listings() {
       !!area ||
       sortBy !== "newest"
     );
-  }, [query, category, priceFrom, priceTo, yearFrom, yearTo, brandId, status, area, sortBy]);
+  }, [
+    query,
+    category,
+    priceFrom,
+    priceTo,
+    yearFrom,
+    yearTo,
+    brandId,
+    status,
+    area,
+    sortBy,
+  ]);
 
   return (
     <MainLayout>
@@ -703,45 +845,80 @@ export default function Listings() {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <FilterChip
-                  label={category ? CATEGORY_OPTIONS.find((c) => c.value === category)?.label || "Danh mục" : "Danh mục"}
+                  label={
+                    category
+                      ? CATEGORY_OPTIONS.find((c) => c.value === category)
+                          ?.label || "Danh mục"
+                      : "Danh mục"
+                  }
                   active={openMenu === "category"}
-                  onClick={() => setOpenMenu((m) => (m === "category" ? null : "category"))}
+                  onClick={() =>
+                    setOpenMenu((m) => (m === "category" ? null : "category"))
+                  }
                   ariaLabel="Chọn danh mục"
                 />
                 {openMenu === "category" && <CategoryPopover />}
               </div>
               <div className="relative">
                 <FilterChip
-                  label={brandId ? `Hãng: ${filteredBrandList.find((b) => String(b.id) === String(brandId))?.name || brandId}` : "Thương hiệu"}
+                  label={
+                    brandId
+                      ? `Hãng: ${
+                          filteredBrandList.find(
+                            (b) => String(b.id) === String(brandId)
+                          )?.name || brandId
+                        }`
+                      : "Thương hiệu"
+                  }
                   active={openMenu === "brand"}
-                  onClick={() => setOpenMenu((m) => (m === "brand" ? null : "brand"))}
+                  onClick={() =>
+                    setOpenMenu((m) => (m === "brand" ? null : "brand"))
+                  }
                   ariaLabel="Chọn thương hiệu"
                 />
                 {openMenu === "brand" && <BrandPopover />}
               </div>
               <div className="relative">
                 <FilterChip
-                  label={priceFrom !== 0 || priceTo !== 5_000_000_000 ? `Giá: ${priceFrom.toLocaleString("vi-VN")} - ${priceTo.toLocaleString("vi-VN")}` : "Khoảng giá"}
+                  label={
+                    priceFrom !== 0 || priceTo !== 5_000_000_000
+                      ? `Giá: ${priceFrom.toLocaleString(
+                          "vi-VN"
+                        )} - ${priceTo.toLocaleString("vi-VN")}`
+                      : "Khoảng giá"
+                  }
                   active={openMenu === "price"}
-                  onClick={() => setOpenMenu((m) => (m === "price" ? null : "price"))}
+                  onClick={() =>
+                    setOpenMenu((m) => (m === "price" ? null : "price"))
+                  }
                   ariaLabel="Chọn khoảng giá"
                 />
                 {openMenu === "price" && <PricePopover />}
               </div>
               <div className="relative">
                 <FilterChip
-                  label={yearFrom || yearTo ? `Năm: ${yearFrom || "-"} - ${yearTo || "-"}` : "Năm sản xuất"}
+                  label={
+                    yearFrom || yearTo
+                      ? `Năm: ${yearFrom || "-"} - ${yearTo || "-"}`
+                      : "Năm sản xuất"
+                  }
                   active={openMenu === "year"}
-                  onClick={() => setOpenMenu((m) => (m === "year" ? null : "year"))}
+                  onClick={() =>
+                    setOpenMenu((m) => (m === "year" ? null : "year"))
+                  }
                   ariaLabel="Chọn năm sản xuất"
                 />
                 {openMenu === "year" && <YearPopover />}
               </div>
               <div className="relative">
                 <FilterChip
-                  label={status ? `Tình trạng: ${statusLabel(status)}` : "Tình trạng"}
+                  label={
+                    status ? `Tình trạng: ${statusLabel(status)}` : "Tình trạng"
+                  }
                   active={openMenu === "status"}
-                  onClick={() => setOpenMenu((m) => (m === "status" ? null : "status"))}
+                  onClick={() =>
+                    setOpenMenu((m) => (m === "status" ? null : "status"))
+                  }
                   ariaLabel="Chọn tình trạng"
                 />
                 {openMenu === "status" && <StatusPopover />}
@@ -779,17 +956,25 @@ export default function Listings() {
           {hasActiveFilters && (
             <div className="flex flex-wrap gap-2">
               {query ? (
-                <ActivePill text={`Tìm: ${query}`} onClear={() => setQuery("")} />
+                <ActivePill
+                  text={`Tìm: ${query}`}
+                  onClear={() => setQuery("")}
+                />
               ) : null}
               {category ? (
                 <ActivePill
-                  text={`Danh mục: ${CATEGORY_OPTIONS.find((c) => c.value === category)?.label || category}`}
+                  text={`Danh mục: ${
+                    CATEGORY_OPTIONS.find((c) => c.value === category)?.label ||
+                    category
+                  }`}
                   onClear={() => setCategory("")}
                 />
               ) : null}
               {priceFrom !== 0 || priceTo !== 5_000_000_000 ? (
                 <ActivePill
-                  text={`Giá: ${priceFrom.toLocaleString("vi-VN")} - ${priceTo.toLocaleString("vi-VN")}`}
+                  text={`Giá: ${priceFrom.toLocaleString(
+                    "vi-VN"
+                  )} - ${priceTo.toLocaleString("vi-VN")}`}
                   onClear={() => {
                     setPriceFrom(0);
                     setPriceTo(5_000_000_000);
@@ -797,23 +982,44 @@ export default function Listings() {
                 />
               ) : null}
               {yearFrom ? (
-                <ActivePill text={`Năm ≥ ${yearFrom}`} onClear={() => setYearFrom("")} />
+                <ActivePill
+                  text={`Năm ≥ ${yearFrom}`}
+                  onClear={() => setYearFrom("")}
+                />
               ) : null}
               {yearTo ? (
-                <ActivePill text={`Năm ≤ ${yearTo}`} onClear={() => setYearTo("")} />
+                <ActivePill
+                  text={`Năm ≤ ${yearTo}`}
+                  onClear={() => setYearTo("")}
+                />
               ) : null}
               {brandId ? (
                 <ActivePill
-                  text={`Hãng: ${filteredBrandList.find((b) => String(b.id) === String(brandId))?.name || brandId}`}
+                  text={`Hãng: ${
+                    filteredBrandList.find(
+                      (b) => String(b.id) === String(brandId)
+                    )?.name || brandId
+                  }`}
                   onClear={() => setBrandId("")}
                 />
               ) : null}
               {status ? (
-                <ActivePill text={`Tình trạng: ${statusLabel(status)}`} onClear={() => setStatus("")} />
+                <ActivePill
+                  text={`Tình trạng: ${statusLabel(status)}`}
+                  onClear={() => setStatus("")}
+                />
               ) : null}
-              {area ? <ActivePill text={`Khu vực: ${area}`} onClear={() => setArea("")} /> : null}
+              {area ? (
+                <ActivePill
+                  text={`Khu vực: ${area}`}
+                  onClear={() => setArea("")}
+                />
+              ) : null}
               {sortBy !== "newest" ? (
-                <ActivePill text={`Sort: ${sortBy}`} onClear={() => setSortBy("newest")} />
+                <ActivePill
+                  text={`Sort: ${sortBy}`}
+                  onClear={() => setSortBy("newest")}
+                />
               ) : null}
             </div>
           )}
@@ -823,27 +1029,31 @@ export default function Listings() {
       <div className="container mx-auto px-4 py-4">
         <div className="bg-white p-4 rounded-lg shadow-md mb-6 border border-gray-200">
           {error && (
-            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">{error}</div>
+            <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+              {error}
+            </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
-            {loading
-              ? Array.from({ length: 10 }).map((_, i) => (
-                  <div
-                    key={`skeleton-${i}`}
-                    className="bg-white rounded-lg overflow-hidden border border-gray-200 p-3 animate-pulse"
-                  >
-                    <div className="h-40 bg-gray-200 rounded mb-3" />
-                    <div className="h-4 bg-gray-200 rounded mb-2" />
-                    <div className="h-3 bg-gray-100 rounded mb-1" />
-                    <div className="h-3 bg-gray-100 rounded mb-3" />
-                    <div className="h-4 bg-gray-200 rounded w-1/2" />
-                  </div>
-                ))
-              : visibleItems.length > 0
-              ? visibleItems.map((l) => <ListingCard key={l.id} listing={l} />)
-              : (
-                  <div className="col-span-full text-center text-gray-600">Không có kết quả phù hợp.</div>
-                )}
+            {loading ? (
+              Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="bg-white rounded-lg overflow-hidden border border-gray-200 p-3 animate-pulse"
+                >
+                  <div className="h-40 bg-gray-200 rounded mb-3" />
+                  <div className="h-4 bg-gray-200 rounded mb-2" />
+                  <div className="h-3 bg-gray-100 rounded mb-1" />
+                  <div className="h-3 bg-gray-100 rounded mb-3" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2" />
+                </div>
+              ))
+            ) : visibleItems.length > 0 ? (
+              visibleItems.map((l) => <ListingCard key={l.id} listing={l} />)
+            ) : (
+              <div className="col-span-full text-center text-gray-600">
+                Không có kết quả phù hợp.
+              </div>
+            )}
           </div>
           {!loading && visibleItems.length < totalItems && (
             <div className="flex justify-center">
@@ -851,7 +1061,8 @@ export default function Listings() {
                 onClick={() => setUiPage((p) => p + 1)}
                 className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-sm cursor-pointer"
               >
-                Xem thêm {Math.min(pageSize, totalItems - visibleItems.length)} / {totalItems - visibleItems.length}
+                Xem thêm {Math.min(pageSize, totalItems - visibleItems.length)}{" "}
+                / {totalItems - visibleItems.length}
               </button>
             </div>
           )}

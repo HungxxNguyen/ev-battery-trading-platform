@@ -164,6 +164,7 @@ const ListingDetail = () => {
         title: listing.title,
         price: listing.price,
         location: listing.area,
+        area: listing.area,
         image: images[0],
       }
     : null;
@@ -230,7 +231,8 @@ const ListingDetail = () => {
     seller?.userID ??
     seller?.user_id ??
     null;
-  const isSellerSelf = sellerId && currentUserId && String(sellerId) === String(currentUserId);
+  const isSellerSelf =
+    sellerId && currentUserId && String(sellerId) === String(currentUserId);
   const packageInfo = listing?.package;
 
   const handleChatWithSeller = () => {
@@ -432,14 +434,14 @@ const ListingDetail = () => {
             </div>
 
             <div className="flex gap-3 mt-5">
-              {(!isSellerSelf && sellerId) && (
-              <button
-                type="button"
-                onClick={handleChatWithSeller}
-                className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
-              >
-                Chat với người bán
-              </button>
+              {!isSellerSelf && sellerId && (
+                <button
+                  type="button"
+                  onClick={handleChatWithSeller}
+                  className="flex-1 px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
+                >
+                  Chat với người bán
+                </button>
               )}
               {listing?.id && (
                 <ReportButton
