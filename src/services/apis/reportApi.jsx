@@ -14,18 +14,10 @@ export const REPORT_REASONS = [
 const BASE_PATH = "/api/Report";
 
 // Create a report (multipart/form-data as per backend contract)
-export const createReport = async (
-  { userId, listingId, reason, otherReason }
-) => {
-  const form = new FormData();
-  form.append("UserId", userId);
-  form.append("ListingId", listingId);
-  form.append("Reason", reason);
-  if (otherReason) form.append("OtherReason", otherReason);
-
+export const createReport = async (formData) => {
   const res = await performApiRequest(`${BASE_PATH}`, {
     method: "post",
-    data: form,
+    data: formData,
   });
   return res.data;
 };
