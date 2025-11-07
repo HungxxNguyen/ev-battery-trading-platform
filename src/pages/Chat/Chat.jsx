@@ -746,7 +746,7 @@ const Chat = () => {
   // Online/offline UI removed per request
 
   return (
-    <MainLayout>
+    <MainLayout hideFooter>
       <div className="bg-gray-50 py-6">
         <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden grid grid-cols-1 lg:grid-cols-[330px_1fr]">
           {/* Left column */}
@@ -779,7 +779,7 @@ const Chat = () => {
               </span>
             </div>
 
-            <div className="mt-3 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+            <div className="mt-3 space-y-1 overflow-y-auto max-h-[calc(100vh-128px)] pr-1">
               {loading && (
                 <div className="px-5 py-3 text-sm text-gray-500">
                   Đang tải danh sách chat...
@@ -833,7 +833,7 @@ const Chat = () => {
           </div>
 
           {/* Right column */}
-          <div className="flex flex-col h-[calc(100vh-220px)]">
+          <div className="flex flex-col h-[calc(100vh-128px)]">
             {selectedThread ? (
               <>
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
@@ -933,9 +933,10 @@ const Chat = () => {
                         .map((m, idx, arr) => {
                           const isMe =
                             String(m.senderId) === String(currentUserId);
-                        const next = arr[idx + 1];
+                          const next = arr[idx + 1];
                           const lastInGroup =
-                            !next || String(next.senderId) !== String(m.senderId);
+                            !next ||
+                            String(next.senderId) !== String(m.senderId);
                           const showAvatar = lastInGroup;
                           const avatarUrl = getAvatarUrl(m.senderId);
                           const altText = isMe
@@ -950,37 +951,40 @@ const Chat = () => {
                                 isMe ? "justify-end" : "justify-start"
                               }`}
                             >
-                            {!isMe &&
-                              (showAvatar ? (
-                                <img
-                                  src={avatarUrl}
-                                  alt={altText}
-                                  className="w-7 h-7 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-7 h-7" />
-                              ))}
-                            <div
-                              className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                                isMe
-                                  ? "bg-blue-50 text-gray-800"
-                                  : "bg-white border border-gray-200 text-gray-800"
-                              }`}
-                            >
-                              <p className="leading-relaxed whitespace-pre-wrap break-words">
-                                {m.messageText}
-                              </p>
-                              <div className="mt-2 text-xs text-gray-400">
-                                {new Date(m.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                              {!isMe &&
+                                (showAvatar ? (
+                                  <img
+                                    src={avatarUrl}
+                                    alt={altText}
+                                    className="w-7 h-7 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-7 h-7" />
+                                ))}
+                              <div
+                                className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                  isMe
+                                    ? "bg-blue-50 text-gray-800"
+                                    : "bg-white border border-gray-200 text-gray-800"
+                                }`}
+                              >
+                                <p className="leading-relaxed whitespace-pre-wrap break-words">
+                                  {m.messageText}
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400">
+                                  {new Date(m.createdAt).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </div>
                               </div>
+                              {/* No avatar for right side (me) */}
                             </div>
-                            {/* No avatar for right side (me) */}
-                          </div>
-                        );
-                      })
+                          );
+                        })
                     )}
                     <div ref={messagesEndRef} />
                   </div>
