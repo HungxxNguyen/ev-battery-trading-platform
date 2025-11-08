@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   User,
   UserX,
+  UserCheck, // NEW: icon cho Unban
 } from "lucide-react";
 
 export default function StaffReportsPage() {
@@ -175,8 +176,14 @@ export default function StaffReportsPage() {
 
   const onBanClick = () => {
     if (!sellerInfo.id) return;
-    // Stub only: no API call per requirement
-    alert(`(Stub) Ban người bán với ID: ${sellerInfo.id}.\nChưa kết nối API.`);
+    // Stub: nối API sau
+    alert(`Ban người bán với ID: ${sellerInfo.id}`);
+  };
+
+  const onUnbanClick = () => {
+    if (!sellerInfo.id) return;
+    // Stub: nối API sau
+    alert(`Unban người bán với ID: ${sellerInfo.id}`);
   };
 
   return (
@@ -456,7 +463,7 @@ export default function StaffReportsPage() {
               )}
             </div>
 
-            {/* Report info + Ban button */}
+            {/* Report info + Actions */}
             <div className="rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4 shadow-md space-y-4">
               <h3 className="text-lg font-semibold text-slate-50">
                 Thông tin báo cáo
@@ -523,12 +530,12 @@ export default function StaffReportsPage() {
                     />
                   )}
 
-                  {/* Ban Seller (stub) */}
+                  {/* Hành động */}
                   <div className="pt-2 border-t border-slate-800/70">
                     <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
                       Hành động
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         onClick={onBanClick}
                         disabled={!sellerInfo.id}
@@ -541,9 +548,18 @@ export default function StaffReportsPage() {
                       >
                         <UserX className="h-4 w-4" /> Ban người bán
                       </Button>
-                      <span className="text-xs text-slate-400">
-                        (Chưa kết nối API)
-                      </span>
+                      <Button
+                        onClick={onUnbanClick}
+                        disabled={!sellerInfo.id}
+                        className="rounded-xl bg-emerald-600/90 text-white hover:bg-emerald-600 gap-2 px-4 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                        title={
+                          sellerInfo.id
+                            ? `Gỡ cấm người bán (${sellerInfo.id})`
+                            : "Không tìm thấy ID người bán"
+                        }
+                      >
+                        <UserCheck className="h-4 w-4" /> Unban người bán
+                      </Button>
                     </div>
                     {sellerInfo?.id && (
                       <div className="mt-2 rounded-xl border border-slate-800/70 bg-slate-900/60 px-3 py-2 text-xs text-slate-300">
