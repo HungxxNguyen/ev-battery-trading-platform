@@ -17,6 +17,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { currency } from "../../utils/currency";
 
 const FALLBACK_AVATAR = "https://placehold.co/80x80?text=U";
+const PIN_PREFIX = "__PINNED_LISTING__:";
 
 const generateGuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -154,7 +155,10 @@ const Chat = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem("chat.threadListings", JSON.stringify(threadListings));
+      localStorage.setItem(
+        "chat.threadListings",
+        JSON.stringify(threadListings)
+      );
     } catch {}
   }, [threadListings]);
 
@@ -173,20 +177,73 @@ const Chat = () => {
       (Array.isArray(l.images) && l.images[0]) ||
       (Array.isArray(l.listingImages) && l.listingImages[0]?.imageUrl) ||
       "https://placehold.co/80x80?text=IMG";
-    return { id: String(id), title: l.title || l.name || "Tin đăng", price, thumbnail: thumb };
+    return {
+      id: String(id),
+      title: l.title || l.name || "Tin đăng",
+      price,
+      thumbnail: thumb,
+    };
   }, []);
 
-  const attachListingToThread = useCallback((threadId, listing) => {
-    const snap = toListingSummary(listing);
-    if (!threadId || !snap) return;
-    setThreadListings((prev) => {
-      const next = { ...prev };
-      if (!next[threadId]) {
-        next[threadId] = snap;
+  const attachListingToThread = useCallback(
+    (threadId, listing) => {
+      const snap = toListingSummary(listing);
+      if (!threadId || !snap) return;
+      setThreadListings((prev) => {
+        const next = { ...prev };
+        if (!next[threadId]) {
+          next[threadId] = snap;
+        }
+        return next;
+      });
+    },
+    [toListingSummary]
+  );
+
+  const parsePinnedListingText = useCallback(
+    (text) => {
+      try {
+        if (!text || typeof text !== "string") return null;
+        if (!text.startsWith(PIN_PREFIX)) return null;
+        const payload = text.slice(PIN_PREFIX.length);
+        const obj = JSON.parse(payload);
+        return toListingSummary(obj);
+      } catch {
+        return null;
       }
-      return next;
-    });
-  }, [toListingSummary]);
+    },
+    [toListingSummary]
+  );
+
+  const extractPinnedFromMessages = useCallback(
+    (messages) => {
+      if (!Array.isArray(messages) || messages.length === 0) return null;
+      for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const snap = parsePinnedListingText(messages[i]?.messageText);
+        if (snap) return snap;
+      }
+      return null;
+    },
+    [parsePinnedListingText]
+  );
+
+  const sendPinnedListingMeta = useCallback(
+    async (threadId, listing) => {
+      const snap = toListingSummary(listing);
+      if (!threadId || !snap || !currentUserId) return;
+      const text = `${PIN_PREFIX}${JSON.stringify(snap)}`;
+      try {
+        await messageService.sendMessage({
+          chatThreadId: threadId,
+          senderId: currentUserId,
+          messageText: text,
+        });
+      } catch {
+        // ignore send failures for meta message
+      }
+    },
+    [currentUserId, toListingSummary]
+  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -265,7 +322,14 @@ const Chat = () => {
       setSelectedThreadId(found.id);
       preloadUser(otherUserId);
       // If we came from a listing, remember it for this thread
-      if (listingFromRoute) attachListingToThread(found.id, listingFromRoute);
+      if (listingFromRoute) {
+        attachListingToThread(found.id, listingFromRoute);
+        const foundThread = (existingMap || threadsById).get(found.id);
+        const hasMeta = extractPinnedFromMessages(foundThread?.messages);
+        if (!hasMeta) {
+          sendPinnedListingMeta(found.id, listingFromRoute);
+        }
+      }
       return;
     }
     // Create thread via API
@@ -296,7 +360,11 @@ const Chat = () => {
       setThreadOrder((prev) => [id, ...prev.filter((x) => x !== id)]);
       setSelectedThreadId(id);
       preloadUser(otherUserId);
-      if (listingFromRoute) attachListingToThread(id, listingFromRoute);
+      if (listingFromRoute) {
+        attachListingToThread(id, listingFromRoute);
+        // New thread has no messages yet; send meta so the seller also sees pinned
+        sendPinnedListingMeta(id, listingFromRoute);
+      }
     } finally {
       setStartingThread(false);
     }
@@ -336,6 +404,14 @@ const Chat = () => {
         };
         const map = new Map(prev);
         map.set(threadId, updated);
+        // Persist pinned listing if this is a meta message
+        const snap = parsePinnedListingText(normalized.messageText);
+        if (snap) {
+          setThreadListings((before) => {
+            if (before[threadId]) return before;
+            return { ...before, [threadId]: snap };
+          });
+        }
         setThreadOrder((old) => [
           threadId,
           ...old.filter((x) => x !== threadId),
@@ -388,6 +464,13 @@ const Chat = () => {
             map.set(threadId, updated);
             return map;
           });
+          const snap = parsePinnedListingText(normalized.messageText);
+          if (snap) {
+            setThreadListings((before) => {
+              if (before[threadId]) return before;
+              return { ...before, [threadId]: snap };
+            });
+          }
           setThreadOrder((old) => [
             threadId,
             ...old.filter((x) => x !== threadId),
@@ -433,6 +516,13 @@ const Chat = () => {
         map.set(threadId, updated);
         return map;
       });
+      const snap = parsePinnedListingText(normalized.messageText);
+      if (snap) {
+        setThreadListings((before) => {
+          if (before[threadId]) return before;
+          return { ...before, [threadId]: snap };
+        });
+      }
       setThreadOrder((old) => [
         existing.id,
         ...old.filter((x) => x !== existing.id),
@@ -483,6 +573,13 @@ const Chat = () => {
             map.set(threadId, updated);
             return map;
           });
+          const snap = parsePinnedListingText(normalized.messageText);
+          if (snap) {
+            setThreadListings((before) => {
+              if (before[threadId]) return before;
+              return { ...before, [threadId]: snap };
+            });
+          }
           setThreadOrder((old) => [
             threadId,
             ...old.filter((x) => x !== threadId),
@@ -542,6 +639,16 @@ const Chat = () => {
     if (!selectedThreadId) return null;
     return threadsById.get(selectedThreadId) || null;
   }, [threadsById, selectedThreadId]);
+
+  // Backfill pinned listing cache if a meta message exists in the selected thread
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    if (threadListings[selectedThread.id]) return;
+    const snap = extractPinnedFromMessages(selectedThread.messages);
+    if (snap) {
+      setThreadListings((prev) => ({ ...prev, [selectedThread.id]: snap }));
+    }
+  }, [selectedThread, threadListings, extractPinnedFromMessages]);
 
   const filteredThreadOrder = useMemo(() => {
     if (!search.trim()) return threadOrder;
@@ -639,7 +746,7 @@ const Chat = () => {
   // Online/offline UI removed per request
 
   return (
-    <MainLayout>
+    <MainLayout hideFooter>
       <div className="bg-gray-50 py-6">
         <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden grid grid-cols-1 lg:grid-cols-[330px_1fr]">
           {/* Left column */}
@@ -672,7 +779,7 @@ const Chat = () => {
               </span>
             </div>
 
-            <div className="mt-3 space-y-1 overflow-y-auto max-h-[calc(100vh-220px)] pr-1">
+            <div className="mt-3 space-y-1 overflow-y-auto max-h-[calc(100vh-128px)] pr-1">
               {loading && (
                 <div className="px-5 py-3 text-sm text-gray-500">
                   Đang tải danh sách chat...
@@ -697,7 +804,7 @@ const Chat = () => {
                   <button
                     key={tid}
                     onClick={() => setSelectedThreadId(tid)}
-                    className={`w-full flex items-center gap-3 px-5 py-3 text-left transition ${
+                    className={`w-full flex items-center gap-3 px-5 py-3 text-left transition cursor-pointer ${
                       isActive
                         ? "bg-white border-l-4 border-blue-500 shadow-sm"
                         : "hover:bg-white"
@@ -726,7 +833,7 @@ const Chat = () => {
           </div>
 
           {/* Right column */}
-          <div className="flex flex-col h-[calc(100vh-220px)]">
+          <div className="flex flex-col h-[calc(100vh-128px)]">
             {selectedThread ? (
               <>
                 <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
@@ -761,13 +868,18 @@ const Chat = () => {
                 {(() => {
                   const pinned = (() => {
                     if (!selectedThread) return null;
-                    const m = threadListings[selectedThread.id];
-                    if (m) return m;
+                    const fromCache = threadListings[selectedThread.id];
+                    if (fromCache) return fromCache;
+                    const fromMessages = extractPinnedFromMessages(
+                      selectedThread.messages
+                    );
+                    if (fromMessages) return fromMessages;
                     if (
                       listingFromRoute &&
                       participantIdFromRoute &&
                       selectedThread.otherId &&
-                      String(selectedThread.otherId) === String(participantIdFromRoute)
+                      String(selectedThread.otherId) ===
+                        String(participantIdFromRoute)
                     ) {
                       return toListingSummary(listingFromRoute);
                     }
@@ -781,9 +893,12 @@ const Chat = () => {
                         onClick={() => navigate(`/listing/${pinned.id}`)}
                         className="w-full text-left"
                       >
-                        <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
+                        <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
                           <img
-                            src={pinned.thumbnail || "https://placehold.co/80x80?text=IMG"}
+                            src={
+                              pinned.thumbnail ||
+                              "https://placehold.co/80x80?text=IMG"
+                            }
                             alt={pinned.title}
                             className="w-16 h-16 rounded-md object-cover"
                           />
@@ -813,57 +928,63 @@ const Chat = () => {
                         Bắt đầu cuộc trò chuyện với người bạn.
                       </div>
                     ) : (
-                      selectedThread.messages.map((m, idx) => {
-                        const isMe =
-                          String(m.senderId) === String(currentUserId);
-                        const next = selectedThread.messages[idx + 1];
-                        const lastInGroup =
-                          !next || String(next.senderId) !== String(m.senderId);
-                        const showAvatar = lastInGroup;
-                        const avatarUrl = getAvatarUrl(m.senderId);
-                        const altText = isMe
-                          ? user?.userName || user?.name || "Me"
-                          : participants[selectedThread.otherId]?.userName ||
-                            participants[selectedThread.otherId]?.name ||
-                            "User";
-                        return (
-                          <div
-                            key={m.id || `${m.createdAt}-${m.senderId}`}
-                            className={`flex items-end gap-2 ${
-                              isMe ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            {!isMe &&
-                              (showAvatar ? (
-                                <img
-                                  src={avatarUrl}
-                                  alt={altText}
-                                  className="w-7 h-7 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-7 h-7" />
-                              ))}
+                      selectedThread.messages
+                        .filter((m) => !parsePinnedListingText(m?.messageText))
+                        .map((m, idx, arr) => {
+                          const isMe =
+                            String(m.senderId) === String(currentUserId);
+                          const next = arr[idx + 1];
+                          const lastInGroup =
+                            !next ||
+                            String(next.senderId) !== String(m.senderId);
+                          const showAvatar = lastInGroup;
+                          const avatarUrl = getAvatarUrl(m.senderId);
+                          const altText = isMe
+                            ? user?.userName || user?.name || "Me"
+                            : participants[selectedThread.otherId]?.userName ||
+                              participants[selectedThread.otherId]?.name ||
+                              "User";
+                          return (
                             <div
-                              className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
-                                isMe
-                                  ? "bg-blue-50 text-gray-800"
-                                  : "bg-white border border-gray-200 text-gray-800"
+                              key={m.id || `${m.createdAt}-${m.senderId}`}
+                              className={`flex items-end gap-2 ${
+                                isMe ? "justify-end" : "justify-start"
                               }`}
                             >
-                              <p className="leading-relaxed whitespace-pre-wrap break-words">
-                                {m.messageText}
-                              </p>
-                              <div className="mt-2 text-xs text-gray-400">
-                                {new Date(m.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                              {!isMe &&
+                                (showAvatar ? (
+                                  <img
+                                    src={avatarUrl}
+                                    alt={altText}
+                                    className="w-7 h-7 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-7 h-7" />
+                                ))}
+                              <div
+                                className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                                  isMe
+                                    ? "bg-blue-50 text-gray-800"
+                                    : "bg-white border border-gray-200 text-gray-800"
+                                }`}
+                              >
+                                <p className="leading-relaxed whitespace-pre-wrap break-words">
+                                  {m.messageText}
+                                </p>
+                                <div className="mt-2 text-xs text-gray-400">
+                                  {new Date(m.createdAt).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </div>
                               </div>
+                              {/* No avatar for right side (me) */}
                             </div>
-                            {/* No avatar for right side (me) */}
-                          </div>
-                        );
-                      })
+                          );
+                        })
                     )}
                     <div ref={messagesEndRef} />
                   </div>
@@ -885,7 +1006,7 @@ const Chat = () => {
                     />
                     <button
                       onClick={handleSend}
-                      className="h-12 w-12 flex items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50"
+                      className="h-12 w-12 flex items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition"
                       disabled={!inputValue.trim()}
                     >
                       <FiSend className="w-5 h-5" />

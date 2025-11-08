@@ -27,7 +27,6 @@ export default function Header() {
   const { favorites } = useFavorites();
   const favoritesCount = favorites.length;
   const chatUnread = 3;
-  const notificationsUnread = 3;
 
   const handleLogout = () => {
     logout();
@@ -297,18 +296,6 @@ export default function Header() {
                   </span>
                 )}
               </Link>
-              <Link
-                to="/notifications"
-                className={iconButtonClass}
-                aria-label="Thong bao"
-              >
-                <FiBell className="w-5 h-5" />
-                {notificationsUnread > 0 && (
-                  <span className={badgeClass}>
-                    {formatCount(notificationsUnread)}
-                  </span>
-                )}
-              </Link>
             </div>
 
             <div className="h-8 w-px bg-cyan-500/20" />
@@ -435,12 +422,6 @@ export default function Header() {
               >
                 <FiHeart className="w-5 h-5" />
               </Link>
-              <Link
-                to="/notifications"
-                className="p-2 rounded-full bg-gray-800/70 hover:bg-gray-700 text-cyan-100"
-              >
-                <FiBell className="w-5 h-5" />
-              </Link>
             </div>
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -534,13 +515,7 @@ export default function Header() {
             >
               Tin yeu thich
             </Link>
-            <Link
-              to="/notifications"
-              className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2"
-              onClick={closeMobileMenu}
-            >
-              Thong bao
-            </Link>
+
             <Link
               to="/manage-listing"
               className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2"

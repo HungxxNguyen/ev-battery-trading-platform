@@ -18,7 +18,6 @@ import Search from "../pages/Search/Search";
 import Listings from "../pages/Listings/Listings";
 import Chat from "../pages/Chat/Chat";
 import Favorites from "../pages/Favorites/Favorites";
-import Notifications from "../pages/Notifications/Notifications";
 import ForgetPassword from "../pages/ForgetPassword/ForgetPassword";
 import VerifyOtp from "../pages/VerifyOtp/VerifyOtp";
 import About from "../pages/About/About";
@@ -63,11 +62,14 @@ const AppRouter = () => {
           <Route path="/forbidden" element={<Forbidden />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failed" element={<PaymentFailed />} />
-          {/* Staff-only -> no role in db */}
-          <Route path="/staff" element={<StaffLayout />}>
-                <Route path="review" element={<StaffReview />} />
-                <Route path="reports" element={<StaffReports />} />
+
+          {/* Staff-only*/}
+          <Route element={<ProtectedRoute allowedRoles={["Staff"]} />}>
+            <Route path="/staff" element={<StaffLayout />}>
+              <Route path="review" element={<StaffReview />} />
+              <Route path="reports" element={<StaffReports />} />
             </Route>
+          </Route>
 
           {/* User-authenticated (không yêu cầu role cụ thể) */}
           <Route element={<ProtectedRoute />}>
@@ -77,7 +79,6 @@ const AppRouter = () => {
             <Route path="/manage-listing/:id" element={<ManageDetail />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/favorites" element={<Favorites />} />
-            <Route path="/notifications" element={<Notifications />} />
             <Route path="/profile" element={<ProfileTab />} />
             <Route path="/transactions" element={<Transaction />} />
           </Route>
@@ -89,7 +90,6 @@ const AppRouter = () => {
               <Route path="plans" element={<PlansPage />} />
               <Route path="brands" element={<BrandPage />} />
             </Route>
-
           </Route>
         </Routes>
       </AnimatePresence>

@@ -25,17 +25,31 @@ const Login = () => {
 
     let target = "/";
     try {
+      // Role-based default landing
       if (role === "Admin") {
         target = "/admin";
+      } else if (role === "Staff") {
+        target = "/staff";
       } else {
+        // Regular user: honor redirect/query only if it's a user-allowed path
         const params = new URLSearchParams(window.location.search);
         const qsRedirect = params.get("redirect");
-        if (qsRedirect && typeof qsRedirect === "string" && qsRedirect.startsWith("/") && !qsRedirect.startsWith("//")) {
+        if (
+          qsRedirect &&
+          typeof qsRedirect === "string" &&
+          qsRedirect.startsWith("/") &&
+          !qsRedirect.startsWith("//")
+        ) {
           target = qsRedirect;
         } else if (location?.state?.from) {
           const from = location.state.from;
           const fromPath = (from.pathname || "/") + (from.search || "");
           if (fromPath.startsWith("/")) target = fromPath;
+        }
+
+        // Prevent redirecting a normal user to staff/admin areas
+        if (target.startsWith("/staff") || target.startsWith("/admin")) {
+          target = "/";
         }
       }
     } catch (e) {
@@ -271,5 +285,3 @@ const Footer = () => (
 );
 
 export default Login;
-
-

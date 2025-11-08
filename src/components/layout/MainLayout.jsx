@@ -2,13 +2,12 @@ import React from "react";
 import Header from "../Header/Header";
 import Footer from "../Footer/Footer";
 
-const MainLayout = ({ children }) => {
-
+const MainLayout = ({ children, hideFooter = false }) => {
   return (
     <div className="layout-container">
-      <Header/>
+      <Header />
       <main className="main-content">{children}</main>
-      <Footer/>
+      {!hideFooter && <Footer />}
     </div>
   );
 };
