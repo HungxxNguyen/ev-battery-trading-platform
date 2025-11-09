@@ -18,7 +18,7 @@ import {
 } from "../../components/Table/table";
 import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
-import { Pencil, Trash2, Plus, RefreshCw } from "lucide-react";
+import { Trash2, Plus, RefreshCw } from "lucide-react";
 import packageService from "../../services/apis/packageApi";
 import { useNotification } from "../../contexts/NotificationContext";
 
@@ -38,9 +38,8 @@ export default function PlansPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  // form state
+  // form state (create only)
   const [openForm, setOpenForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
   const [days, setDays] = useState(30);
   const [price, setPrice] = useState(0);
@@ -66,7 +65,6 @@ export default function PlansPage() {
   );
 
   const resetForm = () => {
-    setEditingId(null);
     setName("");
     setDays(30);
     setPrice(0);
@@ -94,15 +92,11 @@ export default function PlansPage() {
         setPlans(list);
       } else {
         const errMsg = res?.error || res?.data?.Message || res?.data?.message;
-        if (errMsg) {
-          showNotification(errMsg, "error");
-        }
-        console.error("Tải gói thất bại:", res.error || res.data);
+        if (errMsg) showNotification(errMsg, "error");
       }
     } catch (e) {
       const errMsg = e?.error || e?.message;
       if (errMsg) showNotification(errMsg, "error");
-      console.error("Lỗi tải danh sách gói:", e);
     } finally {
       setLoading(false);
     }
@@ -112,11 +106,12 @@ export default function PlansPage() {
     loadPlans();
   }, []);
 
+  // CREATE ONLY
   const onSave = async () => {
     setFieldErrors({});
     setGeneralError("");
+
     const form = new FormData();
-    if (editingId) form.append("Id", editingId);
     form.append("Name", name.trim());
     form.append("Price", String(price));
     form.append("DurationInDays", String(days));
@@ -126,9 +121,7 @@ export default function PlansPage() {
 
     setSubmitting(true);
     try {
-      const res = editingId
-        ? await packageService.updatePackage(form)
-        : await packageService.createPackage(form);
+      const res = await packageService.createPackage(form);
       if (!res.success) {
         const modelErrors = res?.data?.errors;
         if (modelErrors && typeof modelErrors === "object") {
@@ -144,45 +137,23 @@ export default function PlansPage() {
         return;
       }
 
-      const resultPayload = res?.data;
-      if (
-        resultPayload &&
-        (resultPayload.Error === 1 || resultPayload.error === 1)
-      ) {
-        const msg =
-          resultPayload.Message || resultPayload.message || "Không thể lưu gói";
-        if (/tên|name/i.test(msg)) {
-          setFieldErrors((prev) => ({ ...prev, Name: msg }));
-        } else {
-          setGeneralError(msg);
-        }
+      const payload = res?.data;
+      if (payload && (payload.Error === 1 || payload.error === 1)) {
+        const msg = payload.Message || payload.message || "Không thể lưu gói";
+        if (/tên|name/i.test(msg)) setFieldErrors((p) => ({ ...p, Name: msg }));
+        else setGeneralError(msg);
         if (msg) showNotification(msg, "error");
         return;
       }
-      // Success: notify using backend message if present
-      const successMsg = resultPayload?.Message || resultPayload?.message;
-      if (successMsg) {
-        showNotification(successMsg, "success");
-      }
+
+      const successMsg = res?.data?.Message || res?.data?.message;
+      if (successMsg) showNotification(successMsg, "success");
       await loadPlans();
       resetForm();
       setOpenForm(false);
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const startEdit = (id) => {
-    const p = plans.find((x) => x.id === id);
-    if (!p) return;
-    setEditingId(p.id);
-    setName(p.name || "");
-    setDays(p.days || 0);
-    setPrice(p.price || 0);
-    setDescription(p.description || "");
-    setPackageType(p.packageType || "ElectricCar");
-    setStatus(p.status || "Active");
-    setOpenForm(true);
   };
 
   const removePlan = async (id) => {
@@ -192,19 +163,15 @@ export default function PlansPage() {
       setDeletingId(id);
       const res = await packageService.deletePackage(id);
       if (!res.success) {
-        console.error("Xóa gói thất bại:", res.error || res.data);
         const errMsgDel =
           res?.error || res?.data?.Message || res?.data?.message;
         if (errMsgDel) showNotification(errMsgDel, "error");
         return;
       }
       const msg = res?.data?.Message || res?.data?.message;
-      if (msg) {
-        showNotification(msg, "success");
-      }
+      if (msg) showNotification(msg, "success");
       await loadPlans();
     } catch (e) {
-      console.error(e);
       showNotification(e?.error || e?.message || "Không thể xóa gói", "error");
     } finally {
       setDeletingId(null);
@@ -242,7 +209,7 @@ export default function PlansPage() {
       {openForm && (
         <Card className={GLASS_CARD4}>
           <CardHeader>
-            <CardTitle>{editingId ? "Chỉnh sửa gói" : "Tạo gói mới"}</CardTitle>
+            <CardTitle>Tạo gói mới</CardTitle>
           </CardHeader>
           <CardContent>
             {generalError && (
@@ -404,7 +371,8 @@ export default function PlansPage() {
                 <TableHead>Loại</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Giá</TableHead>
-                <TableHead>Thao tác</TableHead>
+                {/* ✅ Căn giữa header cột thao tác */}
+                <TableHead className="text-center w-[120px]">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="[&_tr:last-child]:border-0">
@@ -435,21 +403,15 @@ export default function PlansPage() {
                   <TableCell className="text-right">
                     {currency(p.price)}
                   </TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button
-                      title="Chỉnh sửa"
-                      onClick={() => startEdit(p.id)}
-                      className="cursor-pointer rounded-lg gap-2 px-3 py-1.5 text-xs border border-slate-700/50 bg-slate-900/40 text-slate-100 hover:bg-slate-800/60"
-                    >
-                      <Pencil className="h-4 w-4" /> Sửa
-                    </Button>
+
+                  <TableCell className="flex items-center justify-center">
                     <Button
                       title="Xóa gói"
                       onClick={() => removePlan(p.id)}
                       disabled={deletingId === p.id}
                       className="cursor-pointer rounded-lg bg-rose-500/80 text-white hover:bg-rose-500 gap-2 px-3 py-1.5 text-xs"
                     >
-                      <Trash2 className="h-4 w-4" />{" "}
+                      <Trash2 className="h-4 w-4" />
                       {deletingId === p.id ? "Đang xóa..." : "Xóa"}
                     </Button>
                   </TableCell>

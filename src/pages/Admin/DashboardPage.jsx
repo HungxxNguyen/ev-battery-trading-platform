@@ -1,5 +1,6 @@
 // ===============================
-// File: src/pages/Admin/DashboardPage.jsx (legend sorted, slices keep order, fix missing slice)
+// File: src/pages/Admin/DashboardPage.jsx
+// (Keep 2 KPI cards only: Tổng User & Doanh thu hôm nay)
 // ===============================
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -8,7 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/Card/card";
-import listingService from "../../services/apis/listingApi";
+// ❌ Bỏ listingService vì không còn dùng KPI "Bài chờ duyệt"
+// import listingService from "../../services/apis/listingApi";
 import adminService from "../../services/apis/adminApi";
 import {
   XAxis,
@@ -35,8 +37,6 @@ const GLASS_CARD =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-xl text-slate-100";
 const KPI_CARD_STYLES = [
   "bg-gradient-to-br from-cyan-500/90 via-sky-500/90 to-blue-600/90",
-  "bg-gradient-to-br from-indigo-500/90 via-purple-500/90 to-fuchsia-500/90",
-  "bg-gradient-to-br from-emerald-500/90 via-teal-500/90 to-cyan-500/90",
   "bg-gradient-to-br from-amber-500/90 via-orange-500/90 to-rose-500/90",
 ];
 
@@ -117,40 +117,13 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const [pendingCount, setPendingCount] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await listingService.getByStatus(1, 1000, "Pending");
-        if (cancelled) return;
-        if (res?.success && res?.data) {
-          const d = res.data;
-          const total =
-            (typeof d.totalRecords === "number" && d.totalRecords) ||
-            (typeof d.total === "number" && d.total) ||
-            (typeof d.totalCount === "number" && d.totalCount) ||
-            (typeof d.count === "number" && d.count) ||
-            (Array.isArray(d.data) ? d.data.length : 0);
-          setPendingCount(Number(total) || 0);
-        }
-      } catch {
-        // keep 0
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  // ❌ Bỏ KPI "Bài chờ duyệt" & "User bị báo xấu"
   const kpiList = useMemo(
     () => [
       { label: "Tổng User", value: userCount },
-      { label: "Bài chờ duyệt", value: pendingCount, sub: "" },
-      { label: "User bị báo xấu", value: 37, sub: "+5 hôm nay" },
       { label: "Doanh thu hôm nay", value: 92.4, sub: "+18% vs hôm qua" },
     ],
-    [userCount, pendingCount]
+    [userCount]
   );
 
   // ====== Demo data for charts ======
@@ -246,9 +219,10 @@ export default function DashboardPage() {
     const m = new Map();
     let colorIdx = 0;
     for (const item of pieData) {
-      const color = item.brand === "Others"
-        ? OTHERS_COLOR
-        : (CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1]);
+      const color =
+        item.brand === "Others"
+          ? OTHERS_COLOR
+          : CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1];
       if (item.brand !== "Others") colorIdx += 1;
       m.set(item.brand, color);
     }
@@ -256,7 +230,10 @@ export default function DashboardPage() {
   }, [pieData]);
 
   // Remove zero values and add small gap to avoid flat join
-  const pieCleanData = useMemo(() => pieData.filter((d) => (d.count || 0) > 0), [pieData]);
+  const pieCleanData = useMemo(
+    () => pieData.filter((d) => (d.count || 0) > 0),
+    [pieData]
+  );
 
   // Legend sorted by percentage (desc) but uses brandColorMap colors
   const legendPayload = useMemo(() => {
@@ -287,7 +264,7 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl grid gap-6 text-slate-100">
       {/* KPI */}
-      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
         {kpiList.map((k, i) => (
           <div
             key={i}
@@ -477,11 +454,10 @@ export default function DashboardPage() {
         {/* Chart 3: Posts by Type & Condition (Bar) */}
         <Card className={`col-span-1 lg:col-span-3 ${GLASS_CARD}`}>
           <CardHeader>
-            <CardTitle className="flex items:center gap-2">
+            <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
               Bài đăng theo loại và tình trạng
             </CardTitle>
-            
           </CardHeader>
           <CardContent>
             <div className="h-72">
@@ -491,13 +467,17 @@ export default function DashboardPage() {
                   <XAxis dataKey="type" tickMargin={8} stroke="#ffffff" tick={{ fill: "#ffffff" }} />
                   <YAxis allowDecimals={false} stroke="#a7f3d0" tick={{ fill: "#a7f3d0" }} />
                   <ChartTooltip
-                    formatter={(value, key) => [`${value} bài đăng`, key === "new" ? "Hàng mới" : key === "used" ? "Hàng cũ" : key]}
+                    formatter={(value, key) => [
+                      `${value} bài đăng`,
+                      key === "new" ? "Hàng mới" : key === "used" ? "Hàng cũ" : key,
+                    ]}
                     contentStyle={darkTip}
                     itemStyle={darkItem}
                     labelStyle={darkLabel}
                   />
                   <Legend />
-                  <Bar dataKey="used" name="Hàng cũ" fill={BAR_USED_COLOR} radius={[6, 6, 0, 0]} />$1<Bar dataKey="new" name="Hàng mới" fill={BAR_NEW_COLOR} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="used" name="Hàng cũ" fill={BAR_USED_COLOR} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="new" name="Hàng mới" fill={BAR_NEW_COLOR} radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

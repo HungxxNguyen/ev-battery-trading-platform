@@ -1,6 +1,7 @@
 import {
   API_ENDPOINTS_LISTING,
   API_ENDPOINTS_ADMIN,
+  API_ENDPOINTS_STAFF,
 } from "../../constants/apiEndPoint";
 import { performApiRequest } from "../../utils/apiUtils";
 
@@ -77,7 +78,7 @@ const listingService = {
     if (!id) {
       return { success: false, error: "Listing id is required", status: null };
     }
-    return await performApiRequest(API_ENDPOINTS_ADMIN.ACCEPT_LISTING(id), {
+    return await performApiRequest(API_ENDPOINTS_STAFF.ACCEPT_LISTING(id), {
       method: "post",
     });
   },
@@ -88,7 +89,7 @@ const listingService = {
     }
     // Backend expects reason as query param
     return await performApiRequest(
-      API_ENDPOINTS_ADMIN.REJECT_LISTING(id, reason, descriptionReject),
+      API_ENDPOINTS_STAFF.REJECT_LISTING(id, reason, descriptionReject),
       {
         method: "post",
       }

@@ -35,11 +35,17 @@ export const API_ENDPOINTS_LISTING = {
 
 // Admin endpoints for listing moderation
 export const API_ENDPOINTS_ADMIN = {
+  GET_ALL_USERS: "api/Admin/Get-All-Users",
+};
+
+// Staff endpoints for listing moderation
+export const API_ENDPOINTS_STAFF = {
   ACCEPT_LISTING: (id) => `/api/Staff/Accept-Listing/${id}`,
   REJECT_LISTING: (id, reason, descriptionReject) =>
-    `/api/Staff/Reject-Listing/${id}?reason=${reason}&descriptionReject=${descriptionReject}`,
-  // Admin: users management
-  GET_ALL_USERS: "/api/Staff/Get-All-Users",
+    `/api/Staff/Reject-Listing/${id}?resonReject=${reason}&reason=${descriptionReject}`,
+  // Staff: users management
+  BAN_USER: (id, descriptionBan) => `/api/Staff/Ban-User/${id}?banDescription=${descriptionBan}`,
+  UNBAN_USER: (id) => `/api/Staff/UbBan-User/${id}`
 };
 
 // Các endpoint cho user
@@ -89,4 +95,24 @@ export const API_ENDPOINTS_MESSAGE = {
     `/api/Message/soft-delete-message/${messageId}`,
   SOFT_DELETE_THREAD: (threadId) =>
     `/api/Message/soft-delete-chat-thread/${threadId}`,
+};
+
+// Report
+export const API_ENDPOINTS_REPORT = {
+  // List tất cả report (phân trang)
+  GET_ALL: (pageIndex = 1, pageSize = 20) =>
+    `/api/Report?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+
+  // Tạo report
+  CREATE: `/api/Report`,
+
+  // Lấy/xóa report theo id
+  GET_BY_ID: (id) => `/api/Report/${id}`,
+  DELETE:      (id) => `/api/Report/${id}`,
+
+  // Lấy report theo user và listing (phân trang)
+  GET_BY_USER: (userId, pageIndex = 1, pageSize = 20) =>
+    `/api/Report/user/${userId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+  GET_BY_LISTING: (listingId, pageIndex = 1, pageSize = 20) =>
+    `/api/Report/listing/${listingId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
 };
