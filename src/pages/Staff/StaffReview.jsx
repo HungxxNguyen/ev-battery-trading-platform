@@ -47,6 +47,63 @@ const STATUS_LABEL_MAP = {
   Rejected: "Đã từ chối",
 };
 
+/** ===============================
+ *  Lý do từ chối (khớp enum BE)
+ *  ResonRejectListingEnum:
+ *  CATEGORY_MISMATCH,
+ *  INFORMATION_MISSING,
+ *  PRICE_UNREALISTIC,
+ *  IMAGE_VIOLATION,
+ *  CONTACT_INVALID,
+ *  DOCUMENT_INVALID,
+ *  VEHICLE_CONDITION_FALSE,
+ *  DUPLICATE_LISTING,
+ *  POLICY_VIOLATION,
+ *  SUSPICIOUS_FRAUD
+ *  =============================== */
+const REJECT_REASONS = [
+  {
+    value: "CATEGORY_MISMATCH",
+    label: "Đăng sai danh mục (ô tô/xe máy/pin rời)",
+  },
+  {
+    value: "INFORMATION_MISSING",
+    label: "Thiếu thông tin cụ thể (đời xe, số km, tình trạng…)",
+  },
+  {
+    value: "PRICE_UNREALISTIC",
+    label: "Giá bán không hợp lý (quá thấp/quá cao bất thường)",
+  },
+  {
+    value: "IMAGE_VIOLATION",
+    label: "Ảnh vi phạm (mờ/không đúng xe/quảng cáo sai…)",
+  },
+  {
+    value: "CONTACT_INVALID",
+    label: "Thông tin liên hệ không hợp lệ",
+  },
+  {
+    value: "DOCUMENT_INVALID",
+    label: "Thiếu/không hợp lệ giấy tờ xe (đăng ký, đăng kiểm…)",
+  },
+  {
+    value: "VEHICLE_CONDITION_FALSE",
+    label: "Tình trạng xe không đúng thực tế / gây hiểu lầm",
+  },
+  {
+    value: "DUPLICATE_LISTING",
+    label: "Trùng lặp với một tin đã đăng trước đó",
+  },
+  {
+    value: "POLICY_VIOLATION",
+    label: "Nội dung vi phạm quy định/điều khoản của sàn",
+  },
+  {
+    value: "SUSPICIOUS_FRAUD",
+    label: "Có dấu hiệu lừa đảo, yêu cầu thanh toán bất thường",
+  },
+];
+
 // Format: DD-MM-YYYY, HH : mm
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -754,12 +811,11 @@ export default function StaffReview() {
                         className="w-full rounded-lg bg-slate-950/60 border border-slate-800/60 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/60"
                       >
                         <option value="">-- Chọn lý do từ chối --</option>
-                        <option value="CATEGORY_MISMATCH">
-                          Đăng sai danh mục (ô tô/xe máy/pin rời)
-                        </option>
-                        <option value="INFORMATION_MISSING">
-                          Thiếu thông tin cụ thể
-                        </option>
+                        {REJECT_REASONS.map((r) => (
+                          <option key={r.value} value={r.value} title={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
