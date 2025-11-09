@@ -104,6 +104,7 @@ const mapApiDataToFrontend = (apiData) => {
     ElectricCar: "Ô tô điện",
     ElectricMotorbike: "Xe máy điện",
     RemovableBattery: "Pin rời",
+    Free: "Miễn phí",
   };
 
   return apiData.map((item) => {
@@ -407,12 +408,14 @@ const ListingItem = ({
               <FiEye /> Xem chi tiết
             </button>
 
-            <button
-              onClick={() => onPayAgain(item)}
-              className={`${btnBase} ${btnPrimary}`}
-            >
-              <FiRefreshCcw /> Gia hạn tin
-            </button>
+            {item.package?.packageType !== "Miễn phí" && (
+              <button
+                onClick={() => onPayAgain(item)}
+                className={`${btnBase} ${btnPrimary}`}
+              >
+                Gia hạn tin
+              </button>
+            )}
           </div>
         );
 
@@ -529,11 +532,18 @@ const ListingItem = ({
               <span>
                 Mục <b>{item.category || "Khác"}</b>
               </span>
-              {item.paymentStatus && (
+
+              {/* Ưu tiên hiển thị "Dùng gói miễn phí" nếu packageType là Free */}
+              {item.package?.packageType === "Miễn phí" ? (
+                <span className="ml-3">
+                  | Trạng thái thanh toán:{" "}
+                  <b className="text-green-600">Dùng gói miễn phí</b>
+                </span>
+              ) : item.paymentStatus ? (
                 <span className="ml-3">
                   | Trạng thái thanh toán: <b>{item.paymentStatusText}</b>
                 </span>
-              )}
+              ) : null}
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
