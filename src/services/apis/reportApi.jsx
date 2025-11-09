@@ -1,6 +1,7 @@
 import { performApiRequest } from "../../utils/apiUtils";
+import { API_ENDPOINTS_REPORT } from "../../constants/apiEndPoint";
 
-// Report reasons available from backend
+// Danh sách lý do (theo BE)
 export const REPORT_REASONS = [
   "Scam",
   "Duplicate",
@@ -10,69 +11,87 @@ export const REPORT_REASONS = [
   "Other",
 ];
 
-// Try to reuse base URL from environment if present; otherwise rely on same-origin proxy
-const BASE_PATH = "/api/Report";
+/**
+ * Lưu ý: các hàm bên dưới trả về payload JSON từ BE
+ * (đồng nhất với cách bạn đang dùng trong UI: res?.error === 0)
+ */
 
-// Create a report (multipart/form-data as per backend contract)
+// Tạo report (multipart/form-data)
 export const createReport = async (formData) => {
-  const res = await performApiRequest(`${BASE_PATH}`, {
+  const res = await performApiRequest(API_ENDPOINTS_REPORT.CREATE, {
     method: "post",
     data: formData,
   });
   return res.data;
 };
 
+// Lấy report theo id
 export const getReportById = async (id) => {
-  const res = await performApiRequest(`${BASE_PATH}/${id}`, {
+  const res = await performApiRequest(API_ENDPOINTS_REPORT.GET_BY_ID(id), {
     method: "get",
   });
   return res.data;
 };
 
-export const getReportsByUser = async (
-  userId,
-  { pageIndex = 1, pageSize = 20 } = {},
-) => {
+// Xóa report theo id (nếu cần)
+export const deleteReport = async (id) => {
+  const res = await performApiRequest(API_ENDPOINTS_REPORT.DELETE(id), {
+    method: "delete",
+  });
+  return res.data;
+};
+
+// Lấy report theo user (phân trang)
+export const getReportsByUser = async (userId, { pageIndex = 1, pageSize = 20 } = {}) => {
   const res = await performApiRequest(
-    `${BASE_PATH}/user/${userId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-    {
-      method: "get",
-    }
+    API_ENDPOINTS_REPORT.GET_BY_USER(userId, pageIndex, pageSize),
+    { method: "get" }
   );
   return res.data;
 };
 
-export const getReportsByListing = async (
-  listingId,
-  { pageIndex = 1, pageSize = 20 } = {},
-) => {
+// Lấy report theo listing (phân trang)
+export const getReportsByListing = async (listingId, { pageIndex = 1, pageSize = 20 } = {}) => {
   const res = await performApiRequest(
-    `${BASE_PATH}/listing/${listingId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-    {
-      method: "get",
-    }
+    API_ENDPOINTS_REPORT.GET_BY_LISTING(listingId, pageIndex, pageSize),
+    { method: "get" }
   );
   return res.data;
 };
 
-// Admin: get all reports
-export const getAllReports = async (
-  { pageIndex = 1, pageSize = 20 } = {},
-) => {
+// Staff: lấy tất cả report (phân trang)
+export const getAllReports = async ({ pageIndex = 1, pageSize = 20 } = {}) => {
   const res = await performApiRequest(
-    `${BASE_PATH}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-    {
-      method: "get",
-    }
+    API_ENDPOINTS_REPORT.GET_ALL(pageIndex, pageSize),
+    { method: "get" }
   );
   return res.data;
+};
+
+/**
+ * Helper: Lấy URL ảnh bằng chứng từ reportId.
+ * Trả về string URL | null (tùy thuộc field tên gì ở BE).
+ */
+export const getReportEvidenceUrl = async (reportId) => {
+  const payload = await getReportById(reportId); // { error, message, data }
+  const d = payload?.data || payload;
+  if (!d) return null;
+
+  // BE đang trả "imageReport" (theo swagger bạn chụp)
+  return (
+    d.imageReport ||
+    d.imageReports ||          // fallback nếu BE đổi tên
+    d.evidenceUrl || null
+  );
 };
 
 export default {
   REPORT_REASONS,
   createReport,
   getReportById,
+  deleteReport,
   getReportsByUser,
   getReportsByListing,
   getAllReports,
+  getReportEvidenceUrl,
 };
