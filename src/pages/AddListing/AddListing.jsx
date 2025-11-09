@@ -538,7 +538,16 @@ const AddListing = () => {
         "Đăng tin thành công. Vui lòng hoàn tất thanh toán",
         "success"
       );
-      navigate("/manage-listing?tab=payment");
+      if (plan.isFree) {
+        showNotification("Đăng tin miễn phí thành công! Tin đang chờ duyệt.", "success");
+        navigate("/manage-listing?tab=pending");
+      } else {
+        showNotification(
+          "Đăng tin thành công. Vui lòng hoàn tất thanh toán",
+          "success"
+        );
+        navigate("/manage-listing?tab=payment");
+      }
     } catch (err) {
       console.error("Create listing error:", err);
       showNotification(
