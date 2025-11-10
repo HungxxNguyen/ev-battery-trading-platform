@@ -89,6 +89,9 @@ export const API_ENDPOINTS_MESSAGE = {
   START_THREAD: "/api/Message/start-thread",
   SEND_MESSAGE: "/api/Message/send-message",
   GET_THREAD_BY_ID: (id) => `/api/Message/get-chat-thread-by-id/${id}`,
+  // Fetch a single chat thread by listing id (for pin-based discovery)
+  GET_THREAD_BY_LISTING_ID: (listingId) =>
+    `/api/Message/get-chat-thread-by-listing-id/${listingId}`,
   GET_THREADS_BY_USER_ID: (userId) =>
     `/api/Message/get-chat-thread-by-user-id/${userId}`,
   SOFT_DELETE_MESSAGE: (messageId) =>

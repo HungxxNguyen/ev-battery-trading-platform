@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FiSearch, FiSend } from "react-icons/fi";
+import { FiSearch, FiSend, FiChevronRight } from "react-icons/fi";
 import MainLayout from "../../components/layout/MainLayout";
 import messageService from "../../services/apis/messageApi";
 import userService from "../../services/apis/userApi";
@@ -28,19 +28,52 @@ const generateGuid = () =>
 
 const toIso = (value) => {
   // Normalize various date inputs to ISO string.
-  // Treat missing/invalid/placeholder dates (e.g., year 1 or epoch) as "now"
-  // to avoid showing 12:00 AM until the server updates the value.
+  // Do NOT default to current time for missing/invalid values.
+  // Treat placeholder epochs (e.g., years before 2000) as invalid.
   try {
-    if (!value) return new Date().toISOString();
+    if (!value) return null;
     const d = new Date(value);
-    if (isNaN(d.getTime())) return new Date().toISOString();
+    if (isNaN(d.getTime())) return null;
     const year = d.getUTCFullYear();
-    // Some backends return default dates like 0001-01-01T00:00:00 or 1970-01-01.
-    // Consider anything earlier than 2000 as a placeholder and use current time instead.
-    if (year < 2000) return new Date().toISOString();
+    if (year < 2000) return null;
     return d.toISOString();
   } catch {
-    return new Date().toISOString();
+    return null;
+  }
+};
+
+// Format to "HH:mm dd/MM/yyyy" for consistent display
+const formatDateTime = (iso) => {
+  try {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${min} ${dd}/${mm}/${yyyy}`;
+  } catch {
+    return "";
+  }
+};
+
+const LOCAL_SENT_AT_PREFIX = "chat:sentAt:";
+const getLocalSentAt = (id) => {
+  try {
+    if (!id) return null;
+    return localStorage.getItem(LOCAL_SENT_AT_PREFIX + String(id));
+  } catch {
+    return null;
+  }
+};
+const setLocalSentAt = (id, iso) => {
+  try {
+    if (!id || !iso) return;
+    localStorage.setItem(LOCAL_SENT_AT_PREFIX + String(id), String(iso));
+  } catch {
+    // ignore storage errors
   }
 };
 
@@ -57,13 +90,25 @@ const normalizeMessage = (msg) => {
     msg.chat?.id;
   const senderId = msg.senderId ?? msg.userId ?? msg.fromUserId ?? msg.ownerId;
   const messageText = msg.messageText ?? msg.message ?? msg.text ?? "";
-  const createdAt = toIso(
-    msg.createdAt ??
-      msg.creationDate ??
-      msg.createdAtUtc ??
-      msg.timestamp ??
-      msg.time
+  let createdAt = toIso(
+    msg.createdAt + "Z" ??
+      msg.createdDate + "Z" ??
+      msg.dateCreated + "Z" ??
+      msg.creationDate + "Z" ??
+      msg.createdAtUtc + "Z" ??
+      msg.sentAt + "Z" ??
+      msg.sentTime + "Z" ??
+      msg.messageTime + "Z" ??
+      msg.messageDate + "Z" ??
+      msg.timestamp + "Z" ??
+      msg.time + "Z" ??
+      msg.created + "Z"
   );
+  if (!createdAt && id) {
+    // Try restoring a locally saved send-time (only exists for our own sent messages)
+    const localTs = getLocalSentAt(id);
+    if (localTs) createdAt = toIso(localTs) || localTs;
+  }
   return {
     id,
     chatThreadId: chatThreadId ? String(chatThreadId) : "",
@@ -96,9 +141,22 @@ const parseThread = (t, myId) => {
     ? t.chatMessages
     : [];
   const messages = rawMessages
-    .map(normalizeMessage)
+    .map((m) => {
+      const n = normalizeMessage(m);
+      if (n && !n.createdAt && n.id) {
+        const localTs = getLocalSentAt(n.id);
+        if (localTs) {
+          return { ...n, createdAt: toIso(localTs) || localTs };
+        }
+      }
+      return n;
+    })
     .filter(Boolean)
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    .sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ta - tb;
+    });
   const lastActivity =
     t?.updatedAt ||
     t?.lastMessageAt ||
@@ -317,7 +375,37 @@ const Chat = () => {
       return;
     }
     const entries = Array.from((existingMap || threadsById).values());
-    const found = entries.find((t) => t.otherId === String(otherUserId));
+    const candidateThreads = entries.filter(
+      (t) => String(t.otherId) === String(otherUserId)
+    );
+
+    // If navigating from a listing, only reuse a thread that matches that listing
+    let found = null;
+    const listingId =
+      listingFromRoute?.id ||
+      listingFromRoute?.listingId ||
+      listingFromRoute?.listing?.id;
+
+    if (listingId) {
+      for (const t of candidateThreads) {
+        const cached = threadListings?.[t.id]?.id;
+        if (cached && String(cached) === String(listingId)) {
+          found = t;
+          break;
+        }
+        if (!cached) {
+          const snap = extractPinnedFromMessages(t?.messages);
+          if (snap?.id && String(snap.id) === String(listingId)) {
+            attachListingToThread(t.id, snap);
+            found = t;
+            break;
+          }
+        }
+      }
+    } else {
+      // No listing provided -> keep old behavior: reuse any existing thread with this user
+      found = candidateThreads[0] || null;
+    }
     if (found) {
       setSelectedThreadId(found.id);
       preloadUser(otherUserId);
@@ -332,6 +420,12 @@ const Chat = () => {
       }
       return;
     }
+    // ✅ BẮT BUỘC phải có listingId khi tạo thread mới
+
+    if (!listingId) {
+      console.warn("Cannot create chat thread without listingId");
+      return;
+    }
     // Create thread via API
     try {
       setStartingThread(true);
@@ -340,6 +434,7 @@ const Chat = () => {
         id: newId,
         userId: currentUserId,
         participantId: otherUserId,
+        listingId, // ✅ TRUYỀN LÊN API
       });
       const raw = res?.success ? res.data?.data ?? res.data : null;
       const parsed = parseThread(
@@ -385,9 +480,15 @@ const Chat = () => {
   useEffect(() => {
     if (!hubMessages?.length) return;
     const latest = hubMessages[hubMessages.length - 1];
-    const normalized = normalizeMessage(latest);
+    let normalized = normalizeMessage(latest);
     if (!normalized || !normalized.chatThreadId) return;
     const threadId = String(normalized.chatThreadId);
+    // For real-time messages lacking timestamp, fallback to arrival time and persist
+    if (!normalized.createdAt && normalized.id) {
+      const ts = new Date().toISOString();
+      setLocalSentAt(normalized.id, ts);
+      normalized = { ...normalized, createdAt: ts };
+    }
     const hasThread = threadsById.has(threadId);
 
     if (hasThread) {
@@ -487,10 +588,16 @@ const Chat = () => {
   useEffect(() => {
     if (!hubMessages?.length) return;
     const latest = hubMessages[hubMessages.length - 1];
-    const normalized = normalizeMessage(latest);
+    let normalized = normalizeMessage(latest);
     if (!normalized || normalized.chatThreadId) return; // handled in other effect
     const senderId = normalized.senderId;
     if (!senderId) return;
+    // For real-time messages lacking timestamp, fallback to arrival time and persist
+    if (!normalized.createdAt && normalized.id) {
+      const ts = new Date().toISOString();
+      setLocalSentAt(normalized.id, ts);
+      normalized = { ...normalized, createdAt: ts };
+    }
     // Ignore our own outbound messages without thread id to avoid creating self-threads
     if (String(senderId) === String(currentUserId)) return;
 
@@ -718,13 +825,27 @@ const Chat = () => {
     try {
       const res = await messageService.sendMessage(payload);
       const serverMsg = res?.data?.data ?? res?.data ?? null;
-      const normalized = normalizeMessage(serverMsg) || {
-        id: serverMsg?.id || `local-${Date.now()}`,
-        chatThreadId: String(selectedThread.id),
-        senderId: String(currentUserId),
-        messageText: text,
-        createdAt: new Date().toISOString(),
-      };
+      const serverNorm = normalizeMessage(serverMsg);
+      let normalized;
+      if (serverNorm) {
+        // If server didn't provide a usable timestamp, use local now and persist
+        const ts = serverNorm.createdAt || new Date().toISOString();
+        if (!serverNorm.createdAt && serverNorm.id) {
+          setLocalSentAt(serverNorm.id, ts);
+        }
+        normalized = { ...serverNorm, createdAt: ts };
+      } else {
+        const localId = serverMsg?.id || `local-${Date.now()}`;
+        const ts = new Date().toISOString();
+        setLocalSentAt(localId, ts);
+        normalized = {
+          id: localId,
+          chatThreadId: String(selectedThread.id),
+          senderId: String(currentUserId),
+          messageText: text,
+          createdAt: ts,
+        };
+      }
       setThreadsById((prev) => {
         const t = prev.get(selectedThread.id);
         if (!t) return prev;
@@ -800,6 +921,8 @@ const Chat = () => {
                 const last =
                   t?.messages?.[t.messages.length - 1]?.messageText || "";
                 const isActive = selectedThreadId === tid;
+                const listingSnap = threadListings?.[tid];
+                const listingTitle = listingSnap?.title || null;
                 return (
                   <button
                     key={tid}
@@ -819,9 +942,19 @@ const Chat = () => {
                       {/* online dot removed */}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 truncate">
-                        {name}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-semibold text-gray-800 truncate">
+                          {name}
+                        </p>
+                        {listingTitle && (
+                          <span
+                            title={listingTitle}
+                            className="shrink-0 max-w-[180px] truncate text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100"
+                          >
+                            {listingTitle}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500 truncate">
                         {last || "Chưa có tin nhắn"}
                       </p>
@@ -836,8 +969,8 @@ const Chat = () => {
           <div className="flex flex-col h-[calc(100vh-128px)]">
             {selectedThread ? (
               <>
-                <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-stretch justify-between px-6 py-5 border-b border-gray-100">
+                  <div className="flex items-center gap-3 ">
                     <img
                       src={
                         (selectedThread.otherId &&
@@ -862,61 +995,58 @@ const Chat = () => {
                       {/* online text removed */}
                     </div>
                   </div>
-                </div>
-
-                {/* Pinned listing banner */}
-                {(() => {
-                  const pinned = (() => {
-                    if (!selectedThread) return null;
-                    const fromCache = threadListings[selectedThread.id];
-                    if (fromCache) return fromCache;
-                    const fromMessages = extractPinnedFromMessages(
-                      selectedThread.messages
-                    );
-                    if (fromMessages) return fromMessages;
-                    if (
-                      listingFromRoute &&
-                      participantIdFromRoute &&
-                      selectedThread.otherId &&
-                      String(selectedThread.otherId) ===
-                        String(participantIdFromRoute)
-                    ) {
-                      return toListingSummary(listingFromRoute);
-                    }
-                    return null;
-                  })();
-                  if (!pinned) return null;
-                  return (
-                    <div className="px-6 py-3 bg-white border-b border-gray-100">
+                  {/* Pinned listing mini-card (inside header) */}
+                  {(() => {
+                    const pinned = (() => {
+                      if (!selectedThread) return null;
+                      const fromCache = threadListings[selectedThread.id];
+                      if (fromCache) return fromCache;
+                      const fromMessages = extractPinnedFromMessages(
+                        selectedThread.messages
+                      );
+                      if (fromMessages) return fromMessages;
+                      if (
+                        listingFromRoute &&
+                        participantIdFromRoute &&
+                        selectedThread.otherId &&
+                        String(selectedThread.otherId) ===
+                          String(participantIdFromRoute)
+                      ) {
+                        return toListingSummary(listingFromRoute);
+                      }
+                      return null;
+                    })();
+                    if (!pinned) return null;
+                    return (
                       <button
                         type="button"
                         onClick={() => navigate(`/listing/${pinned.id}`)}
-                        className="w-full text-left"
+                        title={pinned.title}
+                        className=" cursor-pointer hidden sm:flex flex-1 max-w-xl items-center gap-4 ml-6 px-5 py-3 rounded-2xl bg-white/90 hover:bg-white shadow-sm border border-gray-200 hover:border-blue-300 transition"
                       >
-                        <div className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition cursor-pointer">
-                          <img
-                            src={
-                              pinned.thumbnail ||
-                              "https://placehold.co/80x80?text=IMG"
-                            }
-                            alt={pinned.title}
-                            className="w-16 h-16 rounded-md object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-gray-800 truncate">
-                              {pinned.title}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {typeof pinned.price === "number"
-                                ? currency(pinned.price)
-                                : pinned.price || ""}
-                            </p>
-                          </div>
+                        <img
+                          src={
+                            pinned.thumbnail ||
+                            "https://placehold.co/80x80?text=IMG"
+                          }
+                          alt={pinned.title}
+                          className="w-12 h-12 rounded-xl object-cover"
+                        />
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm sm:text-base font-semibold text-gray-700 truncate">
+                            {pinned.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            {typeof pinned.price === "number"
+                              ? currency(pinned.price)
+                              : pinned.price || ""}
+                          </p>
                         </div>
+                        <FiChevronRight className="text-gray-400 shrink-0" />
                       </button>
-                    </div>
-                  );
-                })()}
+                    );
+                  })()}
+                </div>
 
                 <div
                   ref={messagesContainerRef}
@@ -972,13 +1102,7 @@ const Chat = () => {
                                   {m.messageText}
                                 </p>
                                 <div className="mt-2 text-xs text-gray-400">
-                                  {new Date(m.createdAt).toLocaleTimeString(
-                                    [],
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
+                                  {formatDateTime(m?.createdAt)}
                                 </div>
                               </div>
                               {/* No avatar for right side (me) */}

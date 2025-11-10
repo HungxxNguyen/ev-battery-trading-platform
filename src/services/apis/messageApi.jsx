@@ -4,20 +4,20 @@ import { API_ENDPOINTS_MESSAGE } from "../../constants/apiEndPoint";
 
 const messageService = {
   /**
-   * Start a chat thread between two users
-   * Body: { id: Guid, userId: Guid, participantId: Guid }
+   * Start a chat thread between two users for a specific listing
+   * Body: { id: Guid, userId: Guid, participantId: Guid, listingId: Guid }
    */
-  async startThread({ id, userId, participantId }) {
-    if (!id || !userId || !participantId) {
+  async startThread({ id, userId, participantId, listingId }) {
+    if (!id || !userId || !participantId || !listingId) {
       return {
         success: false,
-        error: "id, userId and participantId are required",
+        error: "id, userId, participantId and listingId are required",
         status: null,
       };
     }
     return performApiRequest(API_ENDPOINTS_MESSAGE.START_THREAD, {
       method: "post",
-      data: { id, userId, participantId },
+      data: { id, userId, participantId, listingId },
       headers: {
         "Content-Type": "application/json",
         Accept: "text/plain",
@@ -61,6 +61,17 @@ const messageService = {
     return performApiRequest(API_ENDPOINTS_MESSAGE.GET_THREAD_BY_ID(threadId), {
       method: "get",
     });
+  },
+
+  /** Get a chat thread by listing id */
+  async getThreadByListingId(listingId) {
+    if (!listingId) {
+      return { success: false, error: "listingId is required", status: null };
+    }
+    return performApiRequest(
+      API_ENDPOINTS_MESSAGE.GET_THREAD_BY_LISTING_ID(listingId),
+      { method: "get" }
+    );
   },
 
   /** List threads for a userId */
