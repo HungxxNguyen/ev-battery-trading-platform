@@ -43,16 +43,20 @@ const PAYMENT_STATUS_MAPPING = {
   AwaitingPayment: "Chờ thanh toán",
 };
 
-/* ---------------- Reject reason mapping ---------------- */
-const REJECT_REASON_MAPPING = {
-  CATEGORY_MISMATCH: "Danh mục không khớp",
-  INSUFFICIENT_INFO: "Thiếu thông tin quan trọng",
-  VIOLATES_POLICY: "Vi phạm quy định đăng tin",
-  DUPLICATE_LISTING: "Tin đăng trùng lặp",
-  INAPPROPRIATE_CONTENT: "Nội dung không phù hợp",
-  PRICING_ISSUE: "Giá bán không hợp lý",
-  INVALID_IMAGES: "Hình ảnh không hợp lệ",
-  OTHER: "Lý do khác",
+/* ---------------- Reject reason mapping (Vietnamese) ---------------- */
+const REJECT_REASON_LABELS = {
+  CATEGORY_MISMATCH: "Đăng sai danh mục (ô tô/xe máy/pin rời)",
+  INFORMATION_MISSING: "Thiếu thông tin cụ thể (đời xe, số km, tình trạng...)",
+  PRICE_UNREALISTIC: "Giá bán không hợp lý (quá thấp/quá cao bất thường)",
+  IMAGE_VIOLATION: "Ảnh mờ/không đúng xe/thêm chữ số điện thoại, quảng cáo",
+  CONTACT_INVALID: "Số điện thoại/địa chỉ liên hệ không hợp lệ",
+  DOCUMENT_INVALID:
+    "Thiếu hoặc sai thông tin giấy tờ xe (đăng ký, đăng kiểm...)",
+  VEHICLE_CONDITION_FALSE:
+    "Mô tả tình trạng xe không đúng thực tế / gây hiểu lầm",
+  DUPLICATE_LISTING: "Trùng lặp với một tin đã đăng trước đó",
+  POLICY_VIOLATION: "Nội dung vi phạm quy định/điều khoản của sàn",
+  SUSPICIOUS_FRAUD: "Có dấu hiệu lừa đảo, yêu cầu thanh toán bất thường",
 };
 
 const ITEMS_PER_PAGE = 20;
@@ -574,7 +578,7 @@ const ListingItem = ({
                     <div className="flex flex-wrap items-center gap-2 text-sm text-red-800">
                       <span className="font-medium">Lý do chính:</span>
                       <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold">
-                        {REJECT_REASON_MAPPING[item.resonReject] ||
+                        {REJECT_REASON_LABELS[item.resonReject] ||
                           item.resonReject ||
                           "Không rõ lý do"}
                       </span>
