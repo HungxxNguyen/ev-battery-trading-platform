@@ -48,6 +48,7 @@ export default function PlansPage() {
   const [status, setStatus] = useState("Active");
   const [fieldErrors, setFieldErrors] = useState({});
   const [generalError, setGeneralError] = useState("");
+  const isFree = packageType === "Free";
 
   const typeOptions = useMemo(
     () => [
@@ -111,9 +112,20 @@ export default function PlansPage() {
     setFieldErrors({});
     setGeneralError("");
 
+    // Frontend validation: require price > 0 for non-Free packages
+    if (!isFree && (!price || price <= 0)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        Price: "Giá phải lớn hơn 0 cho gói này",
+      }));
+
+      return;
+    }
+
     const form = new FormData();
     form.append("Name", name.trim());
-    form.append("Price", String(price));
+    // Enforce Free = 0 price, others use entered price
+    form.append("Price", String(isFree ? 0 : price));
     form.append("DurationInDays", String(days));
     form.append("Description", description ?? "");
     form.append("PackageType", packageType);
@@ -273,6 +285,7 @@ export default function PlansPage() {
                   }}
                   placeholder="Số tiền (VND)"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-right text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  disabled={isFree}
                 />
                 {fieldErrors?.Price && (
                   <p className="mt-1 text-xs text-rose-400">
@@ -308,7 +321,19 @@ export default function PlansPage() {
                 <label className="text-sm text-slate-300">Loại gói</label>
                 <select
                   value={packageType}
-                  onChange={(e) => setPackageType(e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPackageType(v);
+                    if (v === "Free") {
+                      // Ensure price is zeroed for Free and clear price errors
+                      setPrice(0);
+                      setFieldErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.Price;
+                        return next;
+                      });
+                    }
+                  }}
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
                 >
                   {typeOptions.map((opt) => (
@@ -372,7 +397,9 @@ export default function PlansPage() {
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Giá</TableHead>
                 {/* ✅ Căn giữa header cột thao tác */}
-                <TableHead className="text-center w-[120px]">Thao tác</TableHead>
+                <TableHead className="text-center w-[120px]">
+                  Thao tác
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="[&_tr:last-child]:border-0">
