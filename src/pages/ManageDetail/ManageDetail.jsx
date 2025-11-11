@@ -393,25 +393,28 @@ const ManageDetail = () => {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="px-4 pb-4 pt-3 flex gap-3 overflow-x-auto">
-                {detail.images.map((img, idx) => (
-                  <button
-                    key={`${img}-${idx}`}
-                    onClick={() => setActiveImage(idx)}
-                    className={`relative flex-shrink-0 w-28 h-20 rounded-lg overflow-hidden border cursor-pointer ${
-                      activeImage === idx
-                        ? "border-orange-500 ring-2 ring-orange-100"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                    title={`Ảnh ${idx + 1}`}
-                  >
-                    <img
-                      src={img}
-                      alt={`thumb-${idx}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+              <div className="px-4 pb-4 pt-3">
+                {/* Thanh thumbnail giới hạn ~5 ảnh, kéo để xem thêm */}
+                <div className="flex gap-3 overflow-x-auto flex-nowrap max-w-full md:max-w-[820px]">
+                  {detail.images.map((img, idx) => (
+                    <button
+                      key={`${img}-${idx}`}
+                      onClick={() => setActiveImage(idx)}
+                      className={`relative flex-shrink-0 w-28 h-20 rounded-lg overflow-hidden border cursor-pointer ${
+                        activeImage === idx
+                          ? "border-orange-500 ring-2 ring-orange-100"
+                          : "border-gray-200 hover:border-gray-300"
+                      }`}
+                      title={`Ảnh ${idx + 1}`}
+                    >
+                      <img
+                        src={img}
+                        alt={`thumb-${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -576,14 +579,6 @@ const ManageDetail = () => {
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Bình luận placeholder */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h3 className="font-semibold text-gray-800">Bình luận</h3>
-              <div className="mt-4 text-center text-sm text-gray-500">
-                Chưa có bình luận nào.
-              </div>
             </div>
           </div>
         </div>

@@ -91,23 +91,23 @@ const normalizeMessage = (msg) => {
   const senderId = msg.senderId ?? msg.userId ?? msg.fromUserId ?? msg.ownerId;
   const messageText = msg.messageText ?? msg.message ?? msg.text ?? "";
   let createdAt = toIso(
-    msg.createdAt + "Z" ??
-      msg.createdDate + "Z" ??
-      msg.dateCreated + "Z" ??
-      msg.creationDate + "Z" ??
-      msg.createdAtUtc + "Z" ??
-      msg.sentAt + "Z" ??
-      msg.sentTime + "Z" ??
-      msg.messageTime + "Z" ??
-      msg.messageDate + "Z" ??
-      msg.timestamp + "Z" ??
-      msg.time + "Z" ??
-      msg.created + "Z"
+    msg.createdAt ??
+      msg.createdDate ??
+      msg.dateCreated ??
+      msg.creationDate ??
+      msg.createdAtUtc ??
+      msg.sentAt ??
+      msg.sentTime ??
+      msg.messageTime ??
+      msg.messageDate ??
+      msg.timestamp ??
+      msg.time ??
+      msg.created
   );
   if (!createdAt && id) {
     // Try restoring a locally saved send-time (only exists for our own sent messages)
     const localTs = getLocalSentAt(id);
-    if (localTs) createdAt = toIso(localTs) || localTs;
+    if (localTs) createdAt = toIso(localTs + "Z") || localTs + "Z";
   }
   return {
     id,

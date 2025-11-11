@@ -119,3 +119,10 @@ export const API_ENDPOINTS_REPORT = {
   GET_BY_LISTING: (listingId, pageIndex = 1, pageSize = 20) =>
     `/api/Report/listing/${listingId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
 };
+
+// Transaction endpoints
+export const API_ENDPOINTS_TRANSACTION = {
+  // Get transactions by userId with pagination
+  GET_BY_USER_ID: (userId, pageIndex = 1, pageSize = 10) =>
+    `/api/Transaction/GetTransactionsByUserId/${userId}?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+};
