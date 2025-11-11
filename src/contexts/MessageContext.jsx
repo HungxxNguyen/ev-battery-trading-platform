@@ -19,6 +19,7 @@ export const MessageProvider = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [hasUnread, setHasUnread] = useState(false);
   const connectionRef = useRef(null);
 
   const addMessage = useCallback((msg) => {
@@ -108,6 +109,21 @@ export const MessageProvider = ({ children }) => {
         addMessage(msg.payload);
       } else {
         addMessage(msg);
+      }
+
+      try {
+        // Best-effort extract senderId to avoid marking our own outbound echoes as unread
+        const raw = msg?.payload ? msg.payload : msg;
+        const sid = String(
+          raw?.senderId ?? raw?.userId ?? raw?.fromUserId ?? raw?.ownerId ?? ""
+        );
+        const me = userId ? String(userId) : "";
+        if (!me || !sid || sid !== me) {
+          setHasUnread(true);
+        }
+      } catch (e) {
+        // Fallback: if anything goes wrong, still mark as unread
+        setHasUnread(true);
       }
     });
 
@@ -204,8 +220,18 @@ export const MessageProvider = ({ children }) => {
       isReconnecting,
       isConnected: connectionStatus === "connected",
       userId,
+      hasUnread,
+      clearUnread: () => setHasUnread(false),
     }),
-    [connection, messages, addMessage, connectionStatus, isReconnecting, userId]
+    [
+      connection,
+      messages,
+      addMessage,
+      connectionStatus,
+      isReconnecting,
+      userId,
+      hasUnread,
+    ]
   );
 
   return (

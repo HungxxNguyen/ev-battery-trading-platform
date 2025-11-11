@@ -186,6 +186,7 @@ const Chat = () => {
     messages: hubMessages,
     connectionStatus,
     isConnected,
+    clearUnread,
   } = useMessages();
 
   const [threadsById, setThreadsById] = useState(new Map());
@@ -309,6 +310,15 @@ const Chat = () => {
       navigate("/login");
     }
   }, [currentUserId, navigate]);
+
+  // While on the chat screen, clear unread indicators
+  useEffect(() => {
+    clearUnread && clearUnread();
+  }, [clearUnread]);
+
+  useEffect(() => {
+    clearUnread && clearUnread();
+  }, [hubMessages, selectedThreadId, clearUnread]);
 
   // Load threads for current user
   useEffect(() => {
