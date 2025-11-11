@@ -1,7 +1,7 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createReport } from "../../services/apis/reportApi";
-import { X, Upload, Image as ImageIcon } from "lucide-react"; // Optional: dùng icon
+import { X, Upload, Image as ImageIcon } from "lucide-react";
 
 export default function ReportModal({
   open,
@@ -12,8 +12,8 @@ export default function ReportModal({
 }) {
   const [reason, setReason] = useState("Scam");
   const [otherReason, setOtherReason] = useState("");
-  const [imageReport, setImageReport] = useState(null); // Lưu file ảnh
-  const [imagePreview, setImagePreview] = useState(""); // Xem trước ảnh
+  const [reportImages, setReportImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -40,40 +40,94 @@ export default function ReportModal({
     }
   }, [userId, ownerId]);
 
+  // Clear ảnh khi close modal
+  useEffect(() => {
+    if (!open) {
+      setReportImages([]);
+      setImagePreviews([]);
+      setError("");
+      setSent(false);
+      setIsDragOver(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }, [open]);
+
   if (!open) return null;
 
-  // Xử lý chọn ảnh (từ click hoặc drag & drop)
-  const handleImageSelect = (file) => {
-    if (!file) return;
+  const handleImageSelect = (files) => {
+    if (!files || files.length === 0) return;
 
-    // Kiểm tra định dạng
-    if (!file.type.startsWith("image/")) {
-      setError("Vui lòng chọn file ảnh.");
+    const newFiles = Array.from(files);
+    const validFiles = [];
+
+    // Kiểm tra số lượng ảnh - giới hạn 5 ảnh
+    const totalFiles = reportImages.length + newFiles.length;
+    if (totalFiles > 5) {
+      setError(
+        `Chỉ được upload tối đa 5 ảnh. Hiện tại đã có ${reportImages.length} ảnh.`
+      );
       return;
     }
-    // Kiểm tra kích thước
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Ảnh không được lớn hơn 5MB.");
-      return;
+
+    for (const file of newFiles) {
+      if (!file.type.startsWith("image/")) {
+        setError("Vui lòng chỉ chọn file ảnh.");
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError(`Ảnh "${file.name}" không được lớn hơn 5MB.`);
+        continue;
+      }
+      validFiles.push(file);
     }
 
-    setImageReport(file);
+    if (validFiles.length === 0) return;
+
+    setReportImages((prev) => [...prev, ...validFiles]);
     setError("");
 
-    // Tạo preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    // Tạo preview cho các ảnh mới
+    const newPreviews = [];
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push({
+          id: Date.now() + Math.random(),
+          url: reader.result,
+          file: file,
+        });
+
+        if (newPreviews.length === validFiles.length) {
+          setImagePreviews((prev) => [...prev, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  // Xóa ảnh
-  const removeImage = () => {
-    setImageReport(null);
-    setImagePreview("");
+  const removeImage = (index) => {
+    setReportImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeAllImages = () => {
+    setReportImages([]);
+    setImagePreviews([]);
     setIsDragOver(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleClose = () => {
+    // Clear tất cả state khi đóng modal
+    setReportImages([]);
+    setImagePreviews([]);
+    setError("");
+    setSent(false);
+    setIsDragOver(false);
+    setReason("Scam");
+    setOtherReason("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    onClose();
   };
 
   const onSubmit = async (e) => {
@@ -100,7 +154,6 @@ export default function ReportModal({
     try {
       setSubmitting(true);
 
-      // Tạo FormData để gửi cả text + file
       const formData = new FormData();
       formData.append("userId", userId);
       formData.append("listingId", listingId);
@@ -108,11 +161,12 @@ export default function ReportModal({
       if (otherReason.trim()) {
         formData.append("otherReason", otherReason.trim());
       }
-      if (imageReport) {
-        formData.append("imageReport", imageReport); // tên field: imageReport
-      }
 
-      const res = await createReport(formData); // API cần nhận FormData
+      reportImages.forEach((file) => {
+        formData.append("ReportImages", file);
+      });
+
+      const res = await createReport(formData);
 
       if (res?.error === 0) {
         setSent(true);
@@ -132,7 +186,7 @@ export default function ReportModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
         className="absolute inset-0 bg-black/40 cursor-pointer"
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden
       />
       <div className="relative w-full max-w-md rounded-xl bg-white p-5 shadow-2xl overflow-y-auto max-h-screen">
@@ -147,7 +201,7 @@ export default function ReportModal({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 aria-label="Đóng"
                 className="rounded p-1 text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
@@ -210,21 +264,31 @@ export default function ReportModal({
               </div>
             )}
 
-            {/* === PHẦN UPLOAD ẢNH - ĐÃ CẢI TIẾN === */}
+            {/* === PHẦN UPLOAD NHIỀU ẢNH - ĐÃ ĐƯỢC SỬA === */}
             <div className="mb-4">
-              <label className="mb-1 block text-sm text-gray-700">
-                Ảnh minh chứng (tùy chọn)
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm text-gray-700">
+                  Ảnh minh chứng (tùy chọn)
+                </label>
+                {reportImages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={removeAllImages}
+                    className="text-xs text-red-600 hover:text-red-800 cursor-pointer"
+                  >
+                    Xóa tất cả
+                  </button>
+                )}
+              </div>
 
               <div className="relative">
                 <div
-                  className={`relative w-full h-48 border-2 border-dashed rounded-lg transition-all duration-200 cursor-pointer
-        ${
-          isDragOver
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50"
-        }
-        ${imagePreview ? "p-0" : "p-4"}`}
+                  className={`relative w-full min-h-[8rem] border-2 border-dashed rounded-lg transition-all duration-200 cursor-pointer
+                    ${
+                      isDragOver
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 bg-gray-50"
+                    }`}
                   onDragOver={(e) => {
                     e.preventDefault();
                     setIsDragOver(true);
@@ -236,38 +300,51 @@ export default function ReportModal({
                   onDrop={(e) => {
                     e.preventDefault();
                     setIsDragOver(false);
-                    const file = e.dataTransfer.files[0];
-                    if (file) handleImageSelect(file);
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) handleImageSelect(files);
                   }}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  {/* Hiển thị ảnh preview (nếu có) */}
-                  {imagePreview ? (
-                    <div className="relative w-full h-full rounded-lg overflow-hidden">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Ngăn click mở file picker
-                          removeImage();
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow-lg"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 truncate">
-                        {imageReport?.name}
+                  {/* Hiển thị ảnh bên TRONG vùng chọn */}
+                  {imagePreviews.length > 0 ? (
+                    <div className="p-3">
+                      <div className="grid grid-cols-3 gap-2 mb-3">
+                        {imagePreviews.map((preview, index) => (
+                          <div key={preview.id} className="relative group">
+                            <img
+                              src={preview.url}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeImage(index);
+                              }}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition opacity-0 group-hover:opacity-100 shadow-lg"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                      
+                      {/* Hiển thị nút thêm ảnh khi chưa đạt tối đa */}
+                      {reportImages.length < 5 && (
+                        <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg bg-white">
+                          <Upload className="w-6 h-6 mb-1 text-gray-400" />
+                          <p className="text-xs text-gray-600 text-center">
+                            Thêm ảnh ({reportImages.length}/5)
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    /* Nội dung khi chưa có ảnh */
-                    <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                    /* Nội dung khi chưa có ảnh nào */
+                    <div className="flex flex-col items-center justify-center h-32 text-center px-4">
                       <Upload
-                        className={`w-10 h-10 mb-2 ${
+                        className={`w-8 h-8 mb-2 ${
                           isDragOver ? "text-blue-500" : "text-gray-400"
                         }`}
                       />
@@ -278,30 +355,44 @@ export default function ReportModal({
                         hoặc nhấp để chọn file
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        PNG, JPG, JPEG (tối đa 5MB)
+                        PNG, JPG, JPEG (tối đa 5MB/ảnh, tối đa 5 ảnh)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Thông báo khi đã đạt tối đa ảnh */}
+                  {reportImages.length >= 5 && (
+                    <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                      <ImageIcon className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="text-sm font-medium text-gray-700">
+                        Đã đạt tối đa 5 ảnh
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Xóa bớt ảnh để thêm ảnh mới
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Input ẩn */}
+                {/* Input ẩn - cho phép chọn nhiều file */}
                 <input
-                  id="imageReport"
+                  id="reportImages"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) handleImageSelect(file);
+                    const files = e.target.files;
+                    if (files.length > 0) handleImageSelect(files);
                   }}
                   className="hidden"
                 />
               </div>
 
-              {/* Hiển thị tên file (tùy chọn, nếu muốn giữ) */}
-              {imageReport && !imagePreview && (
-                <p className="mt-2 text-xs text-gray-500 truncate">
-                  {imageReport.name}
+              {/* Hiển thị số lượng ảnh đã chọn */}
+              {reportImages.length > 0 && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Đã chọn {reportImages.length}/5 ảnh
                 </p>
               )}
             </div>
@@ -311,7 +402,7 @@ export default function ReportModal({
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 disabled={submitting}
                 className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer disabled:cursor-not-allowed"
               >
@@ -334,7 +425,7 @@ export default function ReportModal({
               </h3>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 aria-label="Đóng"
                 className="rounded p-1 text-gray-500 hover:bg-gray-100 cursor-pointer"
               >
@@ -347,7 +438,7 @@ export default function ReportModal({
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 cursor-pointer"
               >
                 Đóng
