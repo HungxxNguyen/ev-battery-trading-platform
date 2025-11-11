@@ -59,6 +59,45 @@ const formatDateTime = (iso) => {
   }
 };
 
+const TIMESTAMP_FIELDS = [
+  "createdAt",
+  "createdDate",
+  "dateCreated",
+  "creationDate",
+  "createdAtUtc",
+  "sentAt",
+  "sentTime",
+  "messageTime",
+  "messageDate",
+  "timestamp",
+  "time",
+  "created",
+];
+
+const ensureUtcSuffix = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/(?:[zZ]|[+\-]\d{2}:\d{2})$/.test(trimmed)) {
+      return trimmed;
+    }
+    return `${trimmed}Z`;
+  }
+  return value;
+};
+
+const resolveCreatedAt = (msg) => {
+  if (!msg || typeof msg !== "object") return null;
+  for (const field of TIMESTAMP_FIELDS) {
+    const iso = toIso(ensureUtcSuffix(msg[field]));
+    if (iso) {
+      return iso;
+    }
+  }
+  return null;
+};
+
 const LOCAL_SENT_AT_PREFIX = "chat:sentAt:";
 const getLocalSentAt = (id) => {
   try {
@@ -90,24 +129,11 @@ const normalizeMessage = (msg) => {
     msg.chat?.id;
   const senderId = msg.senderId ?? msg.userId ?? msg.fromUserId ?? msg.ownerId;
   const messageText = msg.messageText ?? msg.message ?? msg.text ?? "";
-  let createdAt = toIso(
-    msg.createdAt ??
-      msg.createdDate ??
-      msg.dateCreated ??
-      msg.creationDate ??
-      msg.createdAtUtc ??
-      msg.sentAt ??
-      msg.sentTime ??
-      msg.messageTime ??
-      msg.messageDate ??
-      msg.timestamp ??
-      msg.time ??
-      msg.created
-  );
+  let createdAt = resolveCreatedAt(msg);
   if (!createdAt && id) {
     // Try restoring a locally saved send-time (only exists for our own sent messages)
     const localTs = getLocalSentAt(id);
-    if (localTs) createdAt = toIso(localTs + "Z") || localTs + "Z";
+    if (localTs) createdAt = toIso(localTs) || localTs;
   }
   return {
     id,

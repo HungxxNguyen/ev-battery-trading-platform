@@ -10,6 +10,146 @@ import React, {
 import * as signalR from "@microsoft/signalr";
 import axiosInstance from "../services/axiosInstance";
 import { decodeToken } from "../utils/tokenUtils";
+import messageService from "../services/apis/messageApi";
+
+const LAST_SEEN_KEY = (uid) => (uid ? `chat:lastSeenAt:${uid}` : null);
+
+const toIso = (value) => {
+  try {
+    if (!value) return null;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const year = d.getUTCFullYear();
+    if (year < 2000) return null;
+    return d.toISOString();
+  } catch {
+    return null;
+  }
+};
+
+const TIMESTAMP_FIELDS = [
+  "createdAt",
+  "createdDate",
+  "dateCreated",
+  "creationDate",
+  "createdAtUtc",
+  "sentAt",
+  "sentTime",
+  "messageTime",
+  "messageDate",
+  "timestamp",
+  "time",
+  "created",
+];
+
+const ensureUtcSuffix = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    if (/(?:[zZ]|[+\-]\d{2}:\d{2})$/.test(trimmed)) {
+      return trimmed;
+    }
+    return `${trimmed}Z`;
+  }
+  return value;
+};
+
+const resolveCreatedAt = (msg) => {
+  if (!msg || typeof msg !== "object") return null;
+  for (const field of TIMESTAMP_FIELDS) {
+    const iso = toIso(ensureUtcSuffix(msg[field]));
+    if (iso) {
+      return iso;
+    }
+  }
+  return null;
+};
+
+const normalizeInboundMessage = (msg) => {
+  if (!msg || typeof msg !== "object") return null;
+  const senderId =
+    msg.senderId ??
+    msg.userId ??
+    msg.fromUserId ??
+    msg.ownerId ??
+    msg.initiatorId ??
+    null;
+  const createdAt = resolveCreatedAt(msg);
+  return {
+    senderId: senderId ? String(senderId) : "",
+    createdAt,
+  };
+};
+
+const extractThreadMessages = (thread) => {
+  if (!thread || typeof thread !== "object") return [];
+  if (Array.isArray(thread.messages)) return thread.messages;
+  if (Array.isArray(thread.chatMessages)) return thread.chatMessages;
+  if (Array.isArray(thread.messageList)) return thread.messageList;
+  return [];
+};
+
+const findLatestInboundTimestamp = (threads, myId) => {
+  if (!Array.isArray(threads) || !threads.length) return null;
+  const me = myId ? String(myId) : "";
+  let latest = null;
+
+  const consider = (iso) => {
+    if (!iso) return;
+    if (!latest) {
+      latest = iso;
+      return;
+    }
+    const nextMs = Date.parse(iso);
+    if (Number.isNaN(nextMs)) return;
+    const latestMs = Date.parse(latest);
+    if (Number.isNaN(latestMs) || nextMs > latestMs) {
+      latest = iso;
+    }
+  };
+
+  threads.forEach((thread) => {
+    const messages = extractThreadMessages(thread);
+    let inboundFound = false;
+    if (messages.length) {
+      messages.forEach((raw) => {
+        const normalized = normalizeInboundMessage(raw);
+        if (
+          normalized &&
+          normalized.senderId &&
+          (!me || normalized.senderId !== me)
+        ) {
+          inboundFound = true;
+          consider(normalized.createdAt);
+        }
+      });
+    }
+
+    if (!inboundFound) {
+      const summarySender =
+        thread?.lastMessageSenderId ??
+        thread?.lastSenderId ??
+        thread?.lastMessage?.senderId ??
+        thread?.latestMessage?.senderId ??
+        thread?.lastMessage?.userId ??
+        null;
+      if (summarySender && (!me || String(summarySender) !== me)) {
+        const summaryTs = toIso(
+          thread?.lastMessageAt ??
+            thread?.lastMessage?.createdAt ??
+            thread?.latestMessage?.createdAt ??
+            thread?.updatedAt ??
+            thread?.lastActivity ??
+            thread?.lastMessageTime
+        );
+        consider(summaryTs);
+      }
+    }
+  });
+
+  return latest;
+};
 
 export const MessageContext = createContext();
 
@@ -20,11 +160,90 @@ export const MessageProvider = ({ children }) => {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [userId, setUserId] = useState(null);
   const [hasUnread, setHasUnread] = useState(false);
+  const [lastSeenAt, setLastSeenAt] = useState(null);
   const connectionRef = useRef(null);
+  const lastSeenAtRef = useRef(null);
 
   const addMessage = useCallback((msg) => {
     setMessages((prev) => [...prev, msg]);
   }, []);
+
+  const shouldRaiseUnread = useCallback((incomingIso) => {
+    const seen = lastSeenAtRef.current;
+    if (!seen) return true;
+    const incomingMs = Date.parse(incomingIso);
+    const seenMs = Date.parse(seen);
+    if (Number.isNaN(incomingMs) || Number.isNaN(seenMs)) return true;
+    return incomingMs > seenMs;
+  }, []);
+
+  const clearUnread = useCallback(() => {
+    setHasUnread(false);
+    const now = new Date().toISOString();
+    if (!userId) return;
+    setLastSeenAt(now);
+    lastSeenAtRef.current = now;
+    const key = LAST_SEEN_KEY(userId);
+    if (key) {
+      try {
+        localStorage.setItem(key, now);
+      } catch (err) {
+        console.warn("Failed to persist chat last seen timestamp:", err);
+      }
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    lastSeenAtRef.current = lastSeenAt;
+  }, [lastSeenAt]);
+
+  useEffect(() => {
+    if (!userId) {
+      setLastSeenAt(null);
+      lastSeenAtRef.current = null;
+      setHasUnread(false);
+      return;
+    }
+
+    setHasUnread(false);
+    const key = LAST_SEEN_KEY(userId);
+    let stored = null;
+    if (key) {
+      try {
+        stored = localStorage.getItem(key);
+      } catch (err) {
+        console.warn("Failed to read chat last seen timestamp:", err);
+      }
+    }
+    setLastSeenAt(stored);
+    lastSeenAtRef.current = stored;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await messageService.getThreadsByUserId(userId);
+        if (cancelled) return;
+        const list = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : [];
+        const inboundTs = findLatestInboundTimestamp(list, userId);
+        if (!inboundTs) return;
+        if (shouldRaiseUnread(inboundTs)) {
+          setHasUnread(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Unable to hydrate unread chat state:", err);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, shouldRaiseUnread]);
 
   // Monitor auth state and derive userId from token/localStorage reliably
   useEffect(() => {
@@ -114,14 +333,24 @@ export const MessageProvider = ({ children }) => {
       try {
         // Best-effort extract senderId to avoid marking our own outbound echoes as unread
         const raw = msg?.payload ? msg.payload : msg;
-        const sid = String(
-          raw?.senderId ?? raw?.userId ?? raw?.fromUserId ?? raw?.ownerId ?? ""
-        );
+        const normalized = normalizeInboundMessage(raw);
+        const sid =
+          normalized?.senderId ??
+          String(
+            raw?.senderId ??
+              raw?.userId ??
+              raw?.fromUserId ??
+              raw?.ownerId ??
+              ""
+          );
         const me = userId ? String(userId) : "";
         if (!me || !sid || sid !== me) {
-          setHasUnread(true);
+          const ts = normalized?.createdAt || new Date().toISOString();
+          if (shouldRaiseUnread(ts)) {
+            setHasUnread(true);
+          }
         }
-      } catch (e) {
+      } catch {
         // Fallback: if anything goes wrong, still mark as unread
         setHasUnread(true);
       }
@@ -209,7 +438,7 @@ export const MessageProvider = ({ children }) => {
         connectionRef.current = null;
       }
     };
-  }, [userId, addMessage]);
+  }, [userId, addMessage, shouldRaiseUnread]);
 
   const contextValue = useMemo(
     () => ({
@@ -221,7 +450,7 @@ export const MessageProvider = ({ children }) => {
       isConnected: connectionStatus === "connected",
       userId,
       hasUnread,
-      clearUnread: () => setHasUnread(false),
+      clearUnread,
     }),
     [
       connection,
@@ -231,6 +460,7 @@ export const MessageProvider = ({ children }) => {
       isReconnecting,
       userId,
       hasUnread,
+      clearUnread,
     ]
   );
 
