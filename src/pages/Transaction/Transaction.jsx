@@ -6,15 +6,26 @@ import {
   FiXCircle,
   FiClock,
   FiArrowUpRight,
+  FiTrendingUp,
+  FiShoppingBag,
+  FiDollarSign,
+  FiFilter,
+  FiSearch,
+  FiPackage,
 } from "react-icons/fi";
 import { AuthContext } from "../../contexts/AuthContext";
 import transactionService from "../../services/apis/transactionApi";
 import listingService from "../../services/apis/listingApi";
 import { currency } from "../../utils/currency";
+import background2 from "../../assets/background2.png";
 
-const FALLBACK_IMAGE = "https://placehold.co/160?text=Listing";
+const FALLBACK_IMAGE = background2;
 
-const ORDER_TABS = [{ key: "orders", label: "Đơn hàng" }];
+const ORDER_TABS = [
+  { key: "all", label: "Tất cả", count: 0 },
+  { key: "success", label: "Thành công", count: 0 },
+  { key: "failed", label: "Thất bại", count: 0 },
+];
 
 // Normalize backend status to UI tokens
 const asStatusToken = (raw) => {
@@ -26,31 +37,21 @@ const asStatusToken = (raw) => {
     case "cancelled":
     case "expired":
       return "failed";
-    case "pending":
-    case "awaitingpayment":
-    default:
-      return "pending";
   }
 };
 
 const STATUS_TOKEN = {
   success: {
     label: "Thành công",
-    icon: <FiCheckCircle className="mr-1" />,
-    pill: "bg-green-50 text-green-700 border border-green-200",
-    amountColor: "text-green-600",
+    icon: <FiCheckCircle className="w-4 h-4" />,
+    pill: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    amountColor: "text-emerald-600",
   },
   failed: {
     label: "Thất bại",
-    icon: <FiXCircle className="mr-1" />,
-    pill: "bg-red-50 text-red-700 border border-red-200",
-    amountColor: "text-red-600",
-  },
-  pending: {
-    label: "Chờ xử lý",
-    icon: <FiClock className="mr-1" />,
-    pill: "bg-amber-50 text-amber-700 border border-amber-200",
-    amountColor: "text-amber-600",
+    icon: <FiXCircle className="w-4 h-4" />,
+    pill: "bg-rose-50 text-rose-700 border border-rose-200",
+    amountColor: "text-rose-600",
   },
 };
 
@@ -71,19 +72,6 @@ const formatVNDateTime = (date) => {
 
 const toCardModel = (tx) => {
   const listing = tx?.listing || {};
-  // Resolve thumbnail robustly from multiple possible fields
-  let ImageUrl =
-    listing?.thumbnail ||
-    listing?.ImageUrl ||
-    (Array.isArray(listing?.images) && listing.images.find(Boolean)) ||
-    (Array.isArray(listing?.listingImages)
-      ? listing.listingImages
-          .map((i) => (typeof i === "string" ? i : i?.ImageUrl || i?.url || ""))
-          .find(Boolean)
-      : null) ||
-    tx?.ImageUrl ||
-    tx?.thumbnail ||
-    FALLBACK_IMAGE;
   const title = listing?.title || "Tin đăng";
   const pkgName = tx?.package?.name || listing?.package?.name || "";
   const finalTitle = pkgName ? `${title} • ${pkgName}` : title;
@@ -105,7 +93,7 @@ const toCardModel = (tx) => {
     amount,
     status: statusKey,
     statusNote,
-    productThumb: ImageUrl,
+    productThumb: FALLBACK_IMAGE,
     channel,
     listingId,
     manageHref: listingId ? `/manage-listing/${listingId}` : null,
@@ -114,88 +102,96 @@ const toCardModel = (tx) => {
 };
 
 const TransactionCard = ({ item }) => {
-  const statusInfo = STATUS_TOKEN[item.status] ?? STATUS_TOKEN.pending;
+  const statusInfo = STATUS_TOKEN[item.status];
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-      <div className="relative flex-shrink-0 w-full sm:w-32">
+    <div className="group relative flex flex-col sm:flex-row gap-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-gray-300 transition-all duration-200">
+      {/* Image Section */}
+      <div className="relative flex-shrink-0 w-full sm:w-36">
         <Link
           to={item.manageHref || "#"}
           onClick={(e) => !item.manageHref && e.preventDefault()}
+          className="block"
         >
-          <div className="aspect-square w-full overflow-hidden rounded-xl bg-gray-50 border border-gray-200">
+          <div className="w-full h-28 sm:h-36 overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:border-gray-300 transition-colors">
             <img
               src={item.productThumb}
               alt={item.title}
-              className="h-full w-full object-cover"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </div>
         </Link>
         {item.channel && (
-          <span className="absolute -bottom-3 left-3 flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
-            <FiArrowUpRight /> {item.channel}
+          <span className="absolute -bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md">
+            <FiArrowUpRight className="w-3 h-3" /> {item.channel}
           </span>
         )}
       </div>
 
+      {/* Content Section */}
       <div className="flex flex-1 flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex-1 min-w-0">
             {item.manageHref ? (
               <Link
                 to={item.manageHref}
-                className="text-lg font-semibold text-gray-900 leading-snug hover:text-blue-600"
+                className="block text-lg font-semibold text-gray-900 leading-snug hover:text-blue-600 transition-colors line-clamp-2"
               >
                 {item.title}
               </Link>
             ) : (
-              <h3 className="text-lg font-semibold text-gray-900 leading-snug">
+              <h3 className="text-lg font-semibold text-gray-900 leading-snug line-clamp-2">
                 {item.title}
               </h3>
             )}
-            <div className="mt-2 grid gap-x-8 gap-y-1 text-sm text-gray-600 sm:grid-cols-2">
+
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               {item.orderCode && (
-                <span>
-                  <span className="text-gray-500">Mã đơn hàng:</span>{" "}
-                  {item.orderCode}
-                </span>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <FiPackage className="w-4 h-4 text-gray-400" />
+                  <span className="font-mono font-medium">
+                    {item.orderCode}
+                  </span>
+                </div>
               )}
               {item.time && (
-                <span>
-                  <span className="text-gray-500">Thời gian:</span> {item.time}
-                </span>
-              )}
-              {item.channel && (
-                <span>
-                  <span className="text-gray-500">Kênh thanh toán:</span>{" "}
-                  {item.channel}
-                </span>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <FiClock className="w-4 h-4 text-gray-400" />
+                  <span>{item.time}</span>
+                </div>
               )}
             </div>
+
             {item.manageHref && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <Link
                   to={item.manageHref}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:gap-2 transition-all"
                 >
-                  Xem chi tiết bài đăng <FiArrowUpRight />
+                  Xem chi tiết bài đăng
+                  <FiArrowUpRight className="w-4 h-4" />
                 </Link>
               </div>
             )}
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <span className={`text-xl font-bold ${statusInfo.amountColor}`}>
-              {currency(item.amount)}
-            </span>
-            <span
-              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${statusInfo.pill}`}
-            >
-              {statusInfo.icon}
-              {statusInfo.label}
-            </span>
+          {/* Status & Amount Section */}
+          <div className="flex flex-row sm:flex-col items-start sm:items-end justify-between sm:justify-start gap-3 lg:min-w-[160px]">
+            <div className="flex flex-col items-start sm:items-end gap-2">
+              <span className={`text-2xl font-bold ${statusInfo.amountColor}`}>
+                {currency(item.amount)}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${statusInfo.pill}`}
+              >
+                {statusInfo.icon}
+                {statusInfo.label}
+              </span>
+            </div>
             {item.statusNote && (
-              <span className="text-xs text-gray-500">{item.statusNote}</span>
+              <span className="text-xs text-gray-500 italic max-w-[140px] text-right">
+                {item.statusNote}
+              </span>
             )}
           </div>
         </div>
@@ -205,19 +201,51 @@ const TransactionCard = ({ item }) => {
 };
 
 const SkeletonCard = () => (
-  <div className="animate-pulse flex flex-col sm:flex-row gap-4 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-    <div className="relative flex-shrink-0 w-full sm:w-32">
-      <div className="aspect-square w-full rounded-xl bg-gray-100 border border-gray-200" />
+  <div className="animate-pulse flex flex-col sm:flex-row gap-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+    <div className="relative flex-shrink-0 w-full sm:w-36">
+      <div className="w-full h-28 sm:h-36 rounded-xl bg-gray-100 border border-gray-200" />
     </div>
     <div className="flex flex-1 flex-col gap-4">
-      <div className="h-5 w-2/3 bg-gray-100 rounded" />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="h-4 bg-gray-100 rounded" />
-        <div className="h-4 bg-gray-100 rounded" />
-        <div className="h-4 bg-gray-100 rounded" />
-        <div className="h-4 bg-gray-100 rounded" />
+      <div className="h-6 w-2/3 bg-gray-100 rounded" />
+      <div className="flex flex-wrap gap-4">
+        <div className="h-4 w-24 bg-gray-100 rounded" />
+        <div className="h-4 w-32 bg-gray-100 rounded" />
       </div>
+      <div className="h-4 w-32 bg-gray-100 rounded" />
     </div>
+    <div className="flex flex-col items-end gap-2">
+      <div className="h-8 w-24 bg-gray-100 rounded" />
+      <div className="h-6 w-20 bg-gray-100 rounded-full" />
+    </div>
+  </div>
+);
+
+const EmptyState = ({ activeTab }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-4">
+    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-6">
+      <FiShoppingBag className="w-12 h-12 text-gray-400" />
+    </div>
+    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+      {activeTab === "all"
+        ? "Chưa có giao dịch"
+        : `Không có giao dịch ${ORDER_TABS.find(
+            (t) => t.key === activeTab
+          )?.label.toLowerCase()}`}
+    </h3>
+    <p className="text-gray-600 text-center max-w-md mb-6">
+      {activeTab === "all"
+        ? "Lịch sử thanh toán của bạn sẽ hiển thị tại đây khi bạn thực hiện giao dịch."
+        : "Thử chọn tab khác để xem các giao dịch với trạng thái khác nhau."}
+    </p>
+    {activeTab === "all" && (
+      <Link
+        to="/create-listing"
+        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+      >
+        <FiPackage className="w-5 h-5" />
+        Tạo tin đăng mới
+      </Link>
+    )}
   </div>
 );
 
@@ -225,7 +253,7 @@ const Transaction = () => {
   const { user } = useContext(AuthContext) || {};
   const userId = user?.id;
 
-  const [activeTab] = useState("orders");
+  const [activeTab, setActiveTab] = useState("all");
   const [items, setItems] = useState([]);
   const [count, setCount] = useState(0);
   const [pageIndex, setPageIndex] = useState(1);
@@ -299,14 +327,21 @@ const Transaction = () => {
     };
   }, [userId, pageIndex, pageSize]);
 
+  const filteredItems = useMemo(() => {
+    if (activeTab === "all") return items;
+    return items.filter((item) => item.status === activeTab);
+  }, [items, activeTab]);
+
   const stats = useMemo(() => {
     const success = items.filter((t) => t.status === "success");
+    const failed = items.filter((t) => t.status === "failed");
     const totalAmount = success.reduce(
       (acc, cur) => acc + (Number(cur.amount) || 0),
       0
     );
     return {
       totalSuccess: success.length,
+      totalFailed: failed.length,
       totalAmount,
       totalOrders:
         typeof count === "number" && count >= items.length
@@ -315,98 +350,153 @@ const Transaction = () => {
     };
   }, [items, count]);
 
+  const tabsWithCounts = ORDER_TABS.map((tab) => {
+    let count = 0;
+    if (tab.key === "all") count = stats.totalOrders;
+    else if (tab.key === "success") count = stats.totalSuccess;
+    else if (tab.key === "failed") count = stats.totalFailed;
+    return { ...tab, count };
+  });
+
   const totalPages = Math.max(
     1,
     Math.ceil((count || items.length || 1) / pageSize)
   );
   const canPrev = pageIndex > 1;
-  const canNext = pageIndex < totalPages; // advance while we know total pages
+  const canNext = pageIndex < totalPages;
 
   return (
     <MainLayout>
-      <div className="bg-white min-h-screen py-8">
-        <div className="mx-auto w-full max-w-6xl px-4 py-12 space-y-8">
+      <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen py-8">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 space-y-8">
           {/* Header */}
           <header className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex flex-col gap-8">
               <div>
-                <h1 className="mt-3 text-3xl font-bold text-gray-800">
+                <h1 className="text-4xl font-bold text-gray-900 mb-3">
                   Lịch sử giao dịch
                 </h1>
-                <p className="mt-2 text-base text-gray-600 max-w-xl">
-                  Theo dõi trạng thái thanh toán cho các gói và dịch vụ của tin
-                  đăng.
+                <p className="text-base text-gray-600 max-w-2xl">
+                  Theo dõi và quản lý toàn bộ giao dịch thanh toán cho các gói
+                  dịch vụ và tin đăng của bạn.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 w-full lg:w-auto">
-                <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">
-                    Tổng đơn
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-5 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                      <FiShoppingBag className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    Tổng đơn hàng
                   </p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-gray-900">
                     {stats.totalOrders}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-green-200 bg-green-50 p-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-wide text-green-700">
+
+                <div className="group relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-5 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
+                      <FiCheckCircle className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-emerald-700 mb-1">
                     Đã thanh toán
                   </p>
-                  <p className="mt-2 text-2xl font-bold text-green-700">
+                  <p className="text-3xl font-bold text-emerald-700">
                     {stats.totalSuccess}
                   </p>
                 </div>
-                <div className="col-span-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500">
-                        Doanh thu thành công
-                      </p>
-                      <p className="mt-1 text-xl font-semibold text-gray-900">
-                        {currency(stats.totalAmount)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label
-                        htmlFor="pageSize"
-                        className="text-sm text-gray-600"
-                      >
-                        Hiển thị
-                      </label>
-                      <select
-                        id="pageSize"
-                        value={pageSize}
-                        onChange={(e) => {
-                          setPageIndex(1);
-                          setPageSize(Number(e.target.value));
-                        }}
-                        className="border border-gray-300 rounded-lg px-2 py-1 text-sm"
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                      </select>
+
+                <div className="group relative overflow-hidden rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100 p-5 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-rose-100 text-rose-700">
+                      <FiClock className="w-5 h-5" />
                     </div>
                   </div>
+                  <p className="text-sm font-medium text-rose-700  mb-1">
+                    Thất bại
+                  </p>
+                  <p className="text-3xl font-bold text-rose-700 mb-1">
+                    {stats.totalFailed}
+                  </p>
+                </div>
+
+                <div className="group relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-5 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                      <FiDollarSign className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 mb-1">
+                    Tổng chi phí đã thanh toán
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {currency(stats.totalAmount)}
+                  </p>
                 </div>
               </div>
             </div>
           </header>
 
-          {/* Tabs (reserved for future filters) */}
-          <div className="flex items-center gap-2">
-            {ORDER_TABS.map((t) => (
-              <button
-                key={t.key}
-                className={`px-4 py-2 rounded-full border text-sm ${
-                  t.key === activeTab
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-700 border-gray-200"
-                }`}
+          {/* Filters & Controls */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0">
+              {tabsWithCounts.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => {
+                    setActiveTab(t.key);
+                    setPageIndex(1);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                    t.key === activeTab
+                      ? "bg-gray-900 text-white border-gray-900 shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                  }`}
+                >
+                  {t.label}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      t.key === activeTab
+                        ? "bg-white/20 text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {t.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm">
+              <label
+                htmlFor="pageSize"
+                className="text-sm font-medium text-gray-700 whitespace-nowrap"
               >
-                {t.label}
-              </button>
-            ))}
+                Hiển thị
+              </label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageIndex(1);
+                  setPageSize(Number(e.target.value));
+                }}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+              >
+                <option value={5}>5 giao dịch</option>
+                <option value={10}>10 giao dịch</option>
+                <option value={20}>20 giao dịch</option>
+                <option value={50}>50 giao dịch</option>
+              </select>
+            </div>
           </div>
 
           {/* Content */}
@@ -420,49 +510,101 @@ const Transaction = () => {
             )}
 
             {!loading && error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-                {error}
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 flex items-start gap-3">
+                <FiXCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-rose-900 mb-1">
+                    Có lỗi xảy ra
+                  </h3>
+                  <p className="text-rose-700 text-sm">{error}</p>
+                </div>
               </div>
             )}
 
-            {!loading && !error && items.length === 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-600">
-                Chưa có giao dịch nào.
-              </div>
+            {!loading && !error && filteredItems.length === 0 && (
+              <EmptyState activeTab={activeTab} />
             )}
 
             {!loading &&
               !error &&
-              items.map((it) => <TransactionCard key={it.id} item={it} />)}
+              filteredItems.map((it) => (
+                <TransactionCard key={it.id} item={it} />
+              ))}
           </div>
 
           {/* Pagination */}
-          {!loading && !error && items.length > 0 && (
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-sm text-gray-600">
-                Trang {pageIndex}/{totalPages}
+          {!loading && !error && filteredItems.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+              <div className="text-sm text-gray-600 font-medium">
+                Hiển thị{" "}
+                <span className="font-bold text-gray-900">
+                  {(pageIndex - 1) * pageSize + 1}
+                </span>{" "}
+                -{" "}
+                <span className="font-bold text-gray-900">
+                  {Math.min(pageIndex * pageSize, count || items.length)}
+                </span>{" "}
+                của{" "}
+                <span className="font-bold text-gray-900">
+                  {count || items.length}
+                </span>{" "}
+                giao dịch
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   disabled={!canPrev}
                   onClick={() =>
                     canPrev && setPageIndex((p) => Math.max(1, p - 1))
                   }
-                  className={`px-3 py-2 rounded-lg border text-sm ${
+                  className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                     canPrev
-                      ? "bg-white border-gray-300 text-gray-700"
-                      : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-sm"
+                      : "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   Trước
                 </button>
+
+                <div className="hidden sm:flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pageIndex <= 3) {
+                      pageNum = i + 1;
+                    } else if (pageIndex >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = pageIndex - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPageIndex(pageNum)}
+                        className={`w-10 h-10 rounded-lg border text-sm font-medium transition-all ${
+                          pageNum === pageIndex
+                            ? "bg-gray-900 text-white border-gray-900 shadow-md"
+                            : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="sm:hidden px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-700">
+                  {pageIndex} / {totalPages}
+                </div>
+
                 <button
                   disabled={!canNext}
                   onClick={() => canNext && setPageIndex((p) => p + 1)}
-                  className={`px-3 py-2 rounded-lg border text-sm ${
+                  className={`px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                     canNext
-                      ? "bg-white border-gray-300 text-gray-700"
-                      : "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 shadow-sm"
+                      : "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
                   }`}
                 >
                   Sau
