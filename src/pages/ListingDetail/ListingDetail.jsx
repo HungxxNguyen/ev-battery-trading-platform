@@ -20,6 +20,18 @@ import { AuthContext } from "../../contexts/AuthContext";
 const FALLBACK_IMAGE = "https://placehold.co/1200x800?text=Listing";
 const FALLBACK_AVATAR = "https://placehold.co/160x160?text=User";
 
+const CATEGORY_OPTIONS = [
+  { value: "ElectricCar", label: "Ô tô điện" },
+  { value: "ElectricMotorbike", label: "Xe máy điện" },
+  { value: "RemovableBattery", label: "Pin điện" },
+];
+
+const formatCategory = (category) => {
+  if (!category) return "Không rõ";
+  const found = CATEGORY_OPTIONS.find((opt) => opt.value === category);
+  return found?.label || category;
+};
+
 const formatCurrency = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return "Liên hệ";
@@ -181,7 +193,11 @@ const ListingDetail = () => {
 
   const specItems = useMemo(
     () => [
-      { label: "Danh mục", value: listing?.category, icon: "📂" },
+      {
+        label: "Danh mục",
+        value: formatCategory(listing?.category),
+        icon: "📂",
+      },
       { label: "Thương hiệu", value: listing?.brand?.name, icon: "🏷️" },
       { label: "Model", value: listing?.model, icon: "🔧" },
       {
@@ -320,7 +336,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handlePrevImage}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white shadow-lg transition-all hover:scale-110"
+                className="cursor-pointer absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white shadow-lg transition-all hover:scale-110"
                 aria-label="Ảnh trước"
               >
                 <FiChevronLeft className="w-6 h-6" />
@@ -347,7 +363,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handleNextImage}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white shadow-lg transition-all hover:scale-110"
+                className="cursor-pointer absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white shadow-lg transition-all hover:scale-110"
                 aria-label="Ảnh tiếp theo"
               >
                 <FiChevronRight className="w-6 h-6" />
@@ -369,7 +385,7 @@ const ListingDetail = () => {
                       type="button"
                       key={`${imgSrc}-${idx}`}
                       onClick={() => setCurrentImage(idx)}
-                      className={`h-24 w-32 flex-shrink-0 rounded-xl overflow-hidden transition-all ${
+                      className={`h-24 w-32 flex-shrink-0 rounded-xl overflow-hidden transition-all cursor-pointer ${
                         currentImage === idx
                           ? "ring-4 ring-blue-500 scale-105"
                           : "ring-2 ring-gray-200 hover:ring-gray-300"
@@ -452,7 +468,7 @@ const ListingDetail = () => {
                 <button
                   type="button"
                   onClick={() => favoriteItem && toggleFavorite(favoriteItem)}
-                  className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shadow-md ${
+                  className={`flex items-center justify-center w-12 h-12 rounded-full cursor-pointer transition-all shadow-md ${
                     favActive
                       ? "bg-red-500 text-white scale-110"
                       : "bg-white text-gray-400 hover:text-red-500 hover:scale-110"
@@ -474,34 +490,12 @@ const ListingDetail = () => {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FiMapPin className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">Khu vực</p>
-                    <p className="font-semibold text-gray-800">
-                      {listing.area || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FiTag className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500">Thương hiệu</p>
-                    <p className="font-semibold text-gray-800">
-                      {listing.brand?.name || "Chưa cập nhật"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               <div className="pt-4 space-y-3">
                 {!isSellerSelf && sellerId && (
                   <button
                     type="button"
                     onClick={handleChatWithSeller}
-                    className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
+                    className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl text-white hover:from-blue-700 hover:to-blue-800 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group cursor-pointer"
                   >
                     <FiMessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     Chat với người bán
@@ -600,7 +594,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handlePrevImage}
-                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-4 rounded-full transition-all hover:scale-110"
+                className="cursor-pointer absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-4 rounded-full transition-all hover:scale-110"
                 aria-label="Ảnh trước"
               >
                 <FiChevronLeft className="w-7 h-7" />
@@ -617,7 +611,7 @@ const ListingDetail = () => {
               <button
                 type="button"
                 onClick={handleNextImage}
-                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-4 rounded-full transition-all hover:scale-110"
+                className="cursor-pointer absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-4 rounded-full transition-all hover:scale-110"
                 aria-label="Ảnh tiếp theo"
               >
                 <FiChevronRight className="w-7 h-7" />
@@ -627,7 +621,7 @@ const ListingDetail = () => {
             <button
               type="button"
               onClick={closeLightbox}
-              className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all hover:scale-110"
+              className="cursor-pointer absolute top-4 right-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white p-3 rounded-full transition-all hover:scale-110"
               aria-label="Đóng"
             >
               <FiX className="w-6 h-6" />

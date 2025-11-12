@@ -25,7 +25,7 @@ import {
 } from "../../components/Table/table";
 import { Button } from "../../components/Button/button";
 import { Badge } from "../../components/Badge/badge";
-import { ArrowLeft, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import listingService from "../../services/apis/listingApi";
 import Loading from "../../components/loading/Loading";
 import { currency } from "../../utils/currency";
@@ -33,6 +33,8 @@ import { useNotification } from "../../contexts/NotificationContext";
 
 const GLASS_CARD =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-xl text-slate-100";
+
+const FALLBACK_IMAGE = "https://placehold.co/1200x800?text=EV+Listing";
 
 // Tabs trạng thái
 const STATUS_TABS = [
@@ -145,53 +147,38 @@ export default function StaffReview() {
   // Sync selectedId with URL (?id=)
   useEffect(() => {
     const idParam = searchParams.get("id");
-    const parsed = idParam ?? null; // keep as string to avoid type mismatch
+    const parsed = idParam ?? null; // keep as string
     if ((parsed || null) !== (selectedId || null)) {
       setSelectedId(parsed);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Lightbox state
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  // Gallery state (không còn zoom/lightbox)
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [isZoomed, setIsZoomed] = useState(false);
-  const images = selected?.listingImages || [];
 
-  const openLightbox = (idx) => {
-    setLightboxIndex(idx);
-    setIsZoomed(false);
-    setLightboxOpen(true);
-  };
-  const closeLightbox = () => {
-    setLightboxOpen(false);
-    setIsZoomed(false);
-  };
+  const rawImages = selected?.listingImages || [];
+  const imageUrls = useMemo(
+    () =>
+      Array.isArray(rawImages)
+        ? rawImages
+            .map((img) =>
+              typeof img === "string" ? img : img?.imageUrl || img?.url || ""
+            )
+            .filter(Boolean)
+        : [],
+    [rawImages]
+  );
 
   const prevImage = useCallback(() => {
-    if (!images.length) return;
-    setLightboxIndex((i) => (i - 1 + images.length) % images.length);
-    setIsZoomed(false);
-  }, [images.length]);
+    if (!imageUrls.length) return;
+    setLightboxIndex((i) => (i - 1 + imageUrls.length) % imageUrls.length);
+  }, [imageUrls.length]);
 
   const nextImage = useCallback(() => {
-    if (!images.length) return;
-    setLightboxIndex((i) => (i + 1) % images.length);
-    setIsZoomed(false);
-  }, [images.length]);
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowLeft") prevImage();
-      if (e.key === "ArrowRight") nextImage();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [lightboxOpen, prevImage, nextImage]);
+    if (!imageUrls.length) return;
+    setLightboxIndex((i) => (i + 1) % imageUrls.length);
+  }, [imageUrls.length]);
 
   // Reject flow
   const [rejectMode, setRejectMode] = useState(false);
@@ -249,9 +236,7 @@ export default function StaffReview() {
     setRejectMode(false);
     setRejectReason("");
     setDescriptionReject("");
-    setLightboxOpen(false);
     setLightboxIndex(0);
-    setIsZoomed(false);
     const next = new URLSearchParams(searchParams);
     next.set("id", String(id));
     setSearchParams(next);
@@ -262,9 +247,7 @@ export default function StaffReview() {
     setRejectMode(false);
     setRejectReason("");
     setDescriptionReject("");
-    setLightboxOpen(false);
     setLightboxIndex(0);
-    setIsZoomed(false);
     const next = new URLSearchParams(searchParams);
     next.delete("id");
     setSearchParams(next, { replace: true });
@@ -715,34 +698,81 @@ export default function StaffReview() {
               </CardContent>
             </Card>
 
-            {/* Hình ảnh */}
+            {/* Hình ảnh - gallery (không phóng to) */}
             <Card className="bg-slate-900/30 border border-slate-800/60">
               <CardHeader className="pb-3">
                 <CardTitle>Hình ảnh tin đăng</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {images.length ? (
-                    images.map((img, idx) => (
-                      <button
-                        key={img.id || idx}
-                        onClick={() => openLightbox(idx)}
-                        title="Xem ảnh lớn"
-                        className="group overflow-hidden rounded-lg border border-slate-800/60 bg-slate-950/60 cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
-                      >
-                        <img
-                          src={img.imageUrl}
-                          alt={`listing-${idx + 1}`}
-                          className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                        />
-                      </button>
-                    ))
+              <CardContent className="space-y-4">
+                {/* Ảnh lớn */}
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-slate-800/60 bg-slate-950/60">
+                  {imageUrls.length ? (
+                    <>
+                      <img
+                        src={imageUrls[lightboxIndex] || FALLBACK_IMAGE}
+                        alt={`listing-${lightboxIndex + 1}`}
+                        className="h-full w-full object-contain"
+                        draggable={false}
+                      />
+
+                      {imageUrls.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={prevImage}
+                            className="cursor-pointer absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/80 text-slate-100 shadow-md hover:bg-slate-800/90"
+                            aria-label="Ảnh trước"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={nextImage}
+                            className="cursor-pointer absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/80 text-slate-100 shadow-md hover:bg-slate-800/90"
+                            aria-label="Ảnh tiếp theo"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+
+                      <div className="absolute bottom-3 right-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-slate-50">
+                        {lightboxIndex + 1} / {imageUrls.length}
+                      </div>
+                    </>
                   ) : (
-                    <div className="text-sm text-slate-400">
+                    <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
                       Không có hình ảnh
                     </div>
                   )}
                 </div>
+
+                {/* Thumbnails kéo ngang */}
+                {imageUrls.length > 0 && (
+                  <div className="border-t border-slate-800/60 pt-3">
+                    <div className="flex gap-3 overflow-x-auto pb-2">
+                      {imageUrls.map((url, idx) => (
+                        <button
+                          key={`${url}-${idx}`}
+                          type="button"
+                          onClick={() => setLightboxIndex(idx)}
+                          className={`relative flex-shrink-0 h-20 w-24 overflow-hidden rounded-lg border-2 transition-all cursor-pointer ${
+                            lightboxIndex === idx
+                              ? "border-emerald-500 ring-2 ring-emerald-400/40"
+                              : "border-slate-800 hover:border-slate-600"
+                          }`}
+                          title={`Ảnh ${idx + 1}`}
+                        >
+                          <img
+                            src={url || FALLBACK_IMAGE}
+                            alt={`thumb-${idx + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -808,7 +838,7 @@ export default function StaffReview() {
                         id="reasonReject"
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        className="w-full rounded-lg bg-slate-950/60 border border-slate-800/60 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/60"
+                        className="w-full rounded-lg bg-slate-950/60 border border-slate-800/60 px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500/60 cursor-pointer"
                       >
                         <option value="">-- Chọn lý do từ chối --</option>
                         {REJECT_REASONS.map((r) => (
@@ -908,68 +938,6 @@ export default function StaffReview() {
             </Card>
           </div>
         </div>
-
-        {/* Lightbox ảnh */}
-        {lightboxOpen && images.length > 0 && (
-          <div
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-auto"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Xem ảnh gốc"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeLightbox();
-            }}
-          >
-            {/* Close */}
-            <button
-              onClick={closeLightbox}
-              aria-label="Đóng"
-              className="absolute top-4 right-4 rounded-full bg-slate-900/70 border border-slate-700/60 p-2 text-slate-100 hover:bg-slate-800/80"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Prev */}
-            {images.length > 1 && (
-              <button
-                onClick={prevImage}
-                aria-label="Ảnh trước"
-                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 rounded-full bg-slate-900/70 border border-slate-700/60 p-2 text-slate-100 hover:bg-slate-800/80"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-
-            {/* Image */}
-            <div className="flex flex-col items-center">
-              <img
-                src={images[lightboxIndex].imageUrl}
-                alt={`Ảnh ${lightboxIndex + 1}`}
-                className={`rounded-lg shadow-2xl ${
-                  isZoomed
-                    ? "cursor-zoom-out w-auto h-auto"
-                    : "cursor-zoom-in max-w-[90vw] max-h-[85vh] object-contain"
-                }`}
-                onClick={() => setIsZoomed(!isZoomed)}
-                draggable={false}
-              />
-              <div className="mt-3 text-center text-slate-200 text-sm">
-                {lightboxIndex + 1} / {images.length}
-              </div>
-            </div>
-
-            {/* Next */}
-            {images.length > 1 && (
-              <button
-                onClick={nextImage}
-                aria-label="Ảnh tiếp theo"
-                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 rounded-full bg-slate-900/70 border border-slate-700/60 p-2 text-slate-100 hover:bg-slate-800/80"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

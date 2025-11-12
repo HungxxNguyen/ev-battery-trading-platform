@@ -221,7 +221,7 @@ const DropdownField = ({ item, formData, onChange }) => {
       <select
         id={item.name}
         name={item.name}
-        className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-white text-gray-900"
+        className="cursor-pointer mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 bg-white text-gray-900"
         value={valOf(formData, item.name)}
         onChange={(e) => onChange(item.name, e.target.value)}
         required={item.required}
@@ -539,7 +539,10 @@ const AddListing = () => {
         "success"
       );
       if (plan.isFree) {
-        showNotification("Đăng tin miễn phí thành công! Tin đang chờ duyệt.", "success");
+        showNotification(
+          "Đăng tin miễn phí thành công! Tin đang chờ duyệt.",
+          "success"
+        );
         navigate("/manage-listing?tab=pending");
       } else {
         showNotification(
@@ -770,7 +773,7 @@ const AddListing = () => {
                     <span className="text-green-600 font-bold">✓ Đã chọn</span>
                   </div>
                 ) : (
-                  <div className="text-gray-400 flex items-center justify-between">
+                  <div className="text-gray-400 flex items-center justify-between cursor-pointer">
                     <span>Chọn gói đăng tin...</span>
                     <span className="text-xs text-gray-500">(Bắt buộc)</span>
                   </div>

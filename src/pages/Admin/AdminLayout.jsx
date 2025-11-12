@@ -49,8 +49,8 @@ export default function AdminLayout() {
               <p className="text-[11px] uppercase tracking-[0.45em] text-cyan-300/80">
                 VoltX Control
               </p>
-              <h1 className="text-lg font-semibold text-white leading-tight">
-                Admin Panel
+              <h1 className="mt-1 text-lg font-semibold text-white leading-tight">
+                Admin: Quản Trị
               </h1>
             </div>
           </div>
@@ -58,20 +58,20 @@ export default function AdminLayout() {
           <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
             <SideItem
               icon={<LayoutDashboard className="h-4 w-4" />}
-              label="Dashboard"
+              label="Thống Kê"
               active={currentPage === "dashboard"}
               onClick={() => navigate("/admin")}
             />
 
             <SideItem
               icon={<FileText className="h-4 w-4" />}
-              label="Plans"
+              label="Quản lý Gói Đăng Bài"
               active={currentPage === "plans"}
               onClick={() => navigate("/admin/plans")}
             />
             <SideItem
               icon={<Building2 className="h-4 w-4" />}
-              label="Brands"
+              label="Quản lý Thương Hiệu"
               active={currentPage === "brands"}
               onClick={() => navigate("/admin/brands")}
             />

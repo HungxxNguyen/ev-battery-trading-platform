@@ -201,15 +201,8 @@ function useOnClickOutside(ref, handler) {
 }
 
 /* ---------------- Dropdown menu ---------------- */
-const OptionMenu = ({ onShare, onSold, onHide, onDelete }) => (
+const OptionMenu = ({ onSold, onHide, onDelete }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
-    <button
-      onClick={onShare}
-      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-    >
-      <span className="text-lg">↪</span>
-      <span>Chia sẻ</span>
-    </button>
     <div className="h-px bg-gray-200" />
     <button
       onClick={onSold}
@@ -438,10 +431,6 @@ const ListingItem = ({
               {menuForId === item.id && (
                 <div className="absolute z-20 left-0 md:left-auto md:right-0">
                   <OptionMenu
-                    onShare={() => {
-                      setMenuForId(null);
-                      alert("Chia sẻ: mở modal chia sẻ ở đây.");
-                    }}
                     onSold={() => {
                       setMenuForId(null);
                       onOpenSoldModal(item);

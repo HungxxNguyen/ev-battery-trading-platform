@@ -268,7 +268,7 @@ export default function BrandPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="min-w-[200px] rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+              className="min-w-[200px] rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 cursor-pointer"
               title="Loại (Type) của thương hiệu"
             >
               {CATEGORY_OPTIONS.map((opt) => (
@@ -325,7 +325,7 @@ export default function BrandPage() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                className="rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 cursor-pointer"
                 title="Lọc theo loại"
               >
                 <option value="ALL">Tất cả loại</option>

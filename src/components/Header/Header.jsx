@@ -139,7 +139,7 @@ export default function Header() {
             <div className="relative" ref={sellDropdownRef}>
               <button
                 onClick={() => toggleDropdown("sell")}
-                className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
+                className="cursor-pointer text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
               >
                 Bán
                 <svg
@@ -181,7 +181,7 @@ export default function Header() {
             <div className="relative" ref={shopDropdownRef}>
               <button
                 onClick={() => toggleDropdown("shop")}
-                className="text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
+                className="cursor-pointer text-sm font-medium hover:text-cyan-300 transition-all duration-300 flex items-center py-2 relative group whitespace-nowrap"
               >
                 Sản phẩm
                 <svg
@@ -309,7 +309,7 @@ export default function Header() {
             <div className="relative" ref={userDropdownRef}>
               <button
                 onClick={() => toggleDropdown("user")}
-                className="flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
+                className="cursor-pointer flex items-center space-x-3 bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-lg transition-all duration-300"
               >
                 {isAuthenticated && user ? (
                   <>

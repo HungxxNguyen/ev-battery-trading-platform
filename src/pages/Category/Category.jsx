@@ -119,7 +119,7 @@ const Category = () => {
   const { categoryId } = useParams();
   const mapping = CATEGORY_MAP[categoryId];
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isFavorite } = useFavorites();
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   // Data
   const [rawItems, setRawItems] = useState([]); // unfiltered from API
@@ -321,7 +321,8 @@ const Category = () => {
     const getArea = (it) => String(it.area ?? it.Area ?? "");
     const getTitle = (it) => String(it.title ?? it.Title ?? "");
     const getModel = (it) => String(it.model ?? it.Model ?? "");
-    const getBrandName = (it) => String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
+    const getBrandName = (it) =>
+      String(it.brand?.name ?? it.brandName ?? it.BrandName ?? "");
     const getDateVal = (it) => {
       const d =
         it.activatedAt ??
@@ -769,6 +770,8 @@ const Category = () => {
         listing.yearOfManufacture ? `Năm ${listing.yearOfManufacture}` : null,
         listing.odo ? `Odo ${listing.odo} km` : null,
       ].filter(Boolean);
+      const listingArea = listing.area || listing.location || "";
+      const favActive = Boolean(isFavorite?.(listing.id));
 
       return (
         <Link
@@ -792,14 +795,31 @@ const Category = () => {
                 {statusLabel}
               </span>
             )}
-            {/* Favorite indicator (read-only) */}
-            <span
-              className={`absolute top-2 right-2 p-1.5 rounded-full backdrop-blur bg-black/40 ${
-                isFavorite?.(listing.id) ? "text-red-400" : "text-white"
+            {/* Favorite toggle */}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFavorite?.({
+                  id: listing.id,
+                  title: listing.title,
+                  price: listing.price,
+                  location: listingArea,
+                  area: listingArea,
+                  image: coverImage,
+                });
+              }}
+              aria-label={favActive ? "Bo luu tin" : "Luu tin yeu thich"}
+              aria-pressed={favActive}
+              className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition cursor-pointer ${
+                favActive
+                  ? "bg-white text-red-500"
+                  : "bg-white/80 text-gray-600 hover:text-red-500"
               }`}
             >
-              <FiHeart />
-            </span>
+              <FiHeart className={`w-5 h-5 ${favActive ? "fill-current" : ""}`} />
+            </button>
           </div>
 
           <div className="p-3">
@@ -945,7 +965,7 @@ const Category = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded border border-gray-300 text-sm px-2 py-1.5"
+                  className="rounded border border-gray-300 text-sm px-2 py-1.5 cursor-pointer"
                 >
                   <option value="newest">Mới nhất</option>
                   <option value="priceAsc">Giá tăng dần</option>
@@ -968,7 +988,10 @@ const Category = () => {
             {hasActiveFilters && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {query ? (
-                  <ActivePill text={`Tìm: ${query}`} onClear={() => setQuery("")} />
+                  <ActivePill
+                    text={`Tìm: ${query}`}
+                    onClear={() => setQuery("")}
+                  />
                 ) : null}
                 {priceFrom !== 0 || priceTo !== 5_000_000_000 ? (
                   <ActivePill

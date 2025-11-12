@@ -313,7 +313,17 @@ export default function DashboardPage() {
   const [todayRevenue, setTodayRevenue] = useState(0);
   const [dailyRevenue, setDailyRevenue] = useState([]); // [{date, revenue}]
   const [quarterRevenue, setQuarterRevenue] = useState([]); // [{quarter, revenue}]
-  const [view, setView] = useState("day"); // "day" | "quarter"
+  const [view, setView] = useState("day"); // "day" | "quarter" | "range"
+  const [completedTransactions, setCompletedTransactions] = useState([]);
+
+  // Custom date range (default: first day of current month -> today)
+  const [rangeStart, setRangeStart] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return ymd(d);
+  });
+  const [rangeEnd, setRangeEnd] = useState(() => ymd(new Date()));
+  const [rangeRevenue, setRangeRevenue] = useState([]); // [{date, revenue}]
 
   useEffect(() => {
     let cancelled = false;
@@ -364,6 +374,7 @@ export default function DashboardPage() {
         if (cancelled) return;
 
         const completed = results.filter(isSuccess);
+        setCompletedTransactions(completed);
 
         // KPI: hôm nay
         const todayKey = ymd(new Date());
@@ -372,10 +383,10 @@ export default function DashboardPage() {
           .reduce((s, t) => s + pickAmount(t), 0);
         setTodayRevenue(todaySum);
 
-        // Theo ngày (14 ngày gần nhất)
+        // Theo ngày (15 ngày gần nhất)
         const days = [];
         const dayMap = new Map();
-        for (let i = 13; i >= 0; i--) {
+        for (let i = 14; i >= 0; i--) {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const key = ymd(d);
@@ -386,6 +397,7 @@ export default function DashboardPage() {
           days.push({ key, label, revenue: 0 });
           dayMap.set(key, days[days.length - 1]);
         }
+
         for (const t of completed) {
           const k = ymd(pickDate(t));
           const slot = dayMap.get(k);
@@ -424,6 +436,49 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  // Compute rangeRevenue whenever range or transactions change
+  useEffect(() => {
+    try {
+      const start = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        setRangeRevenue([]);
+        return;
+      }
+      // ensure start <= end
+      let s = start;
+      let e = end;
+      if (start > end) {
+        s = end;
+        e = start;
+      }
+      const days = [];
+      const dayMap = new Map();
+      const cur = new Date(s);
+      while (cur <= e) {
+        const key = ymd(cur);
+        const label = cur.toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        });
+        const obj = { key, label, revenue: 0 };
+        days.push(obj);
+        dayMap.set(key, obj);
+        cur.setDate(cur.getDate() + 1);
+      }
+      for (const t of completedTransactions) {
+        const k = ymd(pickDate(t));
+        const slot = dayMap.get(k);
+        if (slot) slot.revenue += pickAmount(t);
+      }
+      setRangeRevenue(
+        days.map(({ label, revenue }) => ({ date: label, revenue }))
+      );
+    } catch {
+      setRangeRevenue([]);
+    }
+  }, [completedTransactions, rangeStart, rangeEnd]);
 
   /* ===== KPI list ===== */
   const kpiList = useMemo(
@@ -556,9 +611,14 @@ export default function DashboardPage() {
   }, [dashStats]);
 
   const totalRevenueSum = useMemo(() => {
-    const list = view === "day" ? dailyRevenue : quarterRevenue;
+    const list =
+      view === "day"
+        ? dailyRevenue
+        : view === "quarter"
+        ? quarterRevenue
+        : rangeRevenue;
     return list.reduce((sum, i) => sum + (i.revenue || 0), 0);
-  }, [view, dailyRevenue, quarterRevenue]);
+  }, [view, dailyRevenue, quarterRevenue, rangeRevenue]);
 
   return (
     <div className="mx-auto max-w-7xl grid gap-6 text-slate-100">
@@ -583,48 +643,137 @@ export default function DashboardPage() {
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8">
         {/* Chart 1: Doanh thu */}
         <Card className={`col-span-1 lg:col-span-2 ${GLASS_CARD}`}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Doanh Thu
-              </CardTitle>
-              <div className="inline-flex rounded-xl border border-slate-700 bg-slate-800/60 p-1 text-sm shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setView("day")}
-                  aria-pressed={view === "day"}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition ${
-                    view === "day"
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-200 hover:bg-slate-700/50"
-                  }`}
-                >
-                  <CalendarRange className="h-4 w-4" />
-                  Theo ngày
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("quarter")}
-                  aria-pressed={view === "quarter"}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition ${
-                    view === "quarter"
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-200 hover:bg-slate-700/50"
-                  }`}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  Theo quý
-                </button>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              {/* Tiêu đề + mô tả nhỏ */}
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Doanh Thu
+                </CardTitle>
+                <p className="mt-1 text-xs text-slate-400">
+                  Tổng doanh thu{" "}
+                  {view === "day"
+                    ? "15 ngày gần nhất"
+                    : view === "quarter"
+                    ? "theo quý trong năm hiện tại"
+                    : "theo khoảng ngày bạn chọn"}
+                </p>
+              </div>
+
+              {/* Tổng + nút đổi view */}
+              <div className="flex flex-col items-end gap-2">
+                {/* Tổng doanh thu – làm nổi bật */}
+                <div className="inline-flex items-baseline gap-2 rounded-2xl bg-blue-500/90 px-4 py-2 shadow-lg  border border-white/10">
+                  <span className="text-[12px] font-semibold uppercase tracking-wide text-white/80">
+                    Tổng
+                  </span>
+                  <span className="text-lg sm:text-xl font-extrabold text-white whitespace-nowrap">
+                    {formatVND(totalRevenueSum)}
+                  </span>
+                </div>
+
+                {/* Nút chọn view */}
+                <div className="inline-flex rounded-xl border border-slate-700 bg-slate-800/60 p-1 text-xs sm:text-sm shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setView("day")}
+                    aria-pressed={view === "day"}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                      view === "day"
+                        ? "bg-blue-600 text-white shadow-sm shadow-blue-500/40"
+                        : "text-slate-200 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <CalendarRange className="h-4 w-4" />
+                    Theo ngày
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("quarter")}
+                    aria-pressed={view === "quarter"}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                      view === "quarter"
+                        ? "bg-blue-600 text-white shadow-sm shadow-blue-500/40"
+                        : "text-slate-200 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Theo quý
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("range")}
+                    aria-pressed={view === "range"}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                      view === "range"
+                        ? "bg-blue-600 text-white shadow-sm shadow-blue-500/40"
+                        : "text-slate-200 hover:bg-slate-700/50"
+                    }`}
+                  >
+                    <CalendarRange className="h-4 w-4" />
+                    Khoảng ngày
+                  </button>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-2">
-              Tổng:{" "}
-              <span className="font-semibold text-blue-300">
-                {formatVND(totalRevenueSum)}
-              </span>
-            </p>
+
+            {/* Chọn khoảng ngày */}
+            {view === "range" && (
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                <span>Từ</span>
+                <div className="relative">
+                  <input
+                    id="rangeStart"
+                    type="date"
+                    className="
+            rounded-md bg-slate-800/60 border border-slate-700
+            pl-2 pr-8 py-1 text-slate-100 text-xs cursor-pointer
+            appearance-none
+            [&::-webkit-calendar-picker-indicator]:hidden
+          "
+                    value={rangeStart}
+                    max={rangeEnd}
+                    onChange={(e) => setRangeStart(e.target.value)}
+                  />
+                  <CalendarRange
+                    className="h-4 w-4 text-white absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                    onClick={() => {
+                      const el = document.getElementById("rangeStart");
+                      if (el?.showPicker) el.showPicker();
+                      else el?.focus();
+                    }}
+                  />
+                </div>
+
+                <span>Đến</span>
+                <div className="relative">
+                  <input
+                    id="rangeEnd"
+                    type="date"
+                    className="
+            rounded-md bg-slate-800/60 border border-slate-700
+            pl-2 pr-8 py-1 text-slate-100 text-xs cursor-pointer
+            appearance-none
+            [&::-webkit-calendar-picker-indicator]:hidden
+          "
+                    value={rangeEnd}
+                    min={rangeStart}
+                    onChange={(e) => setRangeEnd(e.target.value)}
+                  />
+                  <CalendarRange
+                    className="h-4 w-4 text-white absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
+                    onClick={() => {
+                      const el = document.getElementById("rangeEnd");
+                      if (el?.showPicker) el.showPicker();
+                      else el?.focus();
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </CardHeader>
+
           <CardContent>
             <div className="h-72">
               {loadingRevenue ? (
@@ -677,7 +826,7 @@ export default function DashboardPage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : (
+              ) : view === "quarter" ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={quarterRevenue} barCategoryGap={24}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
@@ -723,6 +872,52 @@ export default function DashboardPage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={rangeRevenue} barCategoryGap={16}>
+                    <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
+                    <XAxis
+                      dataKey="date"
+                      tickMargin={8}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
+                    <YAxis
+                      tickFormatter={compactNumber}
+                      width={60}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
+                    <ChartTooltip
+                      formatter={(value) => [formatVND(value), "Doanh thu"]}
+                      labelFormatter={(l) => `Ngày ${l}`}
+                      contentStyle={darkTip}
+                      itemStyle={darkItem}
+                      labelStyle={darkLabel}
+                    />
+                    <Legend />
+                    <defs>
+                      <linearGradient id="blueBar" x1="0" y1="0" x2="0" y2="1">
+                        <stop
+                          offset="0%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.95}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.7}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <Bar
+                      dataKey="revenue"
+                      name="Doanh thu"
+                      radius={[8, 8, 0, 0]}
+                      fill="url(#blueBar)"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </CardContent>
@@ -740,7 +935,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("car")}
                 aria-pressed={brandMode === "car"}
-                className={`rounded-lg px-3 py-1.5 ${
+                className={`rounded-lg px-3 py-1.5 cursor-pointer ${
                   brandMode === "car"
                     ? "bg-blue-600 text-white"
                     : "text-slate-200 hover:bg-slate-700/50"
@@ -752,7 +947,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("motorbike")}
                 aria-pressed={brandMode === "motorbike"}
-                className={`rounded-lg px-3 py-1.5 ${
+                className={`rounded-lg px-3 py-1.5 cursor-pointer ${
                   brandMode === "motorbike"
                     ? "bg-blue-600 text-white"
                     : "text-slate-200 hover:bg-slate-700/50"
@@ -764,7 +959,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("battery")}
                 aria-pressed={brandMode === "battery"}
-                className={`rounded-lg px-3 py-1.5 ${
+                className={`rounded-lg px-3 py-1.5 cursor-pointer ${
                   brandMode === "battery"
                     ? "bg-blue-600 text-white"
                     : "text-slate-200 hover:bg-slate-700/50"
