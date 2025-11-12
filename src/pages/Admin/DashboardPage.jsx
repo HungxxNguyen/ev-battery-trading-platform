@@ -110,22 +110,38 @@ function pickAmount(tx) {
   }
   return 0;
 }
-// Chỉ coi là thanh toán thành công khi paymentStatus === 1
+
+// Chỉ tính doanh thu khi giao dịch thành công.
+// Ưu tiên mã số (1) nếu có; fallback chuỗi "success"
 function isSuccess(tx) {
-  const raw = tx?.status ?? tx?.paymentStatus;
+  const candidates = [
+    tx?.status,
+    tx?.paymentStatus,
+    tx?.Status,
+    tx?.PaymentStatus,
+  ];
 
-  if (typeof raw === "number") return raw === 1;
+  for (const s of candidates) {
+    if (typeof s === "number") return s === 1;
 
-  if (typeof raw === "string") {
-    const s = raw.trim();
-    // nếu backend trả "1" dạng string thì vẫn tính
-    if (/^\d+$/.test(s)) return Number(s) === 1;
-    // Không tính các chuỗi "Success"/"Completed" nữa theo yêu cầu
-    return false;
+    if (typeof s === "string") {
+      const v = s.trim();
+
+      // Nếu API trả "1" dạng string
+      if (/^\d+$/.test(v)) return Number(v) === 1;
+
+      // Chuỗi mô tả thành công
+      const t = v.toLowerCase();
+      if (
+        t.includes("success")
+      ) {
+        return true;
+      }
+    }
   }
-
   return false;
 }
+
 
 function pickDate(tx) {
   const cand = ["paidAt", "createdAt", "transactionDate", "timestamp", "date", "created_on"];
