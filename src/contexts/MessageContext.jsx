@@ -82,6 +82,42 @@ const normalizeInboundMessage = (msg) => {
   };
 };
 
+const unwrapMessagePayload = (msg) => {
+  if (!msg || typeof msg !== "object") return null;
+  if (msg.payload && typeof msg.payload === "object") {
+    return msg.payload;
+  }
+  return msg;
+};
+
+const resolveMessageIdentity = (msg, envelope = null) => {
+  if (!msg || typeof msg !== "object") return null;
+  const baseId =
+    msg.id ??
+    msg.messageId ??
+    msg.chatMessageId ??
+    msg._id ??
+    msg.clientMessageId ??
+    msg.clientTempId ??
+    msg.tempId ??
+    null;
+  if (!baseId) return null;
+  const threadId =
+    msg.chatThreadId ??
+    msg.threadId ??
+    msg.chatThread?.id ??
+    msg.conversationId ??
+    (envelope && typeof envelope === "object"
+      ? envelope.chatThreadId ??
+        envelope.threadId ??
+        envelope.chatThread?.id ??
+        envelope.conversationId
+      : null);
+  return threadId ? `${threadId}:${baseId}` : String(baseId);
+};
+
+const MAX_TRACKED_MESSAGE_IDS = 500;
+
 const extractThreadMessages = (thread) => {
   if (!thread || typeof thread !== "object") return [];
   if (Array.isArray(thread.messages)) return thread.messages;
@@ -163,9 +199,30 @@ export const MessageProvider = ({ children }) => {
   const [lastSeenAt, setLastSeenAt] = useState(null);
   const connectionRef = useRef(null);
   const lastSeenAtRef = useRef(null);
+  const seenMessageIdsRef = useRef(new Set());
+  const seenMessageOrderRef = useRef([]);
 
-  const addMessage = useCallback((msg) => {
-    setMessages((prev) => [...prev, msg]);
+  const addMessage = useCallback((msg, envelope = null) => {
+    const payload = unwrapMessagePayload(msg);
+    if (!payload) return false;
+    const identity = resolveMessageIdentity(payload, envelope || msg);
+    if (identity) {
+      const seen = seenMessageIdsRef.current;
+      if (seen.has(identity)) {
+        return false;
+      }
+      seen.add(identity);
+      const order = seenMessageOrderRef.current;
+      order.push(identity);
+      if (order.length > MAX_TRACKED_MESSAGE_IDS) {
+        const oldest = order.shift();
+        if (oldest) {
+          seen.delete(oldest);
+        }
+      }
+    }
+    setMessages((prev) => [...prev, payload]);
+    return true;
   }, []);
 
   const shouldRaiseUnread = useCallback((incomingIso) => {
@@ -340,18 +397,22 @@ export const MessageProvider = ({ children }) => {
 
     // Message handler
     newConnection.on("ReceivedMessage", (msg) => {
-      console.log("Message received:", msg);
-      console.log("payload received:", msg?.payload);
-
-      if (msg?.payload) {
-        addMessage(msg.payload);
-      } else {
-        addMessage(msg);
+      const raw = unwrapMessagePayload(msg);
+      if (!raw) {
+        console.warn("Received malformed message payload:", msg);
+        return;
       }
+
+      const appended = addMessage(raw, msg);
+      if (!appended) {
+        return;
+      }
+
+      console.log("Message received:", msg);
+      console.log("payload received:", raw);
 
       try {
         // Best-effort extract senderId to avoid marking our own outbound echoes as unread
-        const raw = msg?.payload ? msg.payload : msg;
         const normalized = normalizeInboundMessage(raw);
         const sid =
           normalized?.senderId ??
