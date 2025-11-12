@@ -110,13 +110,23 @@ function pickAmount(tx) {
   }
   return 0;
 }
-function isCompleted(tx) {
-  const s = String(tx?.status ?? tx?.paymentStatus ?? "").toLowerCase();
-  if (s.includes("success") || s.includes("completed") || s.includes("paid") || s === "done") return true;
-  if (typeof tx?.isPaid === "boolean") return tx.isPaid;
-  if (typeof tx?.paymentStatus === "number") return tx.paymentStatus === 1;
-  return true;
+// Chỉ coi là thanh toán thành công khi paymentStatus === 1
+function isSuccess(tx) {
+  const raw = tx?.status ?? tx?.paymentStatus;
+
+  if (typeof raw === "number") return raw === 1;
+
+  if (typeof raw === "string") {
+    const s = raw.trim();
+    // nếu backend trả "1" dạng string thì vẫn tính
+    if (/^\d+$/.test(s)) return Number(s) === 1;
+    // Không tính các chuỗi "Success"/"Completed" nữa theo yêu cầu
+    return false;
+  }
+
+  return false;
 }
+
 function pickDate(tx) {
   const cand = ["paidAt", "createdAt", "transactionDate", "timestamp", "date", "created_on"];
   for (const k of cand) {
@@ -294,7 +304,7 @@ export default function DashboardPage() {
 
         if (cancelled) return;
 
-        const completed = results.filter(isCompleted);
+        const completed = results.filter(isSuccess);
 
         // KPI: hôm nay
         const todayKey = ymd(new Date());
