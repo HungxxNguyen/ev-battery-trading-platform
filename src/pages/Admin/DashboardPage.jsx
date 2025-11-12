@@ -1,17 +1,18 @@
 // ===============================
 // File: src/pages/Admin/DashboardPage.jsx
-// (Keep 2 KPI cards only: Tổng User & Doanh thu hôm nay)
 // ===============================
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/Card/card";
-// ❌ Bỏ listingService vì không còn dùng KPI "Bài chờ duyệt"
-// import listingService from "../../services/apis/listingApi";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/Card/card";
+
 import adminService from "../../services/apis/adminApi";
+import dashboardService from "../../services/apis/dashboardApi";
+import transactionService from "../../services/apis/transactionApi";
+import listingService from "../../services/apis/listingApi";
+import brandService from "../../services/apis/brandApi";
+
+import { performApiRequest } from "../../utils/apiUtils";
+import { API_ENDPOINTS_LISTING } from "../../constants/apiEndPoint";
+
 import {
   XAxis,
   YAxis,
@@ -27,11 +28,11 @@ import {
 } from "recharts";
 import { BarChart3, CalendarRange } from "lucide-react";
 
-// ===== Colors (outside component) =====
-const CORE_COLORS = ["#2563EB", "#F59E0B", "#22C55E"]; // blue, orange, green
-const OTHERS_COLOR = "#9CA3AF"; // gray
-const BAR_NEW_COLOR = "#10B981"; // green
-const BAR_USED_COLOR = "#EF4444"; // red
+/* ===== Colors & styles ===== */
+const CORE_COLORS = ["#2563EB", "#F59E0B", "#22C55E"];
+const OTHERS_COLOR = "#9CA3AF";
+const BAR_NEW_COLOR = "#10B981";
+const BAR_USED_COLOR = "#EF4444";
 
 const GLASS_CARD =
   "bg-slate-900/40 border border-slate-800/60 backdrop-blur-xl text-slate-100";
@@ -40,23 +41,26 @@ const KPI_CARD_STYLES = [
   "bg-gradient-to-br from-amber-500/90 via-orange-500/90 to-rose-500/90",
 ];
 
-// ===== Helpers =====
-const formatKpiValue = (k) =>
-  k.label.includes("Doanh thu")
-    ? `${k.value.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}m₫`
-    : k.value.toLocaleString("vi-VN");
-
+/* ===== Utilities ===== */
 function formatVND(value) {
+  const n = Number(value) || 0;
   try {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
       maximumFractionDigits: 0,
-    }).format(value || 0);
-  } catch (e) {
-    return `${value}`;
+    }).format(n);
+  } catch {
+    return `${n}`;
   }
 }
+
+const formatKpiValue = (k) => {
+  const n = Number(k?.value) || 0;
+  return k?.label?.toLowerCase?.().includes("doanh thu")
+    ? formatVND(n) // Hiển thị VND đầy đủ, không rút gọn mđ
+    : n.toLocaleString("vi-VN");
+};
 
 function compactNumber(value) {
   try {
@@ -64,7 +68,7 @@ function compactNumber(value) {
       notation: "compact",
       maximumFractionDigits: 1,
     }).format(value || 0);
-  } catch (e) {
+  } catch {
     return `${value}`;
   }
 }
@@ -74,14 +78,57 @@ function percent(value, total) {
   return (value / total) * 100;
 }
 
-// Deterministic pseudo-random generator (demo-only)
-function seededRevenue(seed) {
-  const x = Math.sin(seed) * 10000;
-  const base = Math.floor((x - Math.floor(x)) * 9_000_000) + 1_000_000; // 1m - 10m
-  return base + (seed % 5) * 350_000; // slight trend
+function extractItems(payload) {
+  const p = payload?.data ?? payload;
+  if (Array.isArray(p)) return p;
+  if (Array.isArray(p?.items)) return p.items;
+  if (Array.isArray(p?.data)) return p.data;
+  if (p && typeof p === "object") {
+    for (const k of Object.keys(p)) if (Array.isArray(p[k])) return p[k];
+  }
+  return [];
 }
 
-// ===== Tooltip style =====
+function ymd(d) {
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+function getQuarter(d) {
+  return Math.floor(d.getMonth() / 3) + 1;
+}
+
+/* ===== Transaction helpers (field detection) ===== */
+function pickAmount(tx) {
+  const cand = ["amount", "totalAmount", "grandTotal", "total", "price", "value", "finalAmount"];
+  for (const k of cand) {
+    if (tx && typeof tx[k] !== "undefined") {
+      const n = Number(tx[k]);
+      if (!Number.isNaN(n)) return n;
+    }
+  }
+  return 0;
+}
+function isCompleted(tx) {
+  const s = String(tx?.status ?? tx?.paymentStatus ?? "").toLowerCase();
+  if (s.includes("success") || s.includes("completed") || s.includes("paid") || s === "done") return true;
+  if (typeof tx?.isPaid === "boolean") return tx.isPaid;
+  if (typeof tx?.paymentStatus === "number") return tx.paymentStatus === 1;
+  return true;
+}
+function pickDate(tx) {
+  const cand = ["paidAt", "createdAt", "transactionDate", "timestamp", "date", "created_on"];
+  for (const k of cand) {
+    if (tx?.[k]) {
+      const d = new Date(tx[k]);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return new Date();
+}
+
+/* ===== Tooltip theme ===== */
 const darkTip = {
   backgroundColor: "#0f172a",
   border: "1px solid #334155",
@@ -93,8 +140,85 @@ const darkTip = {
 const darkLabel = { color: "#e5e7eb" };
 const darkItem = { color: "#e5e7eb" };
 
+/* ===== Brand / Listing helpers ===== */
+function resolveBrandName(listing, brandIdToMeta) {
+  const brandId =
+    listing?.brandId ??
+    listing?.brandID ??
+    listing?.brand?.id ??
+    listing?.brand?.brandId ??
+    listing?.brand?.Id;
+
+  const brandName =
+    listing?.brand?.name ??
+    listing?.brandName ??
+    (brandId ? brandIdToMeta.get(brandId)?.name : undefined);
+
+  return brandName || "Unknown";
+}
+function resolveBucketByCategory(listing, brandIdToMeta) {
+  const cat = String(listing?.category || listing?.type || "").toLowerCase();
+  if (cat.includes("car")) return "car";
+  if (cat.includes("bike")) return "motorbike";
+  if (cat.includes("battery")) return "battery";
+
+  // Fallback theo brand.type
+  const brandId =
+    listing?.brandId ??
+    listing?.brandID ??
+    listing?.brand?.id ??
+    listing?.brand?.brandId ??
+    listing?.brand?.Id;
+  const t = (brandId ? brandIdToMeta.get(brandId)?.type : "") || "";
+  const tl = String(t).toLowerCase();
+  if (tl.includes("car")) return "car";
+  if (tl.includes("bike")) return "motorbike";
+  if (tl.includes("battery")) return "battery";
+
+  return null;
+}
+function top3WithOthers(data) {
+  const sorted = [...data].sort((a, b) => b.count - a.count);
+  const top3 = sorted.slice(0, 3);
+  const othersCount = sorted.slice(3).reduce((s, i) => s + (i.count || 0), 0);
+  return othersCount > 0 ? [...top3, { brand: "Others", count: othersCount }] : top3;
+}
+
+/* ===== Fallback fetchers ===== */
+async function safeGetAllListings() {
+  // Ưu tiên dùng listingService.getAllListingsAllPages nếu có
+  if (typeof listingService.getAllListingsAllPages === "function") {
+    return listingService.getAllListingsAllPages({ pageSize: 200, maxPages: 30 });
+  }
+  // Fallback: gọi trực tiếp endpoint với phân trang
+  const all = [];
+  for (let page = 1; page <= 30; page++) {
+    const res = await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
+      method: "GET",
+      params: { pageIndex: page, pageSize: 200 },
+    });
+    const items = extractItems(res);
+    all.push(...items);
+    if (!items || items.length < 200) break;
+  }
+  return all;
+}
+async function safeGetBrandMap() {
+  if (typeof brandService.getBrandsAsMap === "function") {
+    return brandService.getBrandsAsMap();
+  }
+  const res = await brandService.getBrands();
+  const items = extractItems(res);
+  return new Map(
+    items.map((b) => [
+      b?.id ?? b?.brandId ?? b?.Id,
+      { name: b?.name ?? b?.brandName ?? "Unknown", type: b?.type ?? b?.category ?? "" },
+    ])
+  );
+}
+
 export default function DashboardPage() {
-  // ====== KPI ======
+  /* ===== KPI: Tổng user ===== */
   const [userCount, setUserCount] = useState(0);
   useEffect(() => {
     let cancelled = false;
@@ -108,8 +232,118 @@ export default function DashboardPage() {
         else if (typeof payload?.count === "number") total = payload.count;
         else if (Array.isArray(res?.data)) total = res.data.length;
         setUserCount(Number(total) || 0);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* ===== Listing dashboard (new/old counts) ===== */
+  const [dashStats, setDashStats] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await dashboardService.getListingDashboard();
+        if (cancelled) return;
+        if (res?.success && res?.data?.error === 0) {
+          setDashStats(res.data.data || null);
+        }
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* ===== Revenue from transactions ===== */
+  const [loadingRevenue, setLoadingRevenue] = useState(true);
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [dailyRevenue, setDailyRevenue] = useState([]); // [{date, revenue}]
+  const [quarterRevenue, setQuarterRevenue] = useState([]); // [{quarter, revenue}]
+  const [view, setView] = useState("day"); // "day" | "quarter"
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingRevenue(true);
+      try {
+        // Lấy tất cả users (gom trang)
+        const users =
+          typeof adminService.getAllUsersAllPages === "function"
+            ? await adminService.getAllUsersAllPages({ pageSize: 200, maxPages: 20 })
+            : [];
+
+        const userIds = users
+          .map((u) => u?.id ?? u?.userId ?? u?.userID ?? u?.Id ?? u?.ID ?? u?.UserId)
+          .filter(Boolean);
+
+        // Lấy toàn bộ giao dịch cho tất cả users (batch)
+        const getAllTx = transactionService.getAllByUserId || transactionService.getAllTransactionsByUserId;
+        const results = [];
+        if (getAllTx && userIds.length) {
+          for (let i = 0; i < userIds.length; i += 6) {
+            const batch = userIds.slice(i, i + 6);
+            const settled = await Promise.allSettled(
+              batch.map((uid) => getAllTx.call(transactionService, uid, { pageSize: 200, maxPages: 5 }))
+            );
+            settled.forEach((s) => s.status === "fulfilled" && Array.isArray(s.value) && results.push(...s.value));
+          }
+        }
+
+        if (cancelled) return;
+
+        const completed = results.filter(isCompleted);
+
+        // KPI: hôm nay
+        const todayKey = ymd(new Date());
+        const todaySum = completed
+          .filter((t) => ymd(pickDate(t)) === todayKey)
+          .reduce((s, t) => s + pickAmount(t), 0);
+        setTodayRevenue(todaySum);
+
+        // Theo ngày (14 ngày gần nhất)
+        const days = [];
+        const dayMap = new Map();
+        for (let i = 13; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const key = ymd(d);
+          const label = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+          days.push({ key, label, revenue: 0 });
+          dayMap.set(key, days[days.length - 1]);
+        }
+        for (const t of completed) {
+          const k = ymd(pickDate(t));
+          const slot = dayMap.get(k);
+          if (slot) slot.revenue += pickAmount(t);
+        }
+        setDailyRevenue(days.map(({ label, revenue }) => ({ date: label, revenue })));
+
+        // Theo quý (năm hiện tại)
+        const y = new Date().getFullYear();
+        const qMap = new Map([
+          ["Q1", 0],
+          ["Q2", 0],
+          ["Q3", 0],
+          ["Q4", 0],
+        ]);
+        for (const t of completed) {
+          const d = pickDate(t);
+          if (d.getFullYear() !== y) continue;
+          const q = `Q${getQuarter(d)}`;
+          qMap.set(q, qMap.get(q) + pickAmount(t));
+        }
+        setQuarterRevenue([
+          { quarter: `Q1 ${y}`, revenue: qMap.get("Q1") },
+          { quarter: `Q2 ${y}`, revenue: qMap.get("Q2") },
+          { quarter: `Q3 ${y}`, revenue: qMap.get("Q3") },
+          { quarter: `Q4 ${y}`, revenue: qMap.get("Q4") },
+        ]);
       } catch {
-        // keep 0
+      } finally {
+        if (!cancelled) setLoadingRevenue(false);
       }
     })();
     return () => {
@@ -117,149 +351,102 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // ❌ Bỏ KPI "Bài chờ duyệt" & "User bị báo xấu"
+  /* ===== KPI list ===== */
   const kpiList = useMemo(
     () => [
       { label: "Tổng User", value: userCount },
-      { label: "Doanh thu hôm nay", value: 92.4, sub: "+18% vs hôm qua" },
+      { label: "Doanh thu hôm nay", value: todayRevenue }, // VND đầy đủ
     ],
-    [userCount]
+    [userCount, todayRevenue]
   );
 
-  // ====== Demo data for charts ======
-  const [view, setView] = useState("day"); // "day" | "quarter"
+  /* ===== Pie: số bài đăng theo brand ===== */
   const [brandMode, setBrandMode] = useState("car"); // "car" | "motorbike" | "battery"
+  const [brandLoading, setBrandLoading] = useState(true);
+  const [brandBreakdown, setBrandBreakdown] = useState({ car: [], motorbike: [], battery: [] });
 
-  const dailyData = useMemo(() => {
-    const arr = [];
-    const today = new Date();
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const label = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
-      const key = Number(`${d.getFullYear()}${d.getMonth() + 1}${d.getDate()}`);
-      arr.push({ date: label, revenue: seededRevenue(key) });
-    }
-    return arr;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setBrandLoading(true);
+      try {
+        const [brandMap, listings] = await Promise.all([safeGetBrandMap(), safeGetAllListings()]);
+
+        const buckets = { car: new Map(), motorbike: new Map(), battery: new Map() };
+        for (const l of listings) {
+          const bucket = resolveBucketByCategory(l, brandMap);
+          if (!bucket) continue;
+          const brandName = resolveBrandName(l, brandMap);
+          buckets[bucket].set(brandName, (buckets[bucket].get(brandName) || 0) + 1);
+        }
+        const toArr = (m) =>
+          Array.from(m.entries())
+            .map(([brand, count]) => ({ brand, count }))
+            .sort((a, b) => b.count - a.count);
+
+        if (!cancelled) {
+          setBrandBreakdown({
+            car: toArr(buckets.car),
+            motorbike: toArr(buckets.motorbike),
+            battery: toArr(buckets.battery),
+          });
+        }
+      } catch {
+      } finally {
+        if (!cancelled) setBrandLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const quarterlyData = useMemo(() => {
-    const year = new Date().getFullYear();
-    return [
-      { quarter: `Q1 ${year}`, revenue: 78_500_000 },
-      { quarter: `Q2 ${year}`, revenue: 91_200_000 },
-      { quarter: `Q3 ${year}`, revenue: 86_400_000 },
-      { quarter: `Q4 ${year}`, revenue: 102_300_000 },
-    ];
-  }, []);
-
-  const totalRevenueSum = useMemo(() => {
-    const list = view === "day" ? dailyData : quarterlyData;
-    return list.reduce((sum, i) => sum + (i.revenue || 0), 0);
-  }, [view, dailyData, quarterlyData]);
-
-  // ====== Demo posts for aggregation ======
-  const demoPosts = useMemo(
-    () => [
-      // Cars
-      { id: 1, category: "car", brand: "VinFast", condition: "new", expiresAt: "2026-01-10" },
-      { id: 2, category: "car", brand: "Tesla", condition: "used", expiresAt: "2025-12-31" },
-      { id: 3, category: "car", brand: "Hyundai", condition: "new", expiresAt: "2025-08-01" },
-      { id: 4, category: "car", brand: "Kia", condition: "used", expiresAt: "2025-11-20" },
-      { id: 5, category: "car", brand: "BYD", condition: "new", expiresAt: "2025-12-15" },
-      { id: 6, category: "car", brand: "Nissan", condition: "used", expiresAt: "2024-10-01" },
-      { id: 7, category: "car", brand: "VinFast", condition: "used", expiresAt: "2026-03-01" },
-      // Motorbikes
-      { id: 11, category: "motorbike", brand: "Honda", condition: "new", expiresAt: "2026-02-01" },
-      { id: 12, category: "motorbike", brand: "Yamaha", condition: "used", expiresAt: "2025-10-10" },
-      { id: 13, category: "motorbike", brand: "VinFast", condition: "new", expiresAt: "2025-12-31" },
-      { id: 14, category: "motorbike", brand: "Piaggio", condition: "used", expiresAt: "2026-01-20" },
-      { id: 15, category: "motorbike", brand: "SYM", condition: "new", expiresAt: "2025-11-25" },
-      { id: 16, category: "motorbike", brand: "Suzuki", condition: "used", expiresAt: "2025-07-01" },
-      // Batteries
-      { id: 21, category: "battery", brand: "CATL", condition: "new", expiresAt: "2026-05-01" },
-      { id: 22, category: "battery", brand: "Panasonic", condition: "used", expiresAt: "2025-09-01" },
-      { id: 23, category: "battery", brand: "LG Energy", condition: "new", expiresAt: "2025-12-30" },
-      { id: 24, category: "battery", brand: "Samsung SDI", condition: "used", expiresAt: "2026-03-15" },
-      { id: 25, category: "battery", brand: "BYD", condition: "new", expiresAt: "2025-12-01" },
-      { id: 26, category: "battery", brand: "VinES", condition: "used", expiresAt: "2025-10-20" },
-    ],
-    []
-  );
-
-  const now = new Date();
-  const isActivePost = (p) => {
-    if (!p?.expiresAt) return true;
-    return new Date(p.expiresAt) >= now;
-  };
-
-  // ===== Pie data (keep original slice order), legend sorted =====
-  const rawBrandData = useMemo(() => {
-    const list = demoPosts.filter((p) => p.category === brandMode);
-    const map = new Map();
-    for (const p of list) map.set(p.brand, (map.get(p.brand) || 0) + 1);
-    const arr = Array.from(map.entries()).map(([brand, count]) => ({ brand, count }));
-    arr.sort((a, b) => b.count - a.count);
-    return arr;
-  }, [demoPosts, brandMode]);
-
-  function top3WithOthers(data) {
-    const sorted = [...data].sort((a, b) => b.count - a.count);
-    const top3 = sorted.slice(0, 3);
-    const othersCount = sorted.slice(3).reduce((s, i) => s + (i.count || 0), 0);
-    return othersCount > 0 ? [...top3, { brand: "Others", count: othersCount }] : top3;
-  }
-
-  // Keep slice order as returned by top3WithOthers
+  const rawBrandData = useMemo(() => brandBreakdown[brandMode] || [], [brandBreakdown, brandMode]);
   const pieData = useMemo(() => top3WithOthers(rawBrandData), [rawBrandData]);
-  const pieTotal = useMemo(() => pieData.reduce((s, i) => s + i.count, 0), [pieData]);
+  const pieCleanData = useMemo(() => pieData.filter((d) => (d.count || 0) > 0), [pieData]);
+  const pieTotal = useMemo(() => pieCleanData.reduce((s, i) => s + i.count, 0), [pieCleanData]);
 
-  // Assign colors to brands following the slice order
   const brandColorMap = useMemo(() => {
     const m = new Map();
     let colorIdx = 0;
-    for (const item of pieData) {
-      const color =
-        item.brand === "Others"
-          ? OTHERS_COLOR
-          : CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1];
+    for (const item of pieCleanData) {
+      const color = item.brand === "Others" ? OTHERS_COLOR : CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1];
       if (item.brand !== "Others") colorIdx += 1;
       m.set(item.brand, color);
     }
     return m;
-  }, [pieData]);
+  }, [pieCleanData]);
 
-  // Remove zero values and add small gap to avoid flat join
-  const pieCleanData = useMemo(
-    () => pieData.filter((d) => (d.count || 0) > 0),
-    [pieData]
+  const legendPayload = useMemo(
+    () =>
+      [...pieCleanData]
+        .sort((a, b) => b.count - a.count)
+        .map((item) => ({
+          value: item.brand,
+          id: item.brand,
+          type: "circle",
+          color: brandColorMap.get(item.brand),
+        })),
+    [pieCleanData, brandColorMap]
   );
 
-  // Legend sorted by percentage (desc) but uses brandColorMap colors
-  const legendPayload = useMemo(() => {
-    const sorted = [...pieCleanData].sort((a, b) => b.count - a.count);
-    return sorted.map((item) => ({
-      value: item.brand,
-      id: item.brand,
-      type: "circle",
-      color: brandColorMap.get(item.brand),
-    }));
-  }, [pieCleanData, brandColorMap]);
-
-  // ===== Bar data: active posts only =====
+  /* ===== Bar: bài đăng theo loại & tình trạng ===== */
   const postsTypeConditionData = useMemo(() => {
-    const cats = [
-      { key: "car", label: "Xe hơi" },
-      { key: "motorbike", label: "Xe máy" },
-      { key: "battery", label: "Pin điện" },
-    ];
-    return cats.map(({ key, label }) => {
-      const list = demoPosts.filter((p) => p.category === key && isActivePost(p));
-      const newCount = list.filter((p) => p.condition === "new").length;
-      const usedCount = list.filter((p) => p.condition === "used").length;
-      return { type: label, new: newCount, used: usedCount };
-    });
-  }, [demoPosts]);
+    if (dashStats) {
+      const d = dashStats;
+      return [
+        { type: "Xe hơi", new: Number(d.totalNewCars || 0), used: Number(d.totalOldCars || 0) },
+        { type: "Xe máy", new: Number(d.totalNewBikes || 0), used: Number(d.totalOldBikes || 0) },
+        { type: "Pin điện", new: Number(d.totalNewBatteries || 0), used: Number(d.totalOldBatteries || 0) },
+      ];
+    }
+    return [];
+  }, [dashStats]);
+
+  const totalRevenueSum = useMemo(() => {
+    const list = view === "day" ? dailyRevenue : quarterRevenue;
+    return list.reduce((sum, i) => sum + (i.revenue || 0), 0);
+  }, [view, dailyRevenue, quarterRevenue]);
 
   return (
     <div className="mx-auto max-w-7xl grid gap-6 text-slate-100">
@@ -272,14 +459,13 @@ export default function DashboardPage() {
           >
             <div className="text-sm opacity-90">{k.label}</div>
             <div className="text-3xl font-extrabold mt-2">{formatKpiValue(k)}</div>
-            {k.sub ? <div className="text-xs opacity-90 mt-2">{k.sub}</div> : null}
           </div>
         ))}
       </section>
 
       {/* Charts */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8">
-        {/* Chart 1: Revenue */}
+        {/* Chart 1: Doanh thu */}
         <Card className={`col-span-1 lg:col-span-2 ${GLASS_CARD}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -318,9 +504,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                {view === "day" ? (
-                  <BarChart data={dailyData} barCategoryGap={16}>
+              {loadingRevenue ? (
+                <div className="h-full grid place-items-center text-slate-400">Đang tải dữ liệu...</div>
+              ) : view === "day" ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyRevenue} barCategoryGap={16}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
                     <XAxis dataKey="date" tickMargin={8} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
                     <YAxis tickFormatter={compactNumber} width={60} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
@@ -340,8 +528,10 @@ export default function DashboardPage() {
                     </defs>
                     <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
                   </BarChart>
-                ) : (
-                  <BarChart data={quarterlyData} barCategoryGap={24}>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={quarterRevenue} barCategoryGap={24}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
                     <XAxis dataKey="quarter" tickMargin={8} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
                     <YAxis tickFormatter={compactNumber} width={60} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
@@ -361,13 +551,13 @@ export default function DashboardPage() {
                     </defs>
                     <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
                   </BarChart>
-                )}
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Chart 2: Posts by Brand (Pie) */}
+        {/* Chart 2: Pie theo brand */}
         <Card className={GLASS_CARD}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -403,55 +593,61 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 8, right: 16, bottom: 36, left: 16 }}>
-                  <ChartTooltip
-                    formatter={(v, name) => {
-                      const val = Number(v);
-                      const pct = percent(val, pieTotal).toFixed(1) + "%";
-                      return [`${val} bài đăng (${pct})`, name];
-                    }}
-                    contentStyle={darkTip}
-                    itemStyle={darkItem}
-                    labelStyle={darkLabel}
-                  />
-                  <Legend
-                    layout="horizontal"
-                    verticalAlign="bottom"
-                    align="center"
-                    iconType="circle"
-                    payload={legendPayload}
-                    wrapperStyle={{ paddingTop: 8, color: "#e5e7eb" }}
-                  />
-                  <Pie
-                    data={pieCleanData}
-                    dataKey="count"
-                    nameKey="brand"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={110}
-                    innerRadius={70}
-                    paddingAngle={2}
-                    minAngle={1}
-                    label={false}
-                    labelLine={false}
-                  >
-                    {pieCleanData.map((entry) => (
-                      <Cell
-                        key={`slice-${entry.brand}`}
-                        fill={brandColorMap.get(entry.brand)}
-                        stroke="#111827"
-                        strokeWidth={1}
-                      />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+              {brandLoading ? (
+                <div className="h-full grid place-items-center text-slate-400">
+                  Đang tải thương hiệu & bài đăng...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 8, right: 16, bottom: 36, left: 16 }}>
+                    <ChartTooltip
+                      formatter={(v, name) => {
+                        const val = Number(v);
+                        const pct = percent(val, pieTotal).toFixed(1) + "%";
+                        return [`${val} bài đăng (${pct})`, name];
+                      }}
+                      contentStyle={darkTip}
+                      itemStyle={darkItem}
+                      labelStyle={darkLabel}
+                    />
+                    <Legend
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      align="center"
+                      iconType="circle"
+                      payload={legendPayload}
+                      wrapperStyle={{ paddingTop: 8, color: "#e5e7eb" }}
+                    />
+                    <Pie
+                      data={pieCleanData}
+                      dataKey="count"
+                      nameKey="brand"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={110}
+                      innerRadius={70}
+                      paddingAngle={2}
+                      minAngle={1}
+                      label={false}
+                      labelLine={false}
+                    >
+                      {pieCleanData.map((entry) => (
+                        <Cell
+                          key={`slice-${entry.brand}`}
+                          fill={brandColorMap.get(entry.brand)}
+                          stroke="#111827"
+                          strokeWidth={1}
+                        />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Chart 3: Posts by Type & Condition (Bar) */}
+        {/* Chart 3: Bài đăng theo loại & tình trạng */}
         <Card className={`col-span-1 lg:col-span-3 ${GLASS_CARD}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
