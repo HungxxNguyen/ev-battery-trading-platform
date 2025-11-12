@@ -262,7 +262,16 @@ export default function DashboardPage() {
   const [todayRevenue, setTodayRevenue] = useState(0);
   const [dailyRevenue, setDailyRevenue] = useState([]); // [{date, revenue}]
   const [quarterRevenue, setQuarterRevenue] = useState([]); // [{quarter, revenue}]
-  const [view, setView] = useState("day"); // "day" | "quarter"
+  const [view, setView] = useState("day"); // "day" | "quarter" | "range"
+  const [completedTransactions, setCompletedTransactions] = useState([]);
+  // Custom date range (default: first day of current month -> today)
+  const [rangeStart, setRangeStart] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return ymd(d);
+  });
+  const [rangeEnd, setRangeEnd] = useState(() => ymd(new Date()));
+  const [rangeRevenue, setRangeRevenue] = useState([]); // [{date, revenue}] for custom range
 
   useEffect(() => {
     let cancelled = false;
@@ -295,6 +304,7 @@ export default function DashboardPage() {
         if (cancelled) return;
 
         const completed = results.filter(isCompleted);
+        setCompletedTransactions(completed);
 
         // KPI: hôm nay
         const todayKey = ymd(new Date());
@@ -350,6 +360,44 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  // Compute rangeRevenue whenever range or transactions change
+  useEffect(() => {
+    try {
+      const start = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        setRangeRevenue([]);
+        return;
+      }
+      // ensure start <= end
+      let s = start;
+      let e = end;
+      if (start > end) {
+        s = end;
+        e = start;
+      }
+      const days = [];
+      const dayMap = new Map();
+      const cur = new Date(s);
+      while (cur <= e) {
+        const key = ymd(cur);
+        const label = cur.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+        const obj = { key, label, revenue: 0 };
+        days.push(obj);
+        dayMap.set(key, obj);
+        cur.setDate(cur.getDate() + 1);
+      }
+      for (const t of completedTransactions) {
+        const k = ymd(pickDate(t));
+        const slot = dayMap.get(k);
+        if (slot) slot.revenue += pickAmount(t);
+      }
+      setRangeRevenue(days.map(({ label, revenue }) => ({ date: label, revenue })));
+    } catch {
+      setRangeRevenue([]);
+    }
+  }, [completedTransactions, rangeStart, rangeEnd]);
 
   /* ===== KPI list ===== */
   const kpiList = useMemo(
@@ -444,9 +492,9 @@ export default function DashboardPage() {
   }, [dashStats]);
 
   const totalRevenueSum = useMemo(() => {
-    const list = view === "day" ? dailyRevenue : quarterRevenue;
+    const list = view === "day" ? dailyRevenue : view === "quarter" ? quarterRevenue : rangeRevenue;
     return list.reduce((sum, i) => sum + (i.revenue || 0), 0);
-  }, [view, dailyRevenue, quarterRevenue]);
+  }, [view, dailyRevenue, quarterRevenue, rangeRevenue]);
 
   return (
     <div className="mx-auto max-w-7xl grid gap-6 text-slate-100">
@@ -496,8 +544,39 @@ export default function DashboardPage() {
                   <BarChart3 className="h-4 w-4" />
                   Theo quý
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setView("range")}
+                  aria-pressed={view === "range"}
+                  className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition ${
+                    view === "range" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"
+                  }`}
+                >
+                  <CalendarRange className="h-4 w-4" />
+                  Khoảng ngày
+                </button>
               </div>
             </div>
+            {view === "range" && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-slate-300 text-xs">Từ</span>
+                <input
+                  type="date"
+                  className="rounded-md bg-slate-800/60 border border-slate-700 px-2 py-1 text-slate-100 text-xs"
+                  value={rangeStart}
+                  max={rangeEnd}
+                  onChange={(e) => setRangeStart(e.target.value)}
+                />
+                <span className="text-slate-300 text-xs">Đến</span>
+                <input
+                  type="date"
+                  className="rounded-md bg-slate-800/60 border border-slate-700 px-2 py-1 text-slate-100 text-xs"
+                  value={rangeEnd}
+                  min={rangeStart}
+                  onChange={(e) => setRangeEnd(e.target.value)}
+                />
+              </div>
+            )}
             <p className="text-xs text-slate-400 mt-2">
               Tổng: <span className="font-semibold text-blue-300">{formatVND(totalRevenueSum)}</span>
             </p>
@@ -529,7 +608,7 @@ export default function DashboardPage() {
                     <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : (
+              ) : view === "quarter" ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={quarterRevenue} barCategoryGap={24}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
@@ -538,6 +617,29 @@ export default function DashboardPage() {
                     <ChartTooltip
                       formatter={(value) => [formatVND(value), "Doanh thu"]}
                       labelFormatter={(l) => `Kỳ ${l}`}
+                      contentStyle={darkTip}
+                      itemStyle={darkItem}
+                      labelStyle={darkLabel}
+                    />
+                    <Legend />
+                    <defs>
+                      <linearGradient id="blueBar" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.7} />
+                      </linearGradient>
+                    </defs>
+                    <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={rangeRevenue} barCategoryGap={16}>
+                    <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
+                    <XAxis dataKey="date" tickMargin={8} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
+                    <YAxis tickFormatter={compactNumber} width={60} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
+                    <ChartTooltip
+                      formatter={(value) => [formatVND(value), "Doanh thu"]}
+                      labelFormatter={(l) => `Ngày ${l}`}
                       contentStyle={darkTip}
                       itemStyle={darkItem}
                       labelStyle={darkLabel}
@@ -683,3 +785,10 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
