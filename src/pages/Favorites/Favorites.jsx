@@ -25,7 +25,7 @@ const Favorites = () => {
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
-                Tin đăng đã lưu ({favorites.length} / 100)
+                Tin đăng đã lưu ({favorites.length} tin)
               </h1>
             </div>
             <div className="flex items-center gap-3">
@@ -69,7 +69,7 @@ const Favorites = () => {
                         </Link>
                         <button
                           onClick={() => toggleFavorite(fav)}
-                          className="text-red-500 hover:text-red-600"
+                          className="cursor-pointer top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 bg-white text-red-500 shadow-sm transition hover:border-red-300 hover:shadow-md"
                           aria-label="Bo luu tin"
                         >
                           <FiHeart className="w-6 h-6 fill-current" />
@@ -115,4 +115,3 @@ const Favorites = () => {
 };
 
 export default Favorites;
-

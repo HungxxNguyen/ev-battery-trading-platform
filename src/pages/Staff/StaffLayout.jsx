@@ -40,8 +40,8 @@ export default function StaffLayout() {
               <p className="text-[11px] uppercase tracking-[0.45em] text-cyan-300/80">
                 VoltX Control
               </p>
-              <h1 className="text-lg font-semibold text-white leading-tight">
-                Staff Panel
+              <h1 className="mt-1 text-lg font-semibold text-white leading-tight">
+                Staff: Quản Trị
               </h1>
             </div>
           </div>
@@ -49,13 +49,13 @@ export default function StaffLayout() {
           <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
             <SideItem
               icon={<ClipboardCheck className="h-4 w-4" />}
-              label="Review"
+              label="Duyệt bài đăng"
               active={currentPage === "review"}
               onClick={() => navigate("/staff/review")}
             />
             <SideItem
               icon={<Flag className="h-4 w-4" />}
-              label="Reports"
+              label="Quản lý báo cáo"
               active={currentPage === "reports"}
               onClick={() => navigate("/staff/reports")}
             />

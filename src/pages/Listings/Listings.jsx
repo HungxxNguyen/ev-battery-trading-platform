@@ -434,7 +434,7 @@ export default function Listings() {
     return (
       <div
         ref={priceRef}
-        className="absolute z-20 mt-2 w-80 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+        className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
@@ -503,7 +503,7 @@ export default function Listings() {
     return (
       <div
         ref={yearRef}
-        className="absolute z-20 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
+        className="absolute z-20 mt-2 w-150 rounded-lg border border-gray-200 bg-white p-4 shadow-lg"
       >
         <div className="mb-3 text-sm text-gray-700 font-medium">
           Năm sản xuất
@@ -757,7 +757,7 @@ export default function Listings() {
             }}
             aria-label={favActive ? "Bỏ yêu thích" : "Lưu tin yêu thích"}
             aria-pressed={favActive}
-            className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
+            className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition cursor-pointer ${
               favActive
                 ? "bg-white text-red-500"
                 : "bg-white/90 text-gray-600 hover:text-red-500"
@@ -934,7 +934,7 @@ export default function Listings() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded border border-gray-300 text-sm px-2 py-1.5"
+                  className="rounded border border-gray-300 text-sm px-2 py-1.5 cursor-pointer"
                 >
                   <option value="newest">Mới nhất</option>
                   <option value="priceAsc">Giá tăng dần</option>

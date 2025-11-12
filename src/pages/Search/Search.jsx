@@ -280,7 +280,7 @@ export default function Search() {
                   type="button"
                   onClick={onClearSearch}
                   aria-label="Xoá từ khoá"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-gray-500 hover:bg-gray-100"
+                  className="cursor-pointer absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-gray-500 hover:bg-gray-100"
                 >
                   <FiX />
                 </button>
@@ -288,7 +288,7 @@ export default function Search() {
             </div>
             <button
               type="submit"
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-[0.98] transition"
+              className="cursor-pointer px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 active:scale-[0.98] transition"
             >
               Tìm kiếm
             </button>
@@ -329,7 +329,7 @@ export default function Search() {
                 setPageSize(val);
                 setPageIndex(1);
               }}
-              className="text-sm border rounded-md px-2 py-1 bg-white"
+              className="text-sm border rounded-md px-2 py-1 bg-white cursor-pointer"
             >
               {PAGE_SIZE_OPTIONS.map((n) => (
                 <option key={n} value={n}>
@@ -506,7 +506,7 @@ function ListingCard({ listing, isFavorite, toggleFavorite }) {
           }}
           aria-label={favActive ? "Bỏ yêu thích" : "Lưu tin yêu thích"}
           aria-pressed={favActive}
-          className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
+          className={`cursor-pointer absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
             favActive
               ? "bg-white text-red-500"
               : "bg-white/90 text-gray-600 hover:text-red-500"

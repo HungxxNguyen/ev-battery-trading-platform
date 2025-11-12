@@ -33,15 +33,10 @@ import { useNotification } from "../../contexts/NotificationContext";
    =============================== */
 const FILE_BASE = (() => {
   try {
-    // Vite: import.meta.env.VITE_FILE_BASE_URL
     const v =
-      import.meta &&
-      import.meta.env &&
-      import.meta.env.VITE_FILE_BASE_URL;
+      import.meta && import.meta.env && import.meta.env.VITE_FILE_BASE_URL;
     return v ? String(v).replace(/\/$/, "") : "";
   } catch (_e) {
-    // Nếu không chạy dưới Vite, có thể fallback sang process.env.* nếu bạn cần
-    // ví dụ: const v2 = process?.env?.VITE_FILE_BASE_URL || process?.env?.REACT_APP_FILE_BASE_URL;
     return "";
   }
 })();
@@ -52,7 +47,6 @@ function absolutize(u) {
   const s = String(u).trim();
   if (!s) return "";
   if (/^https?:\/\//i.test(s)) return s;
-  // /uploads/xxx | reports/xxx
   return FILE_BASE ? `${FILE_BASE}/${s.replace(/^\//, "")}` : s;
 }
 
@@ -62,13 +56,7 @@ function normalizeEvidence(input) {
     arr
       .map((it) => {
         if (typeof it === "string") return it;
-        return (
-          it?.imageUrl ||
-          it?.url ||
-          it?.imagePath ||
-          it?.path ||
-          ""
-        );
+        return it?.imageUrl || it?.url || it?.imagePath || it?.path || "";
       })
       .filter(Boolean)
       .map(absolutize);
@@ -79,7 +67,6 @@ function normalizeEvidence(input) {
     if (typeof input === "string")
       return input.trim() ? [absolutize(input.trim())] : [];
 
-    // Kiểu { data: [...] } hoặc { data: { data: [...] } }
     if (Array.isArray(input?.data)) return take(input.data);
     if (Array.isArray(input?.data?.data)) return take(input.data.data);
 
@@ -166,7 +153,7 @@ function Info({ label, value, mono }) {
 }
 
 /* ===============================
-   2) Listing preview
+   2) Listing preview (GIỐNG StaffReview – KHÔNG ZOOM/LIGHTBOX)
    =============================== */
 function ReportListingDetail({ listing }) {
   const rawImages = Array.isArray(listing?.listingImages)
@@ -176,27 +163,23 @@ function ReportListingDetail({ listing }) {
         )
         .filter(Boolean)
     : [];
-  const images = (rawImages.length ? rawImages : ["https://placehold.co/1200x800?text=Listing"]).map(
-    absolutize
-  );
 
-  const [active, setActive] = React.useState(0);
-  const [lightboxOpen, setLightboxOpen] = React.useState(false);
-  const [lightboxIndex, setLightboxIndex] = React.useState(0);
-  const [isZoomed, setIsZoomed] = React.useState(false);
+  const imageUrls = (
+    rawImages.length
+      ? rawImages
+      : ["https://placehold.co/1200x800?text=Listing"]
+  ).map(absolutize);
 
-  React.useEffect(() => {
-    if (!lightboxOpen) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") setLightboxOpen(false);
-      if (e.key === "ArrowLeft")
-        setLightboxIndex((i) => (i - 1 + images.length) % images.length);
-      if (e.key === "ArrowRight")
-        setLightboxIndex((i) => (i + 1) % images.length);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [lightboxOpen, images.length]);
+  // Chỉ giữ index & prev/next (không có phóng to/zoom)
+  const [index, setIndex] = React.useState(0);
+  const prevImage = React.useCallback(() => {
+    if (!imageUrls.length) return;
+    setIndex((i) => (i - 1 + imageUrls.length) % imageUrls.length);
+  }, [imageUrls.length]);
+  const nextImage = React.useCallback(() => {
+    if (!imageUrls.length) return;
+    setIndex((i) => (i + 1) % imageUrls.length);
+  }, [imageUrls.length]);
 
   const brandName = listing?.brand?.name || listing?.brandName || "-";
   const specFields = (() => {
@@ -231,45 +214,79 @@ function ReportListingDetail({ listing }) {
 
   return (
     <div className="space-y-4">
-      {/* Preview image + thumbnails */}
-      <div className="overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/60">
-        <img
-          src={images[active]}
-          alt={listing?.title || "listing"}
-          className="h-60 w-full cursor-zoom-in object-cover"
-          referrerPolicy="no-referrer"
-          crossOrigin="anonymous"
-          onClick={() => {
-            setLightboxIndex(active);
-            setIsZoomed(false);
-            setLightboxOpen(true);
-          }}
-        />
+      {/* Gallery kiểu StaffReview */}
+      <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-slate-800/70 bg-slate-950/60">
+        {imageUrls.length ? (
+          <>
+            <img
+              src={imageUrls[index]}
+              alt={`listing-${index + 1}`}
+              className="h-full w-full object-contain select-none"
+              draggable={false}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+            />
+
+            {imageUrls.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={prevImage}
+                  className="cursor-pointer absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/80 text-slate-100 shadow-md hover:bg-slate-800/90"
+                  aria-label="Ảnh trước"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={nextImage}
+                  className="cursor-pointer absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/80 text-slate-100 shadow-md hover:bg-slate-800/90"
+                  aria-label="Ảnh tiếp theo"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+
+            <div className="absolute bottom-3 right-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-slate-50">
+              {index + 1} / {imageUrls.length}
+            </div>
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
+            Không có hình ảnh
+          </div>
+        )}
       </div>
-      {images.length > 1 && (
-        <div className="flex gap-2 overflow-auto">
-          {images.map((src, idx) => (
-            <button
-              key={src + idx}
-              type="button"
-              onClick={() => setActive(idx)}
-              className={`h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border transition ${
-                active === idx
-                  ? "border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.35)]"
-                  : "border-slate-800/70 hover:border-slate-600"
-              }`}
-            >
-              <img
-                src={src}
-                alt={`thumb-${idx}`}
-                className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-            </button>
-          ))}
+
+      {imageUrls.length > 0 && (
+        <div className="border-t border-slate-800/60 pt-3">
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {imageUrls.map((url, idx) => (
+              <button
+                key={`${url}-${idx}`}
+                type="button"
+                onClick={() => setIndex(idx)}
+                className={`relative flex-shrink-0 h-20 w-24 overflow-hidden rounded-lg border-2 transition-all cursor-pointer ${
+                  index === idx
+                    ? "border-emerald-500 ring-2 ring-emerald-400/40"
+                    : "border-slate-800 hover:border-slate-600"
+                }`}
+                title={`Ảnh ${idx + 1}`}
+              >
+                <img
+                  src={url}
+                  alt={`thumb-${idx + 1}`}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
       {/* Title + price */}
       <div className="flex items-start justify-between gap-3">
         <h4 className="text-lg font-semibold text-slate-50">
@@ -331,83 +348,6 @@ function ReportListingDetail({ listing }) {
           {listing?.description || "Người bán chưa cập nhật mô tả."}
         </div>
       </div>
-
-      {/* Lightbox */}
-      {lightboxOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto bg-black/80 p-4 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Xem ảnh lớn"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setLightboxOpen(false);
-          }}
-        >
-          {/* Close */}
-          <button
-            onClick={() => setLightboxOpen(false)}
-            aria-label="Đóng"
-            className="absolute right-4 top-4 cursor-pointer rounded-full border border-slate-700/60 bg-slate-900/70 p-2 text-slate-100 hover:bg-slate-800/80"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          {/* Prev */}
-          {images.length > 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxIndex(
-                  (i) => (i - 1 + images.length) % images.length
-                );
-                setIsZoomed(false);
-              }}
-              aria-label="Ảnh trước"
-              className="absolute left-4 top-1/2 -translate-y-1/2 cursor-pointer rounded-full border border-slate-700/60 bg-slate-900/70 p-2 text-slate-100 hover:bg-slate-800/80 md:left-8"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-          )}
-
-          {/* Image */}
-          <div className="flex flex-col items-center">
-            <img
-              src={images[lightboxIndex]}
-              alt={`image-${lightboxIndex + 1}`}
-              className={
-                isZoomed
-                  ? "h-auto w-auto cursor-zoom-out"
-                  : "max-h-[85vh] max-w-[90vw] cursor-zoom-in object-contain"
-              }
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsZoomed(!isZoomed);
-              }}
-              draggable={false}
-            />
-            {images.length > 1 && (
-              <div className="mt-3 text-sm text-slate-200">
-                {lightboxIndex + 1} / {images.length}
-              </div>
-            )}
-          </div>
-          {/* Next */}
-          {images.length > 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxIndex((i) => (i + 1) % images.length);
-                setIsZoomed(false);
-              }}
-              aria-label="Ảnh tiếp theo"
-              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer rounded-full border border-slate-700/60 bg-slate-900/70 p-2 text-slate-100 hover:bg-slate-800/80 md:right-8"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
@@ -668,7 +608,7 @@ export default function StaffReportsPage() {
     try {
       let urls = [];
 
-      // (0) từ row đang chọn trong bảng (list API thường có reportImages)
+      // (0) từ row đang chọn trong bảng
       const row = data.find((x) => String(x.id) === String(selectedId));
       if (row) {
         urls = [
@@ -678,7 +618,7 @@ export default function StaffReportsPage() {
         ];
       }
 
-      // (1) từ selectedReport (get-by-id có thể không trả images)
+      // (1) từ selectedReport
       if (!urls.length && selectedReport) {
         urls = [
           ...normalizeEvidence(selectedReport.reportImages),
@@ -718,7 +658,7 @@ export default function StaffReportsPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-emerald-400 to-sky-400 bg-clip-text text-transparent">
-            Báo cáo bài đăng
+            Quản lý bài đăng vi phạm
           </h2>
           <p className="text-sm text-slate-400">
             Theo dõi và xử lý các báo cáo vi phạm từ người dùng.
@@ -1210,7 +1150,7 @@ export default function StaffReportsPage() {
         )}
       </div>
 
-      {/* Evidence Modal */}
+      {/* Evidence Modal (duyệt ảnh, KHÔNG zoom) */}
       {evidenceOpen && (
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
@@ -1221,7 +1161,7 @@ export default function StaffReportsPage() {
           <div className="relative w-full max-w-3xl rounded-2xl border border-slate-700 bg-slate-900 p-4 shadow-xl">
             <button
               onClick={() => setEvidenceOpen(false)}
-              className="absolute right-3 top-3 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80"
+              className=" cursor-pointer absolute right-3 top-3 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80"
               aria-label="Đóng"
             >
               <X className="h-5 w-5" />
@@ -1235,9 +1175,13 @@ export default function StaffReportsPage() {
             </div>
 
             {evidenceLoading ? (
-              <div className="py-10 text-center text-slate-300">Đang tải ảnh…</div>
+              <div className="py-10 text-center text-slate-300">
+                Đang tải ảnh…
+              </div>
             ) : evidenceError ? (
-              <div className="py-6 text-center text-rose-400">{evidenceError}</div>
+              <div className="py-6 text-center text-rose-400">
+                {evidenceError}
+              </div>
             ) : evidenceList.length ? (
               <>
                 <div className="relative flex justify-center">
@@ -1250,7 +1194,7 @@ export default function StaffReportsPage() {
                             (i - 1 + evidenceList.length) % evidenceList.length
                         )
                       }
-                      className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80"
+                      className="cursor-pointer absolute left-0 top-1/2 -translate-y-1/2 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80"
                       aria-label="Ảnh trước"
                     >
                       <ChevronLeft className="h-6 w-6" />
@@ -1271,7 +1215,7 @@ export default function StaffReportsPage() {
                       onClick={() =>
                         setEvidenceIndex((i) => (i + 1) % evidenceList.length)
                       }
-                      className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80"
+                      className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full border border-slate-700/60 bg-slate-800/70 p-2 text-slate-100 hover:bg-slate-700/80 cursor-pointer"
                       aria-label="Ảnh tiếp theo"
                     >
                       <ChevronRight className="h-6 w-6" />

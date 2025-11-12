@@ -49,7 +49,7 @@ export const API_ENDPOINTS_STAFF = {
     `/api/Staff/Reject-Listing/${id}?resonReject=${reason}&reason=${descriptionReject}`,
   // Staff: users management
   BAN_USER: (id, descriptionBan) => `/api/Staff/Ban-User/${id}?banDescription=${descriptionBan}`,
-  UNBAN_USER: (id) => `/api/Staff/UbBan-User/${id}`
+  UNBAN_USER: (id) => `/api/Staff/Unban-User/${id}`
 };
 
 // Các endpoint cho user

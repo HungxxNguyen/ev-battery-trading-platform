@@ -214,7 +214,7 @@ const Home = () => {
                               image: coverImage,
                             });
                           }}
-                          className={`absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
+                          className={`cursor-pointer absolute top-2 right-2 flex items-center justify-center w-9 h-9 rounded-full shadow-sm transition ${
                             favActive
                               ? "bg-white text-red-500"
                               : "bg-white/90 text-gray-500 hover:text-red-400"

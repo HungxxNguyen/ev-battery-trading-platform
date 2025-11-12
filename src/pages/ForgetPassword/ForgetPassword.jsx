@@ -105,7 +105,7 @@ const ForgetPassword = () => {
                   type="button"
                   onClick={handleSendToken}
                   disabled={sending || !emailOrPhoneNumber}
-                  className={`text-xs px-3 py-1 rounded font-medium transition-all duration-300
+                  className={`text-xs px-3 py-1 rounded font-medium transition-all duration-300 cursor-pointer
                   ${
                     sending || !emailOrPhoneNumber
                       ? "bg-cyan-700/50 cursor-not-allowed text-white/70"
@@ -249,7 +249,7 @@ const SubmitButton = ({ loading, text }) => (
   <button
     type="submit"
     disabled={loading}
-    className={`w-full py-2 px-4 rounded-lg text-white font-semibold transition-all duration-300 ${
+    className={`w-full py-2 px-4 rounded-lg text-white font-semibold transition-all duration-300 cursor-pointer ${
       loading
         ? "bg-cyan-700/50 cursor-not-allowed"
         : "bg-cyan-600 hover:bg-cyan-500 hover:shadow-glow-cyan"

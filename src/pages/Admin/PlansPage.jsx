@@ -318,7 +318,7 @@ export default function PlansPage() {
                 )}
               </div>
               <div>
-                <label className="text-sm text-slate-300">Loại gói</label>
+                <label className="text-sm text-slate-300 ">Loại gói</label>
                 <select
                   value={packageType}
                   onChange={(e) => {
@@ -334,23 +334,9 @@ export default function PlansPage() {
                       });
                     }
                   }}
-                  className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+                  className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 cursor-pointer"
                 >
                   {typeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm text-slate-300">Trạng thái</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-                >
-                  {statusOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
                     </option>
@@ -394,7 +380,6 @@ export default function PlansPage() {
                 <TableHead>Tên gói</TableHead>
                 <TableHead>Số ngày</TableHead>
                 <TableHead>Loại</TableHead>
-                <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Giá</TableHead>
                 {/* ✅ Căn giữa header cột thao tác */}
                 <TableHead className="text-center w-[120px]">
