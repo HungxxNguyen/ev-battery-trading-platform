@@ -218,6 +218,18 @@ export const MessageProvider = ({ children }) => {
     setLastSeenAt(stored);
     lastSeenAtRef.current = stored;
 
+    const persistLastSeen = (iso) => {
+      if (!iso) return;
+      setLastSeenAt(iso);
+      lastSeenAtRef.current = iso;
+      if (!key) return;
+      try {
+        localStorage.setItem(key, iso);
+      } catch (err) {
+        console.warn("Failed to persist chat last seen timestamp:", err);
+      }
+    };
+
     let cancelled = false;
     (async () => {
       try {
@@ -230,6 +242,13 @@ export const MessageProvider = ({ children }) => {
           : [];
         const inboundTs = findLatestInboundTimestamp(list, userId);
         if (!inboundTs) return;
+
+        const baseline = lastSeenAtRef.current;
+        if (!baseline) {
+          persistLastSeen(inboundTs);
+          return;
+        }
+
         if (shouldRaiseUnread(inboundTs)) {
           setHasUnread(true);
         }
