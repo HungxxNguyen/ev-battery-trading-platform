@@ -3,7 +3,15 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import MainLayout from "../../components/layout/MainLayout";
 import { motion } from "framer-motion";
-import { FiArrowLeft, FiMapPin, FiMail, FiPhone } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiArrowRight,
+  FiMapPin,
+  FiMail,
+  FiPhone,
+  FiCalendar,
+  FiClock,
+} from "react-icons/fi";
 import listingService from "../../services/apis/listingApi";
 import brandService from "../../services/apis/brandApi";
 import userService from "../../services/apis/userApi";
@@ -86,6 +94,18 @@ const ManageDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
+
+  // Hàm chuyển ảnh tiếp theo
+  const nextImage = () => {
+    setActiveImage((prev) => (prev + 1) % detail.images.length);
+  };
+
+  // Hàm chuyển ảnh trước đó
+  const prevImage = () => {
+    setActiveImage(
+      (prev) => (prev - 1 + detail.images.length) % detail.images.length
+    );
+  };
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -364,10 +384,10 @@ const ManageDetail = () => {
   return (
     <MainLayout>
       <motion.div
-        className="px-5 md:px-24 my-6 md:my-10"
+        className="px-5 md:px-24 my-6 md:my-10 pb-10"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.3 }}
       >
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -381,29 +401,57 @@ const ManageDetail = () => {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-          {/* LEFT column */}
-          <div className="space-y-4">
-            {/* Gallery */}
-            <div className="bg-white border border-gray-200 rounded-xl p-0">
-              <div className="aspect-video rounded-t-xl overflow-hidden">
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* LEFT + CENTER column - 2/3 width */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Gallery - Đã thêm mũi tên điều hướng */}
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-md">
+              <div className="relative aspect-video bg-gray-100">
                 <img
                   src={detail.images[activeImage]}
                   alt={`image-${activeImage}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
+
+                {/* Nút mũi tên trái */}
+                {detail.images.length > 1 && (
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                    title="Ảnh trước"
+                  >
+                    <FiArrowLeft className="text-lg" />
+                  </button>
+                )}
+
+                {/* Nút mũi tên phải */}
+                {detail.images.length > 1 && (
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 backdrop-blur-sm text-white rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                    title="Ảnh tiếp theo"
+                  >
+                    <FiArrowRight className="text-lg" />
+                  </button>
+                )}
+
+                {/* Indicator số ảnh */}
+                <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                  {activeImage + 1} / {detail.images.length}
+                </div>
               </div>
-              <div className="px-4 pb-4 pt-3">
-                {/* Thanh thumbnail giới hạn ~5 ảnh, kéo để xem thêm */}
-                <div className="flex gap-3 overflow-x-auto flex-nowrap max-w-full md:max-w-[820px]">
+
+              {/* Thumbnails */}
+              <div className="p-4 bg-gray-50">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {detail.images.map((img, idx) => (
                     <button
                       key={`${img}-${idx}`}
                       onClick={() => setActiveImage(idx)}
-                      className={`relative flex-shrink-0 w-28 h-20 rounded-lg overflow-hidden border cursor-pointer ${
+                      className={`relative flex-shrink-0 w-24 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                         activeImage === idx
-                          ? "border-orange-500 ring-2 ring-orange-100"
-                          : "border-gray-200 hover:border-gray-300"
+                          ? "border-green-500 ring-2 ring-green-200 scale-105"
+                          : "border-gray-200 hover:border-gray-400 hover:scale-105"
                       }`}
                       title={`Ảnh ${idx + 1}`}
                     >
