@@ -2,7 +2,12 @@
 // File: src/pages/Admin/DashboardPage.jsx
 // ===============================
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/Card/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/Card/card";
 
 import adminService from "../../services/apis/adminApi";
 import dashboardService from "../../services/apis/dashboardApi";
@@ -101,7 +106,15 @@ function getQuarter(d) {
 
 /* ===== Transaction helpers (field detection) ===== */
 function pickAmount(tx) {
-  const cand = ["amount", "totalAmount", "grandTotal", "total", "price", "value", "finalAmount"];
+  const cand = [
+    "amount",
+    "totalAmount",
+    "grandTotal",
+    "total",
+    "price",
+    "value",
+    "finalAmount",
+  ];
   for (const k of cand) {
     if (tx && typeof tx[k] !== "undefined") {
       const n = Number(tx[k]);
@@ -132,9 +145,7 @@ function isSuccess(tx) {
 
       // Chuỗi mô tả thành công
       const t = v.toLowerCase();
-      if (
-        t.includes("success")
-      ) {
+      if (t.includes("success")) {
         return true;
       }
     }
@@ -142,9 +153,15 @@ function isSuccess(tx) {
   return false;
 }
 
-
 function pickDate(tx) {
-  const cand = ["paidAt", "createdAt", "transactionDate", "timestamp", "date", "created_on"];
+  const cand = [
+    "paidAt",
+    "createdAt",
+    "transactionDate",
+    "timestamp",
+    "date",
+    "created_on",
+  ];
   for (const k of cand) {
     if (tx?.[k]) {
       const d = new Date(tx[k]);
@@ -207,14 +224,19 @@ function top3WithOthers(data) {
   const sorted = [...data].sort((a, b) => b.count - a.count);
   const top3 = sorted.slice(0, 3);
   const othersCount = sorted.slice(3).reduce((s, i) => s + (i.count || 0), 0);
-  return othersCount > 0 ? [...top3, { brand: "Others", count: othersCount }] : top3;
+  return othersCount > 0
+    ? [...top3, { brand: "Others", count: othersCount }]
+    : top3;
 }
 
 /* ===== Fallback fetchers ===== */
 async function safeGetAllListings() {
   // Ưu tiên dùng listingService.getAllListingsAllPages nếu có
   if (typeof listingService.getAllListingsAllPages === "function") {
-    return listingService.getAllListingsAllPages({ pageSize: 200, maxPages: 30 });
+    return listingService.getAllListingsAllPages({
+      pageSize: 200,
+      maxPages: 30,
+    });
   }
   // Fallback: gọi trực tiếp endpoint với phân trang
   const all = [];
@@ -238,7 +260,10 @@ async function safeGetBrandMap() {
   return new Map(
     items.map((b) => [
       b?.id ?? b?.brandId ?? b?.Id,
-      { name: b?.name ?? b?.brandName ?? "Unknown", type: b?.type ?? b?.category ?? "" },
+      {
+        name: b?.name ?? b?.brandName ?? "Unknown",
+        type: b?.type ?? b?.category ?? "",
+      },
     ])
   );
 }
@@ -298,23 +323,41 @@ export default function DashboardPage() {
         // Lấy tất cả users (gom trang)
         const users =
           typeof adminService.getAllUsersAllPages === "function"
-            ? await adminService.getAllUsersAllPages({ pageSize: 200, maxPages: 20 })
+            ? await adminService.getAllUsersAllPages({
+                pageSize: 200,
+                maxPages: 20,
+              })
             : [];
 
         const userIds = users
-          .map((u) => u?.id ?? u?.userId ?? u?.userID ?? u?.Id ?? u?.ID ?? u?.UserId)
+          .map(
+            (u) =>
+              u?.id ?? u?.userId ?? u?.userID ?? u?.Id ?? u?.ID ?? u?.UserId
+          )
           .filter(Boolean);
 
         // Lấy toàn bộ giao dịch cho tất cả users (batch)
-        const getAllTx = transactionService.getAllByUserId || transactionService.getAllTransactionsByUserId;
+        const getAllTx =
+          transactionService.getAllByUserId ||
+          transactionService.getAllTransactionsByUserId;
         const results = [];
         if (getAllTx && userIds.length) {
           for (let i = 0; i < userIds.length; i += 6) {
             const batch = userIds.slice(i, i + 6);
             const settled = await Promise.allSettled(
-              batch.map((uid) => getAllTx.call(transactionService, uid, { pageSize: 200, maxPages: 5 }))
+              batch.map((uid) =>
+                getAllTx.call(transactionService, uid, {
+                  pageSize: 200,
+                  maxPages: 5,
+                })
+              )
             );
-            settled.forEach((s) => s.status === "fulfilled" && Array.isArray(s.value) && results.push(...s.value));
+            settled.forEach(
+              (s) =>
+                s.status === "fulfilled" &&
+                Array.isArray(s.value) &&
+                results.push(...s.value)
+            );
           }
         }
 
@@ -336,7 +379,10 @@ export default function DashboardPage() {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const key = ymd(d);
-          const label = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+          const label = d.toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+          });
           days.push({ key, label, revenue: 0 });
           dayMap.set(key, days[days.length - 1]);
         }
@@ -345,7 +391,9 @@ export default function DashboardPage() {
           const slot = dayMap.get(k);
           if (slot) slot.revenue += pickAmount(t);
         }
-        setDailyRevenue(days.map(({ label, revenue }) => ({ date: label, revenue })));
+        setDailyRevenue(
+          days.map(({ label, revenue }) => ({ date: label, revenue }))
+        );
 
         // Theo quý (năm hiện tại)
         const y = new Date().getFullYear();
@@ -389,21 +437,35 @@ export default function DashboardPage() {
   /* ===== Pie: số bài đăng theo brand ===== */
   const [brandMode, setBrandMode] = useState("car"); // "car" | "motorbike" | "battery"
   const [brandLoading, setBrandLoading] = useState(true);
-  const [brandBreakdown, setBrandBreakdown] = useState({ car: [], motorbike: [], battery: [] });
+  const [brandBreakdown, setBrandBreakdown] = useState({
+    car: [],
+    motorbike: [],
+    battery: [],
+  });
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setBrandLoading(true);
       try {
-        const [brandMap, listings] = await Promise.all([safeGetBrandMap(), safeGetAllListings()]);
+        const [brandMap, listings] = await Promise.all([
+          safeGetBrandMap(),
+          safeGetAllListings(),
+        ]);
 
-        const buckets = { car: new Map(), motorbike: new Map(), battery: new Map() };
+        const buckets = {
+          car: new Map(),
+          motorbike: new Map(),
+          battery: new Map(),
+        };
         for (const l of listings) {
           const bucket = resolveBucketByCategory(l, brandMap);
           if (!bucket) continue;
           const brandName = resolveBrandName(l, brandMap);
-          buckets[bucket].set(brandName, (buckets[bucket].get(brandName) || 0) + 1);
+          buckets[bucket].set(
+            brandName,
+            (buckets[bucket].get(brandName) || 0) + 1
+          );
         }
         const toArr = (m) =>
           Array.from(m.entries())
@@ -427,16 +489,28 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const rawBrandData = useMemo(() => brandBreakdown[brandMode] || [], [brandBreakdown, brandMode]);
+  const rawBrandData = useMemo(
+    () => brandBreakdown[brandMode] || [],
+    [brandBreakdown, brandMode]
+  );
   const pieData = useMemo(() => top3WithOthers(rawBrandData), [rawBrandData]);
-  const pieCleanData = useMemo(() => pieData.filter((d) => (d.count || 0) > 0), [pieData]);
-  const pieTotal = useMemo(() => pieCleanData.reduce((s, i) => s + i.count, 0), [pieCleanData]);
+  const pieCleanData = useMemo(
+    () => pieData.filter((d) => (d.count || 0) > 0),
+    [pieData]
+  );
+  const pieTotal = useMemo(
+    () => pieCleanData.reduce((s, i) => s + i.count, 0),
+    [pieCleanData]
+  );
 
   const brandColorMap = useMemo(() => {
     const m = new Map();
     let colorIdx = 0;
     for (const item of pieCleanData) {
-      const color = item.brand === "Others" ? OTHERS_COLOR : CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1];
+      const color =
+        item.brand === "Others"
+          ? OTHERS_COLOR
+          : CORE_COLORS[colorIdx] || CORE_COLORS[CORE_COLORS.length - 1];
       if (item.brand !== "Others") colorIdx += 1;
       m.set(item.brand, color);
     }
@@ -461,9 +535,21 @@ export default function DashboardPage() {
     if (dashStats) {
       const d = dashStats;
       return [
-        { type: "Xe hơi", new: Number(d.totalNewCars || 0), used: Number(d.totalOldCars || 0) },
-        { type: "Xe máy", new: Number(d.totalNewBikes || 0), used: Number(d.totalOldBikes || 0) },
-        { type: "Pin điện", new: Number(d.totalNewBatteries || 0), used: Number(d.totalOldBatteries || 0) },
+        {
+          type: "Xe hơi",
+          new: Number(d.totalNewCars || 0),
+          used: Number(d.totalOldCars || 0),
+        },
+        {
+          type: "Xe máy",
+          new: Number(d.totalNewBikes || 0),
+          used: Number(d.totalOldBikes || 0),
+        },
+        {
+          type: "Pin điện",
+          new: Number(d.totalNewBatteries || 0),
+          used: Number(d.totalOldBatteries || 0),
+        },
       ];
     }
     return [];
@@ -481,10 +567,14 @@ export default function DashboardPage() {
         {kpiList.map((k, i) => (
           <div
             key={i}
-            className={`${KPI_CARD_STYLES[i % KPI_CARD_STYLES.length]} text-white rounded-xl ring-1 ring-white/10 p-5 backdrop-blur-lg`}
+            className={`${
+              KPI_CARD_STYLES[i % KPI_CARD_STYLES.length]
+            } text-white rounded-xl ring-1 ring-white/10 p-5 backdrop-blur-lg`}
           >
             <div className="text-sm opacity-90">{k.label}</div>
-            <div className="text-3xl font-extrabold mt-2">{formatKpiValue(k)}</div>
+            <div className="text-3xl font-extrabold mt-2">
+              {formatKpiValue(k)}
+            </div>
           </div>
         ))}
       </section>
@@ -505,7 +595,9 @@ export default function DashboardPage() {
                   onClick={() => setView("day")}
                   aria-pressed={view === "day"}
                   className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition ${
-                    view === "day" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"
+                    view === "day"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-200 hover:bg-slate-700/50"
                   }`}
                 >
                   <CalendarRange className="h-4 w-4" />
@@ -516,7 +608,9 @@ export default function DashboardPage() {
                   onClick={() => setView("quarter")}
                   aria-pressed={view === "quarter"}
                   className={`flex items-center gap-2 rounded-lg px-3 py-1.5 transition ${
-                    view === "quarter" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"
+                    view === "quarter"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-200 hover:bg-slate-700/50"
                   }`}
                 >
                   <BarChart3 className="h-4 w-4" />
@@ -525,19 +619,34 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              Tổng: <span className="font-semibold text-blue-300">{formatVND(totalRevenueSum)}</span>
+              Tổng:{" "}
+              <span className="font-semibold text-blue-300">
+                {formatVND(totalRevenueSum)}
+              </span>
             </p>
           </CardHeader>
           <CardContent>
             <div className="h-72">
               {loadingRevenue ? (
-                <div className="h-full grid place-items-center text-slate-400">Đang tải dữ liệu...</div>
+                <div className="h-full grid place-items-center text-slate-400">
+                  Đang tải dữ liệu...
+                </div>
               ) : view === "day" ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyRevenue} barCategoryGap={16}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
-                    <XAxis dataKey="date" tickMargin={8} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
-                    <YAxis tickFormatter={compactNumber} width={60} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
+                    <XAxis
+                      dataKey="date"
+                      tickMargin={8}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
+                    <YAxis
+                      tickFormatter={compactNumber}
+                      width={60}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
                     <ChartTooltip
                       formatter={(value) => [formatVND(value), "Doanh thu"]}
                       labelFormatter={(l) => `Ngày ${l}`}
@@ -548,19 +657,42 @@ export default function DashboardPage() {
                     <Legend />
                     <defs>
                       <linearGradient id="blueBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.95} />
-                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.7} />
+                        <stop
+                          offset="0%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.95}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.7}
+                        />
                       </linearGradient>
                     </defs>
-                    <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
+                    <Bar
+                      dataKey="revenue"
+                      name="Doanh thu"
+                      radius={[8, 8, 0, 0]}
+                      fill="url(#blueBar)"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={quarterRevenue} barCategoryGap={24}>
                     <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
-                    <XAxis dataKey="quarter" tickMargin={8} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
-                    <YAxis tickFormatter={compactNumber} width={60} stroke="#7dd3fc" tick={{ fill: "#7dd3fc" }} />
+                    <XAxis
+                      dataKey="quarter"
+                      tickMargin={8}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
+                    <YAxis
+                      tickFormatter={compactNumber}
+                      width={60}
+                      stroke="#7dd3fc"
+                      tick={{ fill: "#7dd3fc" }}
+                    />
                     <ChartTooltip
                       formatter={(value) => [formatVND(value), "Doanh thu"]}
                       labelFormatter={(l) => `Kỳ ${l}`}
@@ -571,11 +703,24 @@ export default function DashboardPage() {
                     <Legend />
                     <defs>
                       <linearGradient id="blueBar" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#1d4ed8" stopOpacity={0.95} />
-                        <stop offset="100%" stopColor="#1d4ed8" stopOpacity={0.7} />
+                        <stop
+                          offset="0%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.95}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#1d4ed8"
+                          stopOpacity={0.7}
+                        />
                       </linearGradient>
                     </defs>
-                    <Bar dataKey="revenue" name="Doanh thu" radius={[8, 8, 0, 0]} fill="url(#blueBar)" />
+                    <Bar
+                      dataKey="revenue"
+                      name="Doanh thu"
+                      radius={[8, 8, 0, 0]}
+                      fill="url(#blueBar)"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -595,7 +740,11 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("car")}
                 aria-pressed={brandMode === "car"}
-                className={`rounded-lg px-3 py-1.5 ${brandMode === "car" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"}`}
+                className={`rounded-lg px-3 py-1.5 ${
+                  brandMode === "car"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-200 hover:bg-slate-700/50"
+                }`}
               >
                 Xe hơi
               </button>
@@ -603,7 +752,11 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("motorbike")}
                 aria-pressed={brandMode === "motorbike"}
-                className={`rounded-lg px-3 py-1.5 ${brandMode === "motorbike" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"}`}
+                className={`rounded-lg px-3 py-1.5 ${
+                  brandMode === "motorbike"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-200 hover:bg-slate-700/50"
+                }`}
               >
                 Xe máy
               </button>
@@ -611,7 +764,11 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setBrandMode("battery")}
                 aria-pressed={brandMode === "battery"}
-                className={`rounded-lg px-3 py-1.5 ${brandMode === "battery" ? "bg-blue-600 text-white" : "text-slate-200 hover:bg-slate-700/50"}`}
+                className={`rounded-lg px-3 py-1.5 ${
+                  brandMode === "battery"
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-200 hover:bg-slate-700/50"
+                }`}
               >
                 Pin
               </button>
@@ -625,7 +782,9 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart margin={{ top: 8, right: 16, bottom: 36, left: 16 }}>
+                  <PieChart
+                    margin={{ top: 8, right: 16, bottom: 36, left: 16 }}
+                  >
                     <ChartTooltip
                       formatter={(v, name) => {
                         const val = Number(v);
@@ -686,20 +845,43 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={postsTypeConditionData} barCategoryGap={24}>
                   <CartesianGrid strokeDasharray="4 4" opacity={0.2} />
-                  <XAxis dataKey="type" tickMargin={8} stroke="#ffffff" tick={{ fill: "#ffffff" }} />
-                  <YAxis allowDecimals={false} stroke="#a7f3d0" tick={{ fill: "#a7f3d0" }} />
+                  <XAxis
+                    dataKey="type"
+                    tickMargin={8}
+                    stroke="#ffffff"
+                    tick={{ fill: "#ffffff" }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    stroke="#a7f3d0"
+                    tick={{ fill: "#a7f3d0" }}
+                  />
                   <ChartTooltip
                     formatter={(value, key) => [
                       `${value} bài đăng`,
-                      key === "new" ? "Hàng mới" : key === "used" ? "Hàng cũ" : key,
+                      key === "new"
+                        ? "Hàng mới"
+                        : key === "used"
+                        ? "Hàng cũ"
+                        : key,
                     ]}
                     contentStyle={darkTip}
                     itemStyle={darkItem}
                     labelStyle={darkLabel}
                   />
                   <Legend />
-                  <Bar dataKey="used" name="Hàng cũ" fill={BAR_USED_COLOR} radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="new" name="Hàng mới" fill={BAR_NEW_COLOR} radius={[6, 6, 0, 0]} />
+                  <Bar
+                    dataKey="used"
+                    name="Hàng cũ"
+                    fill={BAR_USED_COLOR}
+                    radius={[6, 6, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="new"
+                    name="Hàng mới"
+                    fill={BAR_NEW_COLOR}
+                    radius={[6, 6, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
