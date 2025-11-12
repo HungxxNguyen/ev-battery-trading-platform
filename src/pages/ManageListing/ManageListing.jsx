@@ -18,10 +18,12 @@ import {
   FiEyeOff,
   FiAlertTriangle,
   FiInfo,
+  FiCheckCircle,
 } from "react-icons/fi";
 import { FaRegTrashAlt } from "react-icons/fa";
 import listingService from "../../services/apis/listingApi";
 import PaymentButton from "./components/PaymentButton";
+import { useNotification } from "../../contexts/NotificationContext";
 
 /* ---------------- Tabs (VIỆT HOÁ) ---------------- */
 const TABS = [
@@ -30,6 +32,7 @@ const TABS = [
   { key: "rejected", label: "BỊ TỪ CHỐI" },
   { key: "payment", label: "CẦN THANH TOÁN" },
   { key: "pending", label: "CHỜ DUYỆT" },
+  { key: "sold", label: "ĐÃ BÁN" },
   { key: "hidden", label: "ĐÃ ẨN" },
 ];
 
@@ -129,6 +132,7 @@ const mapApiDataToFrontend = (apiData) => {
         Rejected: "rejected",
         Pending: "pending",
         Hidden: "hidden",
+        Sold: "sold",
       };
       frontendStatus = statusMapping[item.status] || item.status?.toLowerCase();
     }
@@ -197,7 +201,7 @@ function useOnClickOutside(ref, handler) {
 }
 
 /* ---------------- Dropdown menu ---------------- */
-const OptionMenu = ({ onShare, onHide, onDelete }) => (
+const OptionMenu = ({ onShare, onSold, onHide, onDelete }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
     <button
       onClick={onShare}
@@ -208,13 +212,23 @@ const OptionMenu = ({ onShare, onHide, onDelete }) => (
     </button>
     <div className="h-px bg-gray-200" />
     <button
+      onClick={onSold}
+      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 cursor-pointer"
+    >
+      <span className="text-lg">
+        <FiCheckCircle />
+      </span>
+      <span>Đã bán</span>
+    </button>
+    <div className="h-px bg-gray-200" />
+    <button
       onClick={onHide}
       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
     >
       <span className="text-lg">
         <FiEyeOff />
       </span>
-      <span>Đã bán / Ẩn tin</span>
+      <span>Ẩn tin</span>
     </button>
     <div className="h-px bg-gray-200" />
     <button
@@ -229,11 +243,69 @@ const OptionMenu = ({ onShare, onHide, onDelete }) => (
   </div>
 );
 
+/* ---------------- Modal "Đã bán" ---------------- */
+const SoldPostModal = ({ open, title, onClose, onConfirm }) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div className="flex items-center justify-between px-4 py-3 rounded-t-lg bg-gradient-to-r from-gray-900 to-blue-900">
+          <div className="font-semibold text-white truncate">
+            Xác nhận đã bán
+          </div>
+          <button
+            className="px-2 text-white text-lg leading-none cursor-pointer"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <FiCheckCircle className="text-blue-600 text-xl" />
+            </div>
+            <div>
+              <div className="font-semibold text-gray-800">Xác nhận đã bán</div>
+              <div className="text-sm text-gray-600">Tin: {title}</div>
+            </div>
+          </div>
+
+          <p className="text-gray-700 mb-2">
+            Bạn có chắc chắn muốn đánh dấu tin đăng này là{" "}
+            <strong className="text-green-600">"ĐÃ BÁN"</strong>?
+          </p>
+          <p className="text-sm text-gray-600 mb-4">
+            Sau khi xác nhận, tin đăng sẽ được chuyển sang trạng thái đã bán và
+            không còn hiển thị trên sàn giao dịch.
+          </p>
+
+          <div className="mt-6 flex items-center justify-end gap-3">
+            <button
+              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 font-medium cursor-pointer hover:bg-gray-50"
+              onClick={onClose}
+            >
+              Hủy
+            </button>
+            <button
+              className="px-4 py-2 rounded-md font-semibold text-white bg-[#1c76d0] hover:bg-[#0000FF] cursor-pointer"
+              onClick={onConfirm}
+            >
+              Xác nhận đã bán
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ---------------- Modal "Ẩn tin" ---------------- */
 const HidePostModal = ({ open, title, onClose, onConfirm }) => {
   const [reason, setReason] = useState("");
   const reasons = [
-    "Đã bán qua nền tảng",
     "Đã bán qua kênh khác",
     "Tôi bị làm phiền bởi môi giới/dịch vụ đăng tin",
     "Không muốn bán nữa",
@@ -309,6 +381,7 @@ const ListingItem = ({
   onNavigate,
   onEdit,
   onDelete,
+  onOpenSoldModal,
   onOpenHideModal,
   menuForId,
   setMenuForId,
@@ -318,6 +391,7 @@ const ListingItem = ({
   const galleryImage = item.images?.[0];
   const isActive = item.status === "active";
   const canViewDetail = isActive; // hiện tại vẫn chỉ ACTIVE mới cho xem chi tiết nếu bạn muốn giữ logic này
+  const isSold = item.status === "sold";
 
   const menuRef = useRef(null);
   useOnClickOutside(menuRef, () => {
@@ -367,6 +441,10 @@ const ListingItem = ({
                     onShare={() => {
                       setMenuForId(null);
                       alert("Chia sẻ: mở modal chia sẻ ở đây.");
+                    }}
+                    onSold={() => {
+                      setMenuForId(null);
+                      onOpenSoldModal(item);
                     }}
                     onHide={() => {
                       setMenuForId(null);
@@ -486,6 +564,25 @@ const ListingItem = ({
           </div>
         );
 
+      case "sold":
+        return (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => onNavigate(item)}
+              className={`${btnBase} ${btnSecondary}`}
+            >
+              <FiEye /> Xem chi tiết
+            </button>
+
+            <button
+              onClick={() => onDelete(item.id)}
+              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
+            >
+              <FaRegTrashAlt /> Xóa tin
+            </button>
+          </div>
+        );
+
       default:
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -503,24 +600,52 @@ const ListingItem = ({
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
       <div className="p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
-        {/* LEFT: Image */}
+        {/* LEFT: Image - CẬP NHẬT PHẦN NÀY */}
         <div className="flex md:flex-col items-start gap-3 md:w-[200px]">
-          <div className="w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+          <div className="w-28 h-24 md:w-full md:h-[140px] flex-shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 relative">
             {galleryImage ? (
-              <img
-                src={galleryImage}
-                alt={item.title}
-                className="w-full h-full object-cover"
-              />
+              <>
+                <img
+                  src={galleryImage}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+                {/* Overlay cho tin đã bán */}
+                {isSold && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-white font-bold text-lg md:text-xl mb-1">
+                        ĐÃ BÁN
+                      </div>
+                      <div className="text-white/90 text-xs md:text-sm">
+                        Tin đã kết thúc
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
                 Không có ảnh
+                {/* Overlay cho tin đã bán khi không có ảnh */}
+                {isSold && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                    <div className="text-center">
+                      <div className="text-white font-bold text-lg md:text-xl mb-1">
+                        ĐÃ BÁN
+                      </div>
+                      <div className="text-white/90 text-xs md:text-sm">
+                        Tin đã kết thúc
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* MIDDLE: Content */}
+        {/* MIDDLE: Content - GIỮ NGUYÊN */}
         <div className="flex-1">
           <div className="flex flex-col gap-1">
             <h3 className="text-lg md:text-xl font-semibold text-gray-800">
@@ -537,8 +662,12 @@ const ListingItem = ({
                 Mục <b>{item.category || "Khác"}</b>
               </span>
 
-              {/* Ưu tiên hiển thị "Dùng gói miễn phí" nếu packageType là Free */}
-              {item.package?.packageType === "Miễn phí" ? (
+              {/* Thêm trạng thái đã bán vào thông tin */}
+              {isSold ? (
+                <span className="ml-3">
+                  | Trạng thái: <b className="text-gray-600">Đã bán</b>
+                </span>
+              ) : item.package?.packageType === "Miễn phí" ? (
                 <span className="ml-3">
                   | Trạng thái thanh toán:{" "}
                   <b className="text-green-600">Dùng gói miễn phí</b>
@@ -570,7 +699,7 @@ const ListingItem = ({
                       Vui lòng chỉnh sửa lại nội dung tin theo góp ý bên dưới,
                       sau đó nhấn{" "}
                       <span className="font-semibold">
-                        “Sửa tin &amp; gửi lại”
+                        "Sửa tin &amp; gửi lại"
                       </span>{" "}
                       để được duyệt lại.
                     </p>
@@ -622,14 +751,24 @@ const ListingItem = ({
                         : item.postedOn}
                     </strong>
                   </span>
-                  <span>
-                    Ngày hết hạn:{" "}
-                    <strong className="font-medium text-gray-700">
-                      {item.expiredAt
-                        ? formatVNDateTime(new Date(item.expiredAt))
-                        : item.expiresOn}
-                    </strong>
-                  </span>
+                  {!isSold && ( // Ẩn ngày hết hạn nếu đã bán
+                    <span>
+                      Ngày hết hạn:{" "}
+                      <strong className="font-medium text-gray-700">
+                        {item.expiredAt
+                          ? formatVNDateTime(new Date(item.expiredAt))
+                          : item.expiresOn}
+                      </strong>
+                    </span>
+                  )}
+                  {isSold && ( // Hiển thị ngày bán nếu đã bán
+                    <span>
+                      Ngày bán:{" "}
+                      <strong className="font-medium text-green-600">
+                        {formatVNDate(new Date())}
+                      </strong>
+                    </span>
+                  )}
                 </div>
               )
             )}
@@ -640,48 +779,49 @@ const ListingItem = ({
         </div>
 
         {/* RIGHT: Package Info */}
-        {item.package && (
-          <div className="md:w-[220px] flex-shrink-0">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <FiZap className="text-blue-600 text-lg" />
-                <div className="font-semibold text-blue-800 text-sm">
-                  Gói đăng tin
-                </div>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-700">Tên gói:</span>
-                  <span className="font-semibold text-blue-900 text-right">
-                    {item.package.name}
-                  </span>
+        {item.package &&
+          !isSold && ( // Ẩn thông tin gói nếu đã bán
+            <div className="md:w-[220px] flex-shrink-0">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FiZap className="text-blue-600 text-lg" />
+                  <div className="font-semibold text-blue-800 text-sm">
+                    Gói đăng tin
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-700">Phân loại:</span>
-                  <span className="font-semibold text-blue-900">
-                    {item.package.packageType}
-                  </span>
-                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-700">Tên gói:</span>
+                    <span className="font-semibold text-blue-900 text-right">
+                      {item.package.name}
+                    </span>
+                  </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-700">Thời hạn:</span>
-                  <span className="font-semibold text-blue-900">
-                    {item.package.durationInDays} ngày
-                  </span>
-                </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-700">Phân loại:</span>
+                    <span className="font-semibold text-blue-900">
+                      {item.package.packageType}
+                    </span>
+                  </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-700">Chi phí:</span>
-                  <span className="font-bold text-blue-900">
-                    {currency(item.package.price)}
-                  </span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-700">Thời hạn:</span>
+                    <span className="font-semibold text-blue-900">
+                      {item.package.durationInDays} ngày
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-700">Chi phí:</span>
+                    <span className="font-bold text-blue-900">
+                      {currency(item.package.price)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );
@@ -695,6 +835,7 @@ const ManageListing = () => {
 
   const urlTab = searchParams.get("tab") || "active";
   const [activeTab, setActiveTab] = useState(urlTab);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     if (!TABS.some((t) => t.key === urlTab)) {
@@ -711,6 +852,7 @@ const ManageListing = () => {
   const [error, setError] = useState(null);
 
   const [menuForId, setMenuForId] = useState(null);
+  const [soldFor, setSoldFor] = useState(null);
   const [hideFor, setHideFor] = useState(null);
 
   useEffect(() => {
@@ -783,6 +925,38 @@ const ManageListing = () => {
     } catch (e) {
       console.error("Repayment error:", e);
       alert(e?.message || "Có lỗi xảy ra khi tạo liên kết thanh toán.");
+    }
+  };
+
+  // Hàm xử lý xác nhận đã bán
+  const handleConfirmSold = async (item) => {
+    try {
+      if (!item?.id) return;
+
+      // Gọi API xác nhận đã bán
+      const response = await listingService.confirmSoldListing(item.id);
+
+      if (response?.data?.error === 0) {
+        // Cập nhật trạng thái trong local state
+        setListings((prev) =>
+          (prev || []).map((x) =>
+            x.id === item.id ? { ...x, status: "sold" } : x
+          )
+        );
+        showNotification(
+          `Tin đăng về "${item.title}" đã được đánh dấu là đã bán.`,
+          "success"
+        );
+      } else {
+        const errorMsg =
+          response?.data?.message || "Có lỗi xảy ra khi xác nhận đã bán";
+        alert(errorMsg);
+      }
+    } catch (err) {
+      console.error("Error confirming sold listing:", err);
+      alert("Không thể kết nối đến server. Vui lòng thử lại sau.");
+    } finally {
+      setSoldFor(null);
     }
   };
 
@@ -891,6 +1065,7 @@ const ManageListing = () => {
                 onNavigate={onNavigate}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onOpenSoldModal={setSoldFor}
                 onOpenHideModal={setHideFor}
                 menuForId={menuForId}
                 setMenuForId={setMenuForId}
@@ -901,6 +1076,14 @@ const ManageListing = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Modal Xác nhận đã bán */}
+      <SoldPostModal
+        open={!!soldFor}
+        title={soldFor?.title || ""}
+        onClose={() => setSoldFor(null)}
+        onConfirm={() => handleConfirmSold(soldFor)}
+      />
 
       {/* Modal Ẩn tin */}
       <HidePostModal

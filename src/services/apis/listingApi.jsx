@@ -73,6 +73,12 @@ const listingService = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+  async confirmSoldListing(listingId) {
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.CONFIRM_SOLD_LISTING(listingId),
+      { method: "put" }
+    );
+  },
 
   async acceptListing(id) {
     if (!id) {

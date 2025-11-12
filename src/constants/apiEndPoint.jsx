@@ -25,6 +25,8 @@ export const API_ENDPOINTS_LISTING = {
   // Update existing listing (multipart form)
   UPDATE_LISTING: "/api/Listing/UpdateListing",
   // Admin: get listings filtered by status/price range/pagination
+  CONFIRM_SOLD_LISTING: (listingId) =>
+    `/api/Listing/ComfirmedSold/${listingId}`,
   GET_BY_STATUS: (pageIndex, pageSize, status) =>
     `/api/Listing/GetByStatus?pageIndex=${pageIndex}&pageSize=${pageSize}&status=${status}`,
   // VNPAY payment URL
