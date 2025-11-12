@@ -38,6 +38,8 @@ export const API_ENDPOINTS_LISTING = {
 // Admin endpoints for listing moderation
 export const API_ENDPOINTS_ADMIN = {
   GET_ALL_USERS: "api/Admin/Get-All-Users",
+  // Dashboard endpoints
+  LISTING_DASHBOARD: "api/Admin/Listing-Dashboard",
 };
 
 // Staff endpoints for listing moderation
