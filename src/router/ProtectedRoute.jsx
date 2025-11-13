@@ -10,7 +10,7 @@ const ProtectedRoute = ({
   allowedRoles = [],
 }) => {
   const { isAuthenticated, loading } = useContext(AuthContext);
-  const role = localStorage.getItem("role"); // hoặc lấy từ context nếu có
+  const role = localStorage.getItem("role");
   const location = useLocation();
 
   if (loading) return <Loading />;

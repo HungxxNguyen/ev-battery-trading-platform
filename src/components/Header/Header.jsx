@@ -384,7 +384,7 @@ export default function Header() {
                           handleLogout();
                           closeAllDropdowns();
                         }}
-                        className="block w-full text-left px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
+                        className="cursor-pointer block w-full text-left px-4 py-2.5 text-sm hover:bg-blue-900/50 hover:text-cyan-200 transition-all duration-200"
                       >
                         Đăng xuất
                       </button>
