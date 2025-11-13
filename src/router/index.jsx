@@ -1,6 +1,9 @@
 // src/routes/AppRouter.jsx
-import React from "react";
+import React, { useContext, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
+import userService from "../services/apis/userApi";
 import { AnimatePresence } from "framer-motion";
 import ScrollToTop from "../components/ScrollToTop/ScrollToTop";
 
@@ -41,9 +44,43 @@ import StaffReports from "../pages/Staff/StaffReports.jsx";
 // Guards
 import ProtectedRoute from "./ProtectedRoute";
 
+// Global guard: runs on all routes (public + protected).
+// If authenticated and server says status = Inactive, force logout.
+const GlobalAuthGuard = () => {
+  const { isAuthenticated, logout, loading } = useContext(AuthContext);
+  const location = useLocation();
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      if (!isAuthenticated || loading) return;
+      try {
+        const resp = await userService.getCurrentUser();
+        const status = resp?.success ? resp?.data?.data?.status : null;
+        if (
+          !cancelled &&
+          typeof status === "string" &&
+          status.toLowerCase() === "inactive"
+        ) {
+          logout();
+        }
+      } catch (_) {
+        // no-op for guard failures
+      }
+    };
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, loading, location.pathname, logout]);
+
+  return null;
+};
+
 const AppRouter = () => {
   return (
     <Router>
+      <GlobalAuthGuard />
       <ScrollToTop />
       <AnimatePresence mode="wait">
         <Routes>
