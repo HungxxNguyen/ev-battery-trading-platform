@@ -1,7 +1,7 @@
 // ===============================
 // File: src/pages/Staff/StaffReports.jsx
 // ===============================
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   getAllReports,
@@ -81,6 +81,183 @@ function normalizeEvidence(input) {
   }
 }
 
+const REPORT_REASON_LABELS = {
+  Scam: "Lừa đảo",
+  Duplicate: "Tin đăng trùng lặp",
+  Sold: "Đã bán",
+  UnableToContact: "Không liên lạc được",
+  IncorrectInformation: "Thông tin sai lệch",
+  Other: "Lý do khác",
+};
+
+const STATUS_TABS = [
+  { value: "All", label: "Tất cả trạng thái", dotClass: "bg-slate-500" },
+  { value: "Active", label: "Đang hoạt động", dotClass: "bg-emerald-400" },
+  { value: "Inactive", label: "Ngưng hoạt động", dotClass: "bg-rose-400" },
+];
+
+const STATUS_FILTER_TARGETS = [
+  { value: "reporter", label: "Người báo cáo" },
+  { value: "seller", label: "Người bị báo cáo" },
+];
+
+const USER_STATUS_META = {
+  Active: {
+    label: "Đang hoạt động",
+    className:
+      "border-emerald-500/60 bg-emerald-500/10 text-emerald-200 shadow-[0_0_10px_rgba(52,211,153,0.25)]",
+    Icon: UserCheck,
+  },
+  Inactive: {
+    label: "Ngưng hoạt động",
+    className:
+      "border-rose-500/60 bg-rose-500/10 text-rose-200 shadow-[0_0_10px_rgba(248,113,113,0.25)]",
+    Icon: UserX,
+  },
+};
+
+function getReasonLabel(reason) {
+  if (!reason) return "-";
+  return REPORT_REASON_LABELS[reason] || reason;
+}
+
+function hasKey(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function extractSellerInfo(source) {
+  if (!source || typeof source !== "object") return null;
+  const seller =
+    source.user ||
+    source.seller ||
+    source.owner ||
+    source.sellerInfo ||
+    source.listingOwner ||
+    null;
+
+  const id =
+    seller?.id ??
+    seller?.userId ??
+    seller?.userID ??
+    source.userId ??
+    source.UserId ??
+    source.userID ??
+    source.sellerId ??
+    source.SellerId ??
+    source.sellerID ??
+    source.ownerId ??
+    source.OwnerId ??
+    source.ownerID ??
+    null;
+
+  const name =
+    seller?.userName ||
+    seller?.name ||
+    seller?.fullName ||
+    seller?.displayName ||
+    source.sellerName ||
+    source.sellerFullName ||
+    source.ownerName ||
+    source.ownerFullName ||
+    source.userName ||
+    source.contactName ||
+    null;
+
+  const email =
+    seller?.email ||
+    source.sellerEmail ||
+    source.ownerEmail ||
+    source.userEmail ||
+    source.contactEmail ||
+    null;
+
+  const phone =
+    seller?.phoneNumber ||
+    seller?.phone ||
+    source.sellerPhone ||
+    source.ownerPhone ||
+    source.userPhone ||
+    source.contactPhone ||
+    null;
+
+  const status =
+    seller?.status ||
+    seller?.accountStatus ||
+    seller?.userStatus ||
+    seller?.statusName ||
+    source.sellerStatus ||
+    source.ownerStatus ||
+    source.userStatus ||
+    source.status ||
+    source.accountStatus ||
+    source.statusName ||
+    (typeof seller?.isActive === "boolean"
+      ? seller.isActive
+        ? "Active"
+        : "Inactive"
+      : typeof source?.isActive === "boolean"
+      ? source.isActive
+        ? "Active"
+        : "Inactive"
+      : null);
+
+  if (!name && !email && !phone) return null;
+
+  return {
+    id: id || null,
+    name: name || "-",
+    email: email || "-",
+    phone: phone || "-",
+    status: status || null,
+  };
+}
+
+function resolveUserStatus(user) {
+  if (!user || typeof user !== "object") return null;
+  const raw =
+    user.status ??
+    user.accountStatus ??
+    user.userStatus ??
+    (typeof user.isActive === "boolean"
+      ? user.isActive
+        ? "Active"
+        : "Inactive"
+      : null);
+
+  if (raw == null) return null;
+  const str = String(raw).trim();
+  if (!str) return null;
+  const lower = str.toLowerCase();
+
+  if (
+    lower === "active" ||
+    lower === "activated" ||
+    lower === "enable" ||
+    lower === "enabled" ||
+    lower === "1" ||
+    lower === "true"
+  ) {
+    return "Active";
+  }
+
+  if (
+    lower === "inactive" ||
+    lower === "inactivated" ||
+    lower === "disabled" ||
+    lower === "deactive" ||
+    lower === "deactivated" ||
+    lower === "ban" ||
+    lower === "banned" ||
+    lower === "blocked" ||
+    lower === "0" ||
+    lower === "false"
+  ) {
+    return "Inactive";
+  }
+
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 /* ===============================
    1) Helpers nhỏ cho table/field
    =============================== */
@@ -107,8 +284,9 @@ function TdMono({ children }) {
 }
 function ReasonBadge({ value }) {
   if (!value) return <span className="text-xs text-slate-400">-</span>;
-  const text = String(value);
-  const lower = text.toLowerCase();
+  const raw = String(value);
+  const lower = raw.toLowerCase();
+  const text = getReasonLabel(raw);
   let classes =
     "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium";
   if (lower.includes("lừa") || lower.includes("scam")) {
@@ -362,8 +540,10 @@ export default function StaffReportsPage() {
   const [error, setError] = useState("");
   const [data, setData] = useState([]);
   const [pageIndex, setPageIndex] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [reasonFilter, setReasonFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilterTarget, setStatusFilterTarget] = useState("reporter");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState(null); // report id
@@ -372,6 +552,8 @@ export default function StaffReportsPage() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [userMap, setUserMap] = useState({}); // cache user info by id
+  const [reportedSellerMap, setReportedSellerMap] = useState({});
+  const detailSectionRef = useRef(null);
 
   // Ban / Unban UI states
   const [banMode, setBanMode] = useState(false);
@@ -405,6 +587,19 @@ export default function StaffReportsPage() {
     let result = data;
     if (reasonFilter !== "All")
       result = result.filter((x) => x.reason === reasonFilter);
+
+    if (statusFilter !== "All") {
+      result = result.filter((x) => {
+        const sourceUser =
+          statusFilterTarget === "seller"
+            ? reportedSellerMap[x.listingId]
+            : userMap[x.userId];
+        const status = resolveUserStatus(sourceUser);
+        if (!status) return false;
+        return status.toLowerCase() === statusFilter.toLowerCase();
+      });
+    }
+
     if (!searchTerm.trim()) return result;
     const q = searchTerm.trim().toLowerCase();
     return result.filter((x) => {
@@ -419,7 +614,15 @@ export default function StaffReportsPage() {
         other.includes(q)
       );
     });
-  }, [data, reasonFilter, searchTerm]);
+  }, [
+    data,
+    reasonFilter,
+    searchTerm,
+    statusFilter,
+    statusFilterTarget,
+    userMap,
+    reportedSellerMap,
+  ]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -446,6 +649,73 @@ export default function StaffReportsPage() {
             }
           });
           setUserMap(next);
+        }
+
+        const listingIds = [
+          ...new Set(arr.map((x) => x.listingId).filter(Boolean)),
+        ];
+        const missingListingIds = listingIds.filter(
+          (id) => !hasKey(reportedSellerMap, id)
+        );
+        if (missingListingIds.length) {
+          const listingResults = await Promise.allSettled(
+            missingListingIds.map((id) => listingService.getById(id))
+          );
+          const parsed = listingResults.map((res) => {
+            if (res.status !== "fulfilled") return null;
+            const payload = res.value?.data;
+            let detail = null;
+            if (payload?.error === 0 && payload?.data) detail = payload.data;
+            else if (payload && typeof payload === "object")
+              detail = payload.data || payload;
+            return extractSellerInfo(detail);
+          });
+
+          const sellersNeedingStatus = [];
+
+          setReportedSellerMap((prev) => {
+            const next = { ...prev };
+            missingListingIds.forEach((lid, idx) => {
+              if (hasKey(prev, lid)) return;
+              const info = parsed[idx] || null;
+              next[lid] = info;
+              if (info?.id && !resolveUserStatus(info)) {
+                sellersNeedingStatus.push({ listingId: lid, userId: info.id });
+              }
+            });
+            return next;
+          });
+
+          if (sellersNeedingStatus.length) {
+            const statusResults = await Promise.allSettled(
+              sellersNeedingStatus.map((item) =>
+                userService.getById(item.userId)
+              )
+            );
+            setReportedSellerMap((prev) => {
+              const next = { ...prev };
+              sellersNeedingStatus.forEach((item, idx) => {
+                const res = statusResults[idx];
+                if (res?.status !== "fulfilled") return;
+                const payload = res.value?.data;
+                const userPayload = payload?.data || payload || null;
+                if (!userPayload) return;
+                const userInfo = extractSellerInfo(userPayload);
+                const current = next[item.listingId] || {};
+                const updated = { ...current };
+                if (userInfo?.id) updated.id = userInfo.id;
+                if (userInfo?.name && userInfo.name !== "-")
+                  updated.name = userInfo.name;
+                if (userInfo?.email && userInfo.email !== "-")
+                  updated.email = userInfo.email;
+                if (userInfo?.phone && userInfo.phone !== "-")
+                  updated.phone = userInfo.phone;
+                if (userInfo?.status) updated.status = userInfo.status;
+                next[item.listingId] = updated;
+              });
+              return next;
+            });
+          }
         }
       } else {
         setError(res?.message || "Tải danh sách báo cáo thất bại.");
@@ -531,16 +801,49 @@ export default function StaffReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!selectedId || !detailSectionRef.current) return;
+    detailSectionRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [selectedId]);
+
   // Resolve seller of the reported listing
-  const sellerInfo = (() => {
-    const u = selectedListing?.user || null;
-    const id =
-      u?.id ?? selectedListing?.userId ?? selectedListing?.sellerId ?? null;
-    const name = u?.userName || u?.name || selectedListing?.sellerName || "-";
-    const email = u?.email || selectedListing?.sellerEmail || "-";
-    const phone = u?.phoneNumber || selectedListing?.sellerPhone || "-";
-    return { id, name, email, phone };
-  })();
+  const sellerInfo = useMemo(() => {
+    return (
+      extractSellerInfo(selectedListing) || {
+        id: null,
+        name: "-",
+        email: "-",
+        phone: "-",
+      }
+    );
+  }, [selectedListing]);
+
+  useEffect(() => {
+    if (!selectedListing) return;
+    const listingId =
+      selectedListing?.id ??
+      selectedListing?.listingId ??
+      selectedReport?.listingId ??
+      null;
+    if (!listingId) return;
+    const info = extractSellerInfo(selectedListing);
+    if (!info) return;
+    setReportedSellerMap((prev) => {
+      const existing = prev[listingId];
+      if (
+        existing &&
+        existing.name === info.name &&
+        existing.email === info.email &&
+        existing.phone === info.phone
+      ) {
+        return prev;
+      }
+      return { ...prev, [listingId]: info };
+    });
+  }, [selectedListing, selectedReport]);
 
   // Ban
   const doBan = async () => {
@@ -725,8 +1028,9 @@ export default function StaffReportsPage() {
 
       {/* Main card */}
       <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 shadow-lg backdrop-blur-xl">
-        {/* Filters row */}
+        {/* Filters row: Lý do (trái) + Đối tượng (phải) */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {/* Lọc theo lý do */}
           <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-200">
             <Filter className="h-3.5 w-3.5 text-emerald-400" />
             <span className="font-medium">Lọc theo lý do:</span>
@@ -738,14 +1042,58 @@ export default function StaffReportsPage() {
               <option value="All">Tất cả</option>
               {REPORT_REASONS.map((r) => (
                 <option key={r} value={r}>
-                  {r}
+                  {getReasonLabel(r)}
                 </option>
               ))}
             </select>
           </div>
-          <p className="text-xs text-slate-500">
-            Nhấp vào một dòng để xem chi tiết báo cáo & bài đăng ở bên dưới.
-          </p>
+
+          {/* Chọn đối tượng: Người báo cáo / Người bị báo cáo (bên phải) */}
+          <div className="inline-flex items-center gap-1 rounded-full bg-slate-900/70 p-1 shadow-inner shadow-black/40">
+            {STATUS_FILTER_TARGETS.map((target) => {
+              const active = statusFilterTarget === target.value;
+              return (
+                <button
+                  key={target.value}
+                  type="button"
+                  onClick={() => setStatusFilterTarget(target.value)}
+                  className={`rounded-full px-3 py-1.5 text-[11px] sm:text-xs font-medium transition-all cursor-pointer ${
+                    active
+                      ? "bg-emerald-500/20 text-emerald-200"
+                      : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                  }`}
+                >
+                  {target.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Hàng dưới: Trạng thái tài khoản (Tất cả / Đang hoạt động / Ngưng hoạt động) */}
+        <div className="mb-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
+            <div className="inline-flex items-center gap-1 rounded-full bg-slate-900/70 p-1 shadow-inner shadow-black/40">
+              {STATUS_TABS.map((tab) => {
+                const active = statusFilter === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setStatusFilter(tab.value)}
+                    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium cursor-pointer transition-all ${
+                      active
+                        ? "bg-slate-100 text-slate-900 shadow-sm"
+                        : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${tab.dotClass}`} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -754,11 +1102,11 @@ export default function StaffReportsPage() {
             <thead className="bg-slate-950/80">
               <tr>
                 <Th>#</Th>
-                <Th>Report</Th>
-                <Th>Listing</Th>
+                <Th>ID báo cáo</Th>
+                <Th>ID bài đăng</Th>
                 <Th>Người báo cáo</Th>
+                <Th>Người bị báo cáo</Th>
                 <Th>Lý do</Th>
-                <Th>Thông tin thêm</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
@@ -838,6 +1186,11 @@ export default function StaffReportsPage() {
                               Đang tải thông tin…
                             </span>
                           );
+                        const statusValue = resolveUserStatus(u);
+                        const statusMeta = statusValue
+                          ? USER_STATUS_META[statusValue] || null
+                          : null;
+                        const StatusIcon = statusMeta?.Icon;
                         return (
                           <div className="flex items-start gap-2 text-xs leading-5">
                             <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-800/80 text-slate-300">
@@ -853,21 +1206,101 @@ export default function StaffReportsPage() {
                               <div className="text-[11px] text-slate-400">
                                 {u.phoneNumber || "-"}
                               </div>
+                              {statusValue && (
+                                <span
+                                  className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                    statusMeta?.className ||
+                                    "border-slate-600/60 bg-slate-800/70 text-slate-200"
+                                  }`}
+                                >
+                                  {StatusIcon && (
+                                    <StatusIcon className="h-3 w-3" />
+                                  )}
+                                  {statusMeta?.label || statusValue}
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
                       })()}
                     </Td>
                     <Td>
-                      <ReasonBadge value={r.reason} />
+                      {(() => {
+                        if (!r.listingId)
+                          return (
+                            <span className="text-xs text-slate-400">
+                              Không có ID bài đăng
+                            </span>
+                          );
+                        const hasSeller = hasKey(
+                          reportedSellerMap,
+                          r.listingId
+                        );
+                        if (!hasSeller)
+                          return (
+                            <span className="text-xs text-slate-400">
+                              Dan t? ngu?i b�n.
+                            </span>
+                          );
+                        const seller = reportedSellerMap[r.listingId];
+                        if (!seller)
+                          return (
+                            <span className="text-xs text-slate-400">
+                              Chưa có dữ liệu người bị báo cáo.
+                            </span>
+                          );
+                        const sellerStatusValue = resolveUserStatus(seller);
+                        const sellerStatusMeta =
+                          sellerStatusValue &&
+                          USER_STATUS_META[sellerStatusValue]
+                            ? USER_STATUS_META[sellerStatusValue]
+                            : null;
+                        const SellerStatusIcon = sellerStatusMeta?.Icon;
+                        return (
+                          <div className="flex items-start gap-2 text-xs leading-5">
+                            <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-950/40 text-rose-200">
+                              <UserX className="h-3.5 w-3.5" />
+                            </span>
+                            <div>
+                              <div className="font-medium text-slate-100">
+                                {seller.name || "-"}
+                              </div>
+                              <div className="font-mono text-[11px] text-slate-400">
+                                {seller.email || "-"}
+                              </div>
+                              <div className="text-[11px] text-slate-400">
+                                {seller.phone || "-"}
+                              </div>
+                              {sellerStatusValue && (
+                                <span
+                                  className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                                    sellerStatusMeta?.className ||
+                                    "border-slate-600/60 bg-slate-800/70 text-slate-200"
+                                  }`}
+                                >
+                                  {SellerStatusIcon && (
+                                    <SellerStatusIcon className="h-3 w-3" />
+                                  )}
+                                  {sellerStatusMeta?.label || sellerStatusValue}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </Td>
                     <Td>
-                      <p
-                        className="max-w-xs truncate text-xs text-slate-300"
-                        title={r.otherReason}
-                      >
-                        {r.otherReason || "—"}
-                      </p>
+                      <div className="space-y-1">
+                        <ReasonBadge value={r.reason} />
+                        {r.otherReason && (
+                          <p
+                            className="max-w-xs truncate text-xs text-slate-300"
+                            title={r.otherReason}
+                          >
+                            {r.otherReason}
+                          </p>
+                        )}
+                      </div>
                     </Td>
                   </tr>
                 ))
@@ -902,7 +1335,10 @@ export default function StaffReportsPage() {
 
         {/* Detail section */}
         {selectedId && (
-          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div
+            ref={detailSectionRef}
+            className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3"
+          >
             {/* Listing detail */}
             <div className="lg:col-span-2 rounded-2xl border border-slate-800/70 bg-slate-950/60 p-4 shadow-md">
               <div className="mb-3 flex items-center justify-between gap-2">
@@ -990,8 +1426,8 @@ export default function StaffReportsPage() {
                     </div>
                     <div className="rounded-xl border border-slate-800/70 bg-slate-900/60 p-3 text-sm">
                       <div className="flex items-start gap-2">
-                        <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-800/80 text-slate-200">
-                          <User className="h-4 w-4" />
+                        <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full  bg-rose-950/40 text-rose-200">
+                          <UserX className="h-4 w-4" />
                         </span>
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center justify-between gap-2">
