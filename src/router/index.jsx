@@ -1,6 +1,11 @@
 // src/routes/AppRouter.jsx
 import React, { useContext, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import userService from "../services/apis/userApi";
@@ -77,6 +82,25 @@ const GlobalAuthGuard = () => {
   return null;
 };
 
+// Component xử lý vào trang đúng theo role
+const RoleBasedHome = () => {
+  const { isAuthenticated } = useContext(AuthContext);
+  const role = localStorage.getItem("role");
+
+  if (isAuthenticated && role === "Admin") {
+    // Admin vào lại trang web -> nhảy thẳng vào admin dashboard
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (isAuthenticated && role === "Staff") {
+    // Staff vào lại -> nhảy thẳng vào trang staff (ví dụ review)
+    return <Navigate to="/staff/review" replace />;
+  }
+
+  // User thường hoặc chưa đăng nhập -> vẫn vào Home như cũ
+  return <Home />;
+};
+
 const AppRouter = () => {
   return (
     <Router>
@@ -85,7 +109,8 @@ const AppRouter = () => {
       <AnimatePresence mode="wait">
         <Routes>
           {/* Public */}
-          <Route path="/" element={<Home />} />
+          {/* ⬇️ đổi Home thành RoleBasedHome */}
+          <Route path="/" element={<RoleBasedHome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
