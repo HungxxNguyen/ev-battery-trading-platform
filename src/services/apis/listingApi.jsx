@@ -19,7 +19,9 @@ function extractItems(payload) {
 const listingService = {
   // (GIỮ NGUYÊN) — gọi GetAll mặc định (BE thường mặc định pageIndex=1,pageSize=10)
   async getListings() {
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, { method: "get" });
+    return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
+      method: "get",
+    });
   },
 
   // ✅ MỚI — lấy 1 trang GetAll với tham số phân trang rõ ràng
@@ -46,7 +48,9 @@ const listingService = {
     if (!id) {
       return { success: false, error: "Listing id is required", status: null };
     }
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_BY_ID(id), { method: "get" });
+    return await performApiRequest(API_ENDPOINTS_LISTING.GET_BY_ID(id), {
+      method: "get",
+    });
   },
 
   async getByStatus(pageIndex = 1, pageSize = 10, status = "Pending") {
@@ -89,6 +93,13 @@ const listingService = {
       // headers: { "Content-Type": "multipart/form-data" },
     });
   },
+  async deleteListing(id) {
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
+    return await performApiRequest(API_ENDPOINTS_LISTING.DELETE_LISTING(id), {
+      method: "delete",
+    });
+  },
   async confirmSoldListing(listingId) {
     return await performApiRequest(
       API_ENDPOINTS_LISTING.CONFIRM_SOLD_LISTING(listingId),
@@ -97,12 +108,16 @@ const listingService = {
   },
 
   async acceptListing(id) {
-    if (!id) return { success: false, error: "Listing id is required", status: null };
-    return await performApiRequest(API_ENDPOINTS_STAFF.ACCEPT_LISTING(id), { method: "post" });
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
+    return await performApiRequest(API_ENDPOINTS_STAFF.ACCEPT_LISTING(id), {
+      method: "post",
+    });
   },
 
   async rejectListing(id, reason = "", descriptionReject = "") {
-    if (!id) return { success: false, error: "Listing id is required", status: null };
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
     return await performApiRequest(
       API_ENDPOINTS_STAFF.REJECT_LISTING(id, reason, descriptionReject),
       { method: "post" }
@@ -110,13 +125,20 @@ const listingService = {
   },
 
   async getVnPayUrl(id) {
-    if (!id) return { success: false, error: "Listing id is required", status: null };
-    return await performApiRequest(API_ENDPOINTS_LISTING.LISTING_VNPAY(id), { method: "get" });
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
+    return await performApiRequest(API_ENDPOINTS_LISTING.LISTING_VNPAY(id), {
+      method: "get",
+    });
   },
 
   async getRepaymentUrl(id) {
-    if (!id) return { success: false, error: "Listing id is required", status: null };
-    return await performApiRequest(API_ENDPOINTS_LISTING.LISTING_REPAYMENT(id), { method: "get" });
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.LISTING_REPAYMENT(id),
+      { method: "get" }
+    );
   },
 };
 

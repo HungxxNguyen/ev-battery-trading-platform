@@ -15,7 +15,6 @@ import {
   FiRefreshCcw,
   FiZap,
   FiEye,
-  FiEyeOff,
   FiAlertTriangle,
   FiInfo,
   FiCheckCircle,
@@ -33,7 +32,6 @@ const TABS = [
   { key: "payment", label: "CẦN THANH TOÁN" },
   { key: "pending", label: "CHỜ DUYỆT" },
   { key: "sold", label: "ĐÃ BÁN" },
-  { key: "hidden", label: "ĐÃ ẨN" },
 ];
 
 /* ---------------- Payment Status Mapping ---------------- */
@@ -114,74 +112,86 @@ const mapApiDataToFrontend = (apiData) => {
     Free: "Miễn phí",
   };
 
-  return apiData.map((item) => {
-    let frontendStatus = item.status?.toLowerCase();
+  return apiData
+    .map((item) => {
+      const normalizedStatus = item.status?.toLowerCase();
+      if (normalizedStatus === "hidden") return null;
 
-    // Logic phân loại tab dựa trên PaymentStatus và status
-    if (item.paymentStatus === "AwaitingPayment" && item.status === "Pending") {
-      frontendStatus = "payment"; // Tab "CẦN THANH TOÁN"
-    } else if (item.paymentStatus === "Failed" && item.status === "Pending") {
-      // Thanh toán thất bại cũng cần hiển thị ở tab "CẦN THANH TOÁN"
-      frontendStatus = "payment";
-    } else if (item.paymentStatus === "Success" && item.status === "Pending") {
-      frontendStatus = "pending"; // Tab "CHỜ DUYỆT"
-    } else {
-      const statusMapping = {
-        Active: "active",
-        Expired: "expired",
-        Rejected: "rejected",
-        Pending: "pending",
-        Hidden: "hidden",
-        Sold: "sold",
+      let frontendStatus = normalizedStatus;
+
+      // Logic phân loại tab dựa trên PaymentStatus và status
+      if (
+        item.paymentStatus === "AwaitingPayment" &&
+        item.status === "Pending"
+      ) {
+        frontendStatus = "payment"; // Tab "CẦN THANH TOÁN"
+      } else if (item.paymentStatus === "Failed" && item.status === "Pending") {
+        // Thanh toán thất bại cũng cần hiển thị ở tab "CẦN THANH TOÁN"
+        frontendStatus = "payment";
+      } else if (
+        item.paymentStatus === "Success" &&
+        item.status === "Pending"
+      ) {
+        frontendStatus = "pending"; // Tab "CHỜ DUYỆT"
+      } else {
+        const statusMapping = {
+          Active: "active",
+          Expired: "expired",
+          Rejected: "rejected",
+          Pending: "pending",
+          Sold: "sold",
+        };
+        frontendStatus = statusMapping[item.status] || normalizedStatus;
+      }
+
+      const categoryMapping = {
+        ElectricCar: "Ô tô điện",
+        ElectricMotorbike: "Xe máy điện",
+        RemovableBattery: "Pin rời",
       };
-      frontendStatus = statusMapping[item.status] || item.status?.toLowerCase();
-    }
 
-    const categoryMapping = {
-      ElectricCar: "Ô tô điện",
-      ElectricMotorbike: "Xe máy điện",
-      RemovableBattery: "Pin rời",
-    };
+      const frontendItem = {
+        id: item.id,
+        title: item.title,
+        price: item.price,
+        status: frontendStatus,
+        category: categoryMapping[item.category] || item.category,
+        location: item.area || "Đang cập nhật",
+        images: item.listingImages?.map((img) => img.imageUrl) || [],
+        activatedAt: item.activatedAt,
+        expiredAt: item.expiredAt,
+        creationDate: item.creationDate,
+        // Reject information
+        resonReject: item.resonReject || item.reasonReject || null,
+        descriptionReject: item.descriptionReject || null,
+        postedOn: formatVNDate(new Date()),
+        expiresOn: formatVNDate(
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        ),
+        payment: item.payment || false,
+        paymentStatus: item.paymentStatus,
+        paymentStatusText:
+          PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus,
+        package: item.package
+          ? {
+              name: item.package.name,
+              price: item.package.price,
+              durationInDays: item.package.durationInDays,
+              packageType:
+                packageTypeMapping[item.package.packageType] ||
+                item.package.packageType,
+            }
+          : null,
+        metrics: {
+          rank: Math.floor(Math.random() * 100) + 1,
+          categoryLabel: categoryMapping[item.category] || item.category,
+          daysToDelete: 28,
+        },
+      };
 
-    const frontendItem = {
-      id: item.id,
-      title: item.title,
-      price: item.price,
-      status: frontendStatus,
-      category: categoryMapping[item.category] || item.category,
-      location: item.area || "Đang cập nhật",
-      images: item.listingImages?.map((img) => img.imageUrl) || [],
-      activatedAt: item.activatedAt,
-      expiredAt: item.expiredAt,
-      creationDate: item.creationDate,
-      // Reject information
-      resonReject: item.resonReject || item.reasonReject || null,
-      descriptionReject: item.descriptionReject || null,
-      postedOn: formatVNDate(new Date()),
-      expiresOn: formatVNDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-      payment: item.payment || false,
-      paymentStatus: item.paymentStatus,
-      paymentStatusText:
-        PAYMENT_STATUS_MAPPING[item.paymentStatus] || item.paymentStatus,
-      package: item.package
-        ? {
-            name: item.package.name,
-            price: item.package.price,
-            durationInDays: item.package.durationInDays,
-            packageType:
-              packageTypeMapping[item.package.packageType] ||
-              item.package.packageType,
-          }
-        : null,
-      metrics: {
-        rank: Math.floor(Math.random() * 100) + 1,
-        categoryLabel: categoryMapping[item.category] || item.category,
-        daysToDelete: 28,
-      },
-    };
-
-    return frontendItem;
-  });
+      return frontendItem;
+    })
+    .filter(Boolean);
 };
 
 /* ---------------- Click-outside ---------------- */
@@ -201,7 +211,7 @@ function useOnClickOutside(ref, handler) {
 }
 
 /* ---------------- Dropdown menu ---------------- */
-const OptionMenu = ({ onSold, onHide, onDelete }) => (
+const OptionMenu = ({ onSold, onDelete }) => (
   <div className="mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-lg overflow-hidden">
     <div className="h-px bg-gray-200" />
     <button
@@ -212,16 +222,6 @@ const OptionMenu = ({ onSold, onHide, onDelete }) => (
         <FiCheckCircle />
       </span>
       <span>Đã bán</span>
-    </button>
-    <div className="h-px bg-gray-200" />
-    <button
-      onClick={onHide}
-      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
-    >
-      <span className="text-lg">
-        <FiEyeOff />
-      </span>
-      <span>Ẩn tin</span>
     </button>
     <div className="h-px bg-gray-200" />
     <button
@@ -295,71 +295,92 @@ const SoldPostModal = ({ open, title, onClose, onConfirm }) => {
   );
 };
 
-/* ---------------- Modal "Ẩn tin" ---------------- */
-const HidePostModal = ({ open, title, onClose, onConfirm }) => {
-  const [reason, setReason] = useState("");
-  const reasons = [
-    "Đã bán qua kênh khác",
-    "Tôi bị làm phiền bởi môi giới/dịch vụ đăng tin",
-    "Không muốn bán nữa",
-    "Khác",
-  ];
-  useEffect(() => {
-    if (!open) setReason("");
-  }, [open]);
-  if (!open) return null;
+/* ---------------- Modal "Xoá tin" ---------------- */
+const DeletePostModal = ({ open, listing, loading, onClose, onConfirm }) => {
+  if (!open || !listing) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-lg rounded-lg bg-white shadow-xl">
-        <div className="flex items-center justify-between px-4 py-3 rounded-t-lg bg-gradient-to-r from-gray-900 to-blue-900">
-          <div className="font-semibold text-white truncate">
-            Ẩn tin {title}
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={loading ? undefined : onClose}
+      />
+
+      {/* Card */}
+      <div className="relative mx-3 mt-16 md:mt-0 w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-gray-900 via-red-900 to-red-700">
+          <div className="flex items-center gap-2 text-white">
+            <FiAlertTriangle className="text-lg" />
+            <span className="font-semibold">Xoá tin đăng</span>
           </div>
           <button
-            className="px-2 text-white text-lg leading-none cursor-pointer"
+            className="px-2 text-white text-xl leading-none cursor-pointer disabled:opacity-50"
             onClick={onClose}
+            disabled={loading}
           >
             ×
           </button>
         </div>
+
+        {/* Body */}
         <div className="p-5">
-          <div className="font-semibold mb-3">Vui lòng chọn lý do ẩn tin</div>
-          <div className="space-y-3">
-            {reasons.map((r) => (
-              <label
-                key={r}
-                className="flex items-center gap-3 cursor-pointer select-none"
+          <div className="flex items-start gap-3 mb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+              <FaRegTrashAlt className="text-lg" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-gray-900">
+                Bạn chắc chắn muốn xoá tin này?
+              </p>
+              <p
+                className="text-sm text-gray-600 mt-1 truncate"
+                title={listing.title}
               >
-                <input
-                  type="radio"
-                  name="hide_reason"
-                  className="w-4 h-4 text-blue-600 border-gray-300"
-                  value={r}
-                  checked={reason === r}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-                <span className="text-gray-700">{r}</span>
-              </label>
-            ))}
+                {listing.title}
+              </p>
+              {typeof listing.price !== "undefined" && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Giá đăng:{" "}
+                  <span className="font-medium text-gray-700">
+                    {currency(listing.price)}
+                  </span>
+                </p>
+              )}
+            </div>
           </div>
+
+          <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700 space-y-1">
+            <p>
+              • Tin đăng sẽ bị xoá{" "}
+              <span className="font-semibold">vĩnh viễn</span> khỏi hệ thống.
+            </p>
+            <p>• Người mua sẽ không thể xem lại tin này trên sàn.</p>
+            <p>
+              • Hành động này{" "}
+              <span className="font-semibold">không thể hoàn tác</span>.
+            </p>
+          </div>
+
+          {/* Actions */}
           <div className="mt-6 flex items-center justify-end gap-3">
             <button
-              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 font-medium cursor-pointer hover:bg-gray-50"
+              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 text-sm font-medium cursor-pointer hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={onClose}
+              disabled={loading}
             >
-              Quay lại
+              Hủy
             </button>
             <button
-              className={`px-4 py-2 rounded-md font-semibold text-white ${
-                reason
-                  ? "bg-gray-700 hover:bg-gray-800 cursor-pointer"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-              disabled={!reason}
-              onClick={() => onConfirm(reason)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold text-white bg-red-600 hover:bg-red-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={onConfirm}
+              disabled={loading}
             >
-              Ẩn tin
+              {loading && (
+                <span className="h-4 w-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
+              )}
+              <span>Xoá tin</span>
             </button>
           </div>
         </div>
@@ -375,11 +396,9 @@ const ListingItem = ({
   onEdit,
   onDelete,
   onOpenSoldModal,
-  onOpenHideModal,
   menuForId,
   setMenuForId,
   onPayAgain,
-  onUnhide,
 }) => {
   const galleryImage = item.images?.[0];
   const isActive = item.status === "active";
@@ -435,13 +454,9 @@ const ListingItem = ({
                       setMenuForId(null);
                       onOpenSoldModal(item);
                     }}
-                    onHide={() => {
-                      setMenuForId(null);
-                      onOpenHideModal(item);
-                    }}
                     onDelete={() => {
                       setMenuForId(null);
-                      onDelete(item.id);
+                      onDelete(item);
                     }}
                   />
                 </div>
@@ -487,6 +502,14 @@ const ListingItem = ({
                 Gia hạn tin
               </button>
             )}
+
+            {/* Nút xoá tin cho tab HẾT HẠN */}
+            <button
+              onClick={() => onDelete(item)}
+              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
+            >
+              <FaRegTrashAlt /> Xóa tin
+            </button>
           </div>
         );
 
@@ -512,6 +535,14 @@ const ListingItem = ({
             >
               Thanh toán
             </PaymentButton>
+
+            {/* Nút xoá tin cho tab CẦN THANH TOÁN */}
+            <button
+              onClick={() => onDelete(item)}
+              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
+            >
+              <FaRegTrashAlt /> Xóa tin
+            </button>
           </div>
         );
 
@@ -527,32 +558,6 @@ const ListingItem = ({
           </div>
         );
 
-      case "hidden":
-        return (
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => onNavigate(item)}
-              className={`${btnBase} ${btnSecondary}`}
-            >
-              <FiEye /> Xem chi tiết
-            </button>
-
-            <button
-              onClick={() => onUnhide?.(item)}
-              className={`${btnBase} ${btnPrimary}`}
-            >
-              <FiEye /> Hiện tin lại
-            </button>
-
-            <button
-              onClick={() => onDelete(item.id)}
-              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
-            >
-              <FaRegTrashAlt /> Xóa tin
-            </button>
-          </div>
-        );
-
       case "sold":
         return (
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -564,7 +569,7 @@ const ListingItem = ({
             </button>
 
             <button
-              onClick={() => onDelete(item.id)}
+              onClick={() => onDelete(item)}
               className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
             >
               <FaRegTrashAlt /> Xóa tin
@@ -842,7 +847,8 @@ const ManageListing = () => {
 
   const [menuForId, setMenuForId] = useState(null);
   const [soldFor, setSoldFor] = useState(null);
-  const [hideFor, setHideFor] = useState(null);
+  const [deleteFor, setDeleteFor] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchListings = async () => {
@@ -876,9 +882,6 @@ const ManageListing = () => {
     [listings, activeTab]
   );
 
-  const onDelete = (id) =>
-    setListings((prev) => (prev || []).filter((x) => x.id !== id));
-
   const onEdit = (id) => navigate(`/update-listing/${id}${location.search}`);
 
   const onNavigate = (listing) => {
@@ -889,13 +892,6 @@ const ManageListing = () => {
 
   const getCountForTab = (key) =>
     (listings || []).filter((x) => x.status === key).length;
-
-  const onUnhide = (item) =>
-    setListings((prev) =>
-      (prev || []).map((x) =>
-        x.id === item.id ? { ...x, status: "active" } : x
-      )
-    );
 
   const onPayAgain = async (item) => {
     try {
@@ -946,6 +942,44 @@ const ManageListing = () => {
       alert("Không thể kết nối đến server. Vui lòng thử lại sau.");
     } finally {
       setSoldFor(null);
+    }
+  };
+
+  // Mở modal xoá
+  const requestDelete = (listing) => {
+    setDeleteFor(listing);
+  };
+
+  // Xác nhận xoá trong modal
+  const handleDeleteListing = async () => {
+    if (!deleteFor?.id) return;
+
+    try {
+      setDeleting(true);
+
+      const response = await listingService.deleteListing(deleteFor.id);
+
+      if (response?.data?.error === 0) {
+        setListings((prev) =>
+          (prev || []).filter((x) => x.id !== deleteFor.id)
+        );
+        showNotification(`Xoá tin "${deleteFor.title}" thành công.`, "success");
+        setDeleteFor(null);
+      } else {
+        const msg =
+          response?.data?.message ||
+          response?.error ||
+          "Không thể xoá tin đăng. Vui lòng thử lại.";
+        showNotification(msg, "error");
+      }
+    } catch (err) {
+      console.error("Error deleting listing:", err);
+      showNotification(
+        "Không thể kết nối đến server. Vui lòng thử lại sau.",
+        "error"
+      );
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1053,13 +1087,11 @@ const ManageListing = () => {
                 item={item}
                 onNavigate={onNavigate}
                 onEdit={onEdit}
-                onDelete={onDelete}
+                onDelete={requestDelete}
                 onOpenSoldModal={setSoldFor}
-                onOpenHideModal={setHideFor}
                 menuForId={menuForId}
                 setMenuForId={setMenuForId}
                 onPayAgain={onPayAgain}
-                onUnhide={onUnhide}
               />
             ))}
           </div>
@@ -1074,21 +1106,15 @@ const ManageListing = () => {
         onConfirm={() => handleConfirmSold(soldFor)}
       />
 
-      {/* Modal Ẩn tin */}
-      <HidePostModal
-        open={!!hideFor}
-        title={hideFor?.title || ""}
-        onClose={() => setHideFor(null)}
-        onConfirm={(reason) => {
-          if (hideFor) {
-            setListings((prev) =>
-              (prev || []).map((x) =>
-                x.id === hideFor.id ? { ...x, status: "hidden" } : x
-              )
-            );
-          }
-          setHideFor(null);
+      {/* Modal Xoá tin */}
+      <DeletePostModal
+        open={!!deleteFor}
+        listing={deleteFor}
+        loading={deleting}
+        onClose={() => {
+          if (!deleting) setDeleteFor(null);
         }}
+        onConfirm={handleDeleteListing}
       />
     </MainLayout>
   );
