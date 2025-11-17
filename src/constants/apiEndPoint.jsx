@@ -33,6 +33,7 @@ export const API_ENDPOINTS_LISTING = {
   LISTING_VNPAY: (id) => `/api/Listing/VnpayUrl/${id}`,
   // Repayment URL for extending expired listings
   LISTING_REPAYMENT: (id) => `/api/Listing/Repayment/${id}`,
+  DELETE_LISTING: (id) => `/api/Listing/Delete/${id}`,
 };
 
 // Admin endpoints for listing moderation
@@ -48,8 +49,9 @@ export const API_ENDPOINTS_STAFF = {
   REJECT_LISTING: (id, reason, descriptionReject) =>
     `/api/Staff/Reject-Listing/${id}?resonReject=${reason}&reason=${descriptionReject}`,
   // Staff: users management
-  BAN_USER: (id, descriptionBan) => `/api/Staff/Ban-User/${id}?banDescription=${descriptionBan}`,
-  UNBAN_USER: (id) => `/api/Staff/Unban-User/${id}`
+  BAN_USER: (id, descriptionBan) =>
+    `/api/Staff/Ban-User/${id}?banDescription=${descriptionBan}`,
+  UNBAN_USER: (id) => `/api/Staff/Unban-User/${id}`,
 };
 
 // Các endpoint cho user
@@ -115,7 +117,7 @@ export const API_ENDPOINTS_REPORT = {
 
   // Lấy/xóa report theo id
   GET_BY_ID: (id) => `/api/Report/${id}`,
-  DELETE:      (id) => `/api/Report/${id}`,
+  DELETE: (id) => `/api/Report/${id}`,
 
   // Lấy report theo user và listing (phân trang)
   GET_BY_USER: (userId, pageIndex = 1, pageSize = 20) =>
