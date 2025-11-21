@@ -535,14 +535,6 @@ const ListingItem = ({
             >
               Thanh toán
             </PaymentButton>
-
-            {/* Nút xoá tin cho tab CẦN THANH TOÁN */}
-            <button
-              onClick={() => onDelete(item)}
-              className={`${btnBase} ${btnOutline} text-red-600 hover:bg-red-50 hover:border-red-300`}
-            >
-              <FaRegTrashAlt /> Xóa tin
-            </button>
           </div>
         );
 

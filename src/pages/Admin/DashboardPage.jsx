@@ -602,8 +602,8 @@ export default function DashboardPage() {
         },
         {
           type: "Pin điện",
-          new: Number(d.totalNewBatteries || 0),
-          used: Number(d.totalOldBatteries || 0),
+          new: Number(d.totalNewBateries || 0),
+          used: Number(d.totalOldBateries || 0),
         },
       ];
     }

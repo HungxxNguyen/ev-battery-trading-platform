@@ -32,7 +32,7 @@ const PRICE_PRESETS = [
   { label: "50 - 200tr", from: 50_000_000, to: 200_000_000 },
   { label: "200 - 500tr", from: 200_000_000, to: 500_000_000 },
   { label: "500tr - 1tỷ", from: 500_000_000, to: 1_000_000_000 },
-  { label: "> 1tỷ", from: 1_000_000_000, to: 5_000_000_000 },
+  { label: "> 1tỷ", from: 1_000_000_000, to: null },
 ];
 
 const YEAR_PRESETS = [
@@ -42,7 +42,7 @@ const YEAR_PRESETS = [
   { label: "<= 2014", from: "", to: 2014 },
 ];
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 1000;
 const FALLBACK_LISTING_IMAGE = "https://placehold.co/600x450?text=Listing";
 
 const formatCurrency = (value) => {
@@ -60,6 +60,13 @@ const formatListingStatus = (status) => {
   if (!status) return null;
   const mapping = { New: "Mới", Used: "Đã sử dụng" };
   return mapping[status] || status;
+};
+
+const parsePriceParam = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return num;
 };
 
 // Normalize brand model from various backend shapes
@@ -138,12 +145,10 @@ const Category = () => {
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const debouncedQuery = useDebouncedValue(query, 450);
   const [priceFrom, setPriceFrom] = useState(
-    Number(searchParams.get("from")) >= 0 ? Number(searchParams.get("from")) : 0
+    parsePriceParam(searchParams.get("from"))
   );
   const [priceTo, setPriceTo] = useState(
-    Number(searchParams.get("to")) > 0
-      ? Number(searchParams.get("to"))
-      : 5_000_000_000
+    parsePriceParam(searchParams.get("to"))
   );
   const [yearFrom, setYearFrom] = useState(
     Number(searchParams.get("yfrom")) > 0
@@ -219,13 +224,23 @@ const Category = () => {
       setLoading(true);
       setError("");
       try {
+        const normalizedFrom =
+          priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
+        let normalizedTo =
+          priceTo != null ? Math.max(0, Number(priceTo) || 0) : null;
+        if (
+          normalizedFrom != null &&
+          normalizedTo != null &&
+          normalizedTo < normalizedFrom
+        ) {
+          normalizedTo = normalizedFrom;
+        }
+
         const params = {
           pageIndex: 1, // always get the freshest set; UI paging is client-side
           pageSize: 500, // reasonable cap to avoid huge payloads
           // Do not pass text search to backend: backend search may not include 'model'.
           // Fetch broadly and apply text filtering (title/brand/model/area) client-side below.
-          from: Math.max(0, Number(priceFrom) || 0),
-          to: Math.max(Number(priceFrom) || 0, Number(priceTo) || 0),
           category: mapping?.api,
           brandId: brandId || undefined,
           status: status || undefined,
@@ -233,6 +248,8 @@ const Category = () => {
           yearTo: yearTo || undefined,
           area: area || undefined,
         };
+        if (normalizedFrom != null) params.from = normalizedFrom;
+        if (normalizedTo != null) params.to = normalizedTo;
 
         const res = await listingService.getListings(params);
         if (!active) return;
@@ -267,8 +284,10 @@ const Category = () => {
     const next = new URLSearchParams(searchParams);
     query ? next.set("q", String(query)) : next.delete("q");
     next.set("pageSize", String(pageSize));
-    next.set("from", String(priceFrom || 0));
-    next.set("to", String(priceTo || 0));
+    priceFrom != null
+      ? next.set("from", String(priceFrom))
+      : next.delete("from");
+    priceTo != null ? next.set("to", String(priceTo)) : next.delete("to");
     yearFrom ? next.set("yfrom", String(yearFrom)) : next.delete("yfrom");
     yearTo ? next.set("yto", String(yearTo)) : next.delete("yto");
     brandId ? next.set("brandId", String(brandId)) : next.delete("brandId");
@@ -306,8 +325,12 @@ const Category = () => {
   // Client filter + sort
   const clientFilteredSorted = useMemo(() => {
     const arr = Array.isArray(rawItems) ? rawItems : [];
-    const from = Math.max(0, Number(priceFrom) || 0);
-    const to = Math.max(from, Number(priceTo) || 0);
+    const from =
+      priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
+    let to = priceTo != null ? Math.max(0, Number(priceTo) || 0) : null;
+    if (from != null && to != null && to < from) {
+      to = from;
+    }
 
     const getNum = (v) => (isNaN(Number(v)) ? 0 : Number(v));
     const getYear = (it) =>
@@ -352,7 +375,8 @@ const Category = () => {
       const st = getStatus(it);
       const bId = getBrandId(it);
       const ar = getArea(it);
-      if (p < from || p > to) return false;
+      if (from != null && p < from) return false;
+      if (to != null && p > to) return false;
       if (yearFrom && (!y || y < Number(yearFrom))) return false;
       if (yearTo && (!y || y > Number(yearTo))) return false;
       if (status && st !== status) return false;
@@ -393,8 +417,8 @@ const Category = () => {
 
   const onClearAll = () => {
     setQuery("");
-    setPriceFrom(0);
-    setPriceTo(5_000_000_000);
+    setPriceFrom(null);
+    setPriceTo(null);
     setYearFrom("");
     setYearTo("");
     setBrandId("");
@@ -448,18 +472,28 @@ const Category = () => {
   );
 
   const PricePopover = () => {
-    const [localPriceFrom, setLocalPriceFrom] = useState(priceFrom);
-    const [localPriceTo, setLocalPriceTo] = useState(priceTo);
+    const [localPriceFrom, setLocalPriceFrom] = useState(priceFrom ?? "");
+    const [localPriceTo, setLocalPriceTo] = useState(priceTo ?? "");
 
     const handleApply = () => {
-      setPriceFrom(localPriceFrom);
-      setPriceTo(localPriceTo);
+      const normalizedFrom =
+        localPriceFrom === "" ? null : Math.max(0, Number(localPriceFrom) || 0);
+      const normalizedToRaw =
+        localPriceTo === "" ? null : Math.max(0, Number(localPriceTo) || 0);
+      const normalizedTo =
+        normalizedFrom != null &&
+        normalizedToRaw != null &&
+        normalizedToRaw < normalizedFrom
+          ? normalizedFrom
+          : normalizedToRaw;
+      setPriceFrom(normalizedFrom);
+      setPriceTo(normalizedTo);
       setOpenMenu(null);
     };
 
     const handleReset = () => {
-      setLocalPriceFrom(0);
-      setLocalPriceTo(5_000_000_000);
+      setLocalPriceFrom("");
+      setLocalPriceTo("");
     };
 
     return (
@@ -474,7 +508,11 @@ const Category = () => {
           <input
             type="number"
             value={localPriceFrom}
-            onChange={(e) => setLocalPriceFrom(Number(e.target.value) || 0)}
+            onChange={(e) => {
+              const val = e.target.value;
+              const num = Number(val);
+              setLocalPriceFrom(val === "" || Number.isNaN(num) ? "" : num);
+            }}
             className="flex-1 rounded border border-gray-300 px-3 py-2"
             placeholder="Giá tối thiểu"
           />
@@ -482,7 +520,11 @@ const Category = () => {
           <input
             type="number"
             value={localPriceTo}
-            onChange={(e) => setLocalPriceTo(Number(e.target.value) || 0)}
+            onChange={(e) => {
+              const val = e.target.value;
+              const num = Number(val);
+              setLocalPriceTo(val === "" || Number.isNaN(num) ? "" : num);
+            }}
             className="flex-1 rounded border border-gray-300 px-3 py-2"
             placeholder="Giá tối đa"
           />
@@ -492,8 +534,8 @@ const Category = () => {
             <button
               key={p.label}
               onClick={() => {
-                setLocalPriceFrom(p.from);
-                setLocalPriceTo(p.to || 5_000_000_000);
+                setLocalPriceFrom(p.from ?? "");
+                setLocalPriceTo(p.to ?? "");
               }}
               className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50 cursor-pointer"
             >
@@ -818,7 +860,9 @@ const Category = () => {
                   : "bg-white/80 text-gray-600 hover:text-red-500"
               }`}
             >
-              <FiHeart className={`w-5 h-5 ${favActive ? "fill-current" : ""}`} />
+              <FiHeart
+                className={`w-5 h-5 ${favActive ? "fill-current" : ""}`}
+              />
             </button>
           </div>
 
@@ -848,10 +892,24 @@ const Category = () => {
     });
   };
 
+  const hasPriceFilter = priceFrom != null || priceTo != null;
+
+  const priceLabel = useMemo(() => {
+    if (!hasPriceFilter) return "Khoảng giá";
+    if (priceFrom != null && priceTo != null) {
+      return `Giá: ${priceFrom.toLocaleString("vi-VN")} - ${priceTo.toLocaleString(
+        "vi-VN"
+      )}`;
+    }
+    if (priceFrom != null) {
+      return `Giá từ ${priceFrom.toLocaleString("vi-VN")}`;
+    }
+    return `Giá đến ${priceTo?.toLocaleString("vi-VN")}`;
+  }, [hasPriceFilter, priceFrom, priceTo]);
+
   const hasActiveFilters =
     query ||
-    priceFrom !== 0 ||
-    priceTo !== 5_000_000_000 ||
+    hasPriceFilter ||
     yearFrom ||
     yearTo ||
     brandId ||
@@ -905,12 +963,8 @@ const Category = () => {
 
               <div className="relative">
                 <FilterChip
-                  label="Giá"
-                  active={
-                    openMenu === "price" ||
-                    priceFrom !== 0 ||
-                    priceTo !== 5_000_000_000
-                  }
+                  label={priceLabel}
+                  active={openMenu === "price" || hasPriceFilter}
                   onClick={() =>
                     setOpenMenu(openMenu === "price" ? null : "price")
                   }
@@ -993,14 +1047,12 @@ const Category = () => {
                     onClear={() => setQuery("")}
                   />
                 ) : null}
-                {priceFrom !== 0 || priceTo !== 5_000_000_000 ? (
+                {hasPriceFilter ? (
                   <ActivePill
-                    text={`Giá: ${priceFrom.toLocaleString(
-                      "vi-VN"
-                    )} - ${priceTo.toLocaleString("vi-VN")}`}
+                    text={priceLabel}
                     onClear={() => {
-                      setPriceFrom(0);
-                      setPriceTo(5_000_000_000);
+                      setPriceFrom(null);
+                      setPriceTo(null);
                     }}
                   />
                 ) : null}

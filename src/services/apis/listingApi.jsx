@@ -18,9 +18,10 @@ function extractItems(payload) {
 
 const listingService = {
   // (GIỮ NGUYÊN) — gọi GetAll mặc định (BE thường mặc định pageIndex=1,pageSize=10)
-  async getListings() {
+  async getListings(params) {
     return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
       method: "get",
+      params,
     });
   },
 
