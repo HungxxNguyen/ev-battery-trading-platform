@@ -133,7 +133,8 @@ export default function StaffReview() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("Pending");
   const [pageIndex] = useState(1);
-  const [pageSize] = useState(10);
+  // Tăng pageSize để backend trả về nhiều tin hơn trong một lần (thay vì mặc định 10)
+  const [pageSize] = useState(1000);
 
   // Selection + details
   const [selectedId, setSelectedId] = useState(null);
