@@ -89,9 +89,6 @@ const ListingDetail = () => {
 
       try {
         let response = await listingService.getById(id);
-        if (!response?.success || response?.status === 404) {
-          response = await listingService.getListingDetail(id);
-        }
 
         if (!active) {
           return;

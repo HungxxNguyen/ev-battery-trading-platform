@@ -192,7 +192,7 @@ const ManageDetail = () => {
         }
 
         if ((!images || images.length === 0 || !item?.brand?.name) && id) {
-          const detailAlt = await listingService.getListingDetail(id);
+          const detailAlt = await listingService.getById(id);
           const altPayload = detailAlt?.data;
           const altItem =
             (altPayload?.data &&
