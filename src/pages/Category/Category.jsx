@@ -224,34 +224,7 @@ const Category = () => {
       setLoading(true);
       setError("");
       try {
-        const normalizedFrom =
-          priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
-        let normalizedTo =
-          priceTo != null ? Math.max(0, Number(priceTo) || 0) : null;
-        if (
-          normalizedFrom != null &&
-          normalizedTo != null &&
-          normalizedTo < normalizedFrom
-        ) {
-          normalizedTo = normalizedFrom;
-        }
-
-        const params = {
-          pageIndex: 1, // always get the freshest set; UI paging is client-side
-          pageSize: 500, // reasonable cap to avoid huge payloads
-          // Do not pass text search to backend: backend search may not include 'model'.
-          // Fetch broadly and apply text filtering (title/brand/model/area) client-side below.
-          category: mapping?.api,
-          brandId: brandId || undefined,
-          status: status || undefined,
-          yearFrom: yearFrom || undefined,
-          yearTo: yearTo || undefined,
-          area: area || undefined,
-        };
-        if (normalizedFrom != null) params.from = normalizedFrom;
-        if (normalizedTo != null) params.to = normalizedTo;
-
-        const res = await listingService.getListings(params);
+        const res = await listingService.getListings(1, 500);
         if (!active) return;
         if (res?.success) {
           const payload = res.data;
@@ -325,8 +298,7 @@ const Category = () => {
   // Client filter + sort
   const clientFilteredSorted = useMemo(() => {
     const arr = Array.isArray(rawItems) ? rawItems : [];
-    const from =
-      priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
+    const from = priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
     let to = priceTo != null ? Math.max(0, Number(priceTo) || 0) : null;
     if (from != null && to != null && to < from) {
       to = from;
@@ -476,22 +448,14 @@ const Category = () => {
     const [localPriceTo, setLocalPriceTo] = useState(priceTo ?? "");
 
     const handleApply = () => {
-      const normalizedFrom =
-        localPriceFrom === "" ? null : Math.max(0, Number(localPriceFrom) || 0);
-      const normalizedToRaw =
-        localPriceTo === "" ? null : Math.max(0, Number(localPriceTo) || 0);
-      const normalizedTo =
-        normalizedFrom != null &&
-        normalizedToRaw != null &&
-        normalizedToRaw < normalizedFrom
-          ? normalizedFrom
-          : normalizedToRaw;
-      setPriceFrom(normalizedFrom);
-      setPriceTo(normalizedTo);
+      setPriceFrom(localPriceFrom);
+      setPriceTo(localPriceTo);
       setOpenMenu(null);
     };
 
     const handleReset = () => {
+      setPriceFrom(null);
+      setPriceTo(null);
       setLocalPriceFrom("");
       setLocalPriceTo("");
     };
@@ -897,9 +861,9 @@ const Category = () => {
   const priceLabel = useMemo(() => {
     if (!hasPriceFilter) return "Khoảng giá";
     if (priceFrom != null && priceTo != null) {
-      return `Giá: ${priceFrom.toLocaleString("vi-VN")} - ${priceTo.toLocaleString(
+      return `Giá: ${priceFrom.toLocaleString(
         "vi-VN"
-      )}`;
+      )} - ${priceTo.toLocaleString("vi-VN")}`;
     }
     if (priceFrom != null) {
       return `Giá từ ${priceFrom.toLocaleString("vi-VN")}`;

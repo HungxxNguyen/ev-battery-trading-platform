@@ -115,9 +115,7 @@ export const FavoritesProvider = ({ children }) => {
         missing.map(async (it) => {
           try {
             let resp = await listingService.getById(it.id);
-            if (!resp?.success || resp?.status === 404) {
-              resp = await listingService.getListingDetail(it.id);
-            }
+
             if (resp?.success) {
               const payload = resp.data;
               const detail =
@@ -144,9 +142,7 @@ export const FavoritesProvider = ({ children }) => {
         const enriched = byId[String(it.id)] || {};
         const area = enriched.area || it.area || it.location || "";
         const needsArea = area && (!it.area || !it.location);
-        return needsArea
-          ? { ...it, area, location: area }
-          : it;
+        return needsArea ? { ...it, area, location: area } : it;
       });
     } catch {
       return items;

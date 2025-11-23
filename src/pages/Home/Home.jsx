@@ -6,13 +6,6 @@ import { FiHeart } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import listingService from "../../services/apis/listingApi";
 
-const DEFAULT_LISTING_PARAMS = {
-  pageIndex: 1,
-  pageSize: 10,
-  from: 0,
-  to: 1000000000,
-};
-
 const FALLBACK_LISTING_IMAGE = "https://placehold.co/400x300?text=Listing";
 const SKELETON_COUNT = 5;
 
@@ -71,9 +64,7 @@ const Home = () => {
       setError("");
 
       try {
-        const response = await listingService.getListings(
-          DEFAULT_LISTING_PARAMS
-        );
+        const response = await listingService.getListings(1, 10);
 
         if (!active) return;
 

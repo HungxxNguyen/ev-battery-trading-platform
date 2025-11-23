@@ -18,11 +18,13 @@ function extractItems(payload) {
 
 const listingService = {
   // (GIỮ NGUYÊN) — gọi GetAll mặc định (BE thường mặc định pageIndex=1,pageSize=10)
-  async getListings(params) {
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
-      method: "get",
-      params,
-    });
+  async getListings(pageIndex = 1, pageSize = 10) {
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.GET_ALL(pageIndex, pageSize),
+      {
+        method: "get",
+      }
+    );
   },
 
   // ✅ MỚI — lấy 1 trang GetAll với tham số phân trang rõ ràng
@@ -59,16 +61,6 @@ const listingService = {
       API_ENDPOINTS_LISTING.GET_BY_STATUS(pageIndex, pageSize, status),
       { method: "get" }
     );
-  },
-
-  async getListingDetail(id) {
-    if (!id) {
-      return { success: false, error: "Listing id is required", status: null };
-    }
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_DETAIL, {
-      method: "get",
-      params: { id },
-    });
   },
 
   async getMyListings(pageIndex = 1, pageSize = 1000) {

@@ -15,7 +15,8 @@ export const API_ENDPOINTS_AUTH = {
 
 // Các endpoint cho sản phẩm
 export const API_ENDPOINTS_LISTING = {
-  GET_ALL: "/api/Listing/GetAll",
+  GET_ALL: (pageIndex, pageSize) =>
+    `/api/Listing/GetAll?pageIndex=${pageIndex}&pageSize=${pageSize}`,
   GET_DETAIL: "/api/Listing/GetDetail",
   // Backend detail by id (per provided cURL)
   GET_BY_ID: (id) => `/api/Listing/GetById/${id}`,

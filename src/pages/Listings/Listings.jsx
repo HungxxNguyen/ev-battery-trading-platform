@@ -12,7 +12,6 @@ import listingService from "../../services/apis/listingApi";
 import brandService from "../../services/apis/brandApi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 
-const DEFAULT_PAGE_SIZE = 1000;
 const FALLBACK_LISTING_IMAGE = "https://placehold.co/600x450?text=Listing";
 const CATEGORY_OPTIONS = [
   { value: "", label: "Tất cả danh mục" },
@@ -136,7 +135,7 @@ export default function Listings() {
   const [pageSize] = useState(
     Number(searchParams.get("pageSize")) > 0
       ? Number(searchParams.get("pageSize"))
-      : DEFAULT_PAGE_SIZE
+      : 1000
   );
 
   // Popovers
@@ -202,34 +201,7 @@ export default function Listings() {
       setLoading(true);
       setError("");
       try {
-        const normalizedFrom =
-          priceFrom != null ? Math.max(0, Number(priceFrom) || 0) : null;
-        let normalizedTo =
-          priceTo != null ? Math.max(0, Number(priceTo) || 0) : null;
-        if (
-          normalizedFrom != null &&
-          normalizedTo != null &&
-          normalizedTo < normalizedFrom
-        ) {
-          normalizedTo = normalizedFrom;
-        }
-
-        const params = {
-          pageIndex: 1,
-          pageSize: 500,
-          // Note: do NOT pass text search to backend here.
-          // Backend search does not include model, which breaks model queries.
-          // We fetch broadly and apply robust client-side filtering below.
-          category: category || undefined,
-          brandId: brandId || undefined,
-          status: status || undefined,
-          yearFrom: yearFrom || undefined,
-          yearTo: yearTo || undefined,
-          area: area || undefined,
-        };
-        if (normalizedFrom != null) params.from = normalizedFrom;
-        if (normalizedTo != null) params.to = normalizedTo;
-        const res = await listingService.getListings(params);
+        const res = await listingService.getListings(1, 500);
         if (!active) return;
         if (res?.success) {
           const payload = res.data;
@@ -449,21 +421,13 @@ export default function Listings() {
     const [localFrom, setLocalFrom] = useState(priceFrom ?? "");
     const [localTo, setLocalTo] = useState(priceTo ?? "");
     const apply = () => {
-      const normalizedFrom =
-        localFrom === "" ? null : Math.max(0, Number(localFrom) || 0);
-      const normalizedToRaw =
-        localTo === "" ? null : Math.max(0, Number(localTo) || 0);
-      const normalizedTo =
-        normalizedFrom != null &&
-        normalizedToRaw != null &&
-        normalizedToRaw < normalizedFrom
-          ? normalizedFrom
-          : normalizedToRaw;
-      setPriceFrom(normalizedFrom);
-      setPriceTo(normalizedTo);
+      setPriceFrom(localFrom); //thêm
+      setPriceTo(localTo);
       setOpenMenu(null);
     };
     const reset = () => {
+      setPriceFrom(null);
+      setPriceTo(null);
       setLocalFrom("");
       setLocalTo("");
     };
@@ -841,9 +805,9 @@ export default function Listings() {
   const priceLabel = useMemo(() => {
     if (!hasPriceFilter) return "Khoảng giá";
     if (priceFrom != null && priceTo != null) {
-      return `Giá: ${priceFrom.toLocaleString("vi-VN")} - ${priceTo.toLocaleString(
+      return `Giá: ${priceFrom.toLocaleString(
         "vi-VN"
-      )}`;
+      )} - ${priceTo.toLocaleString("vi-VN")}`;
     }
     if (priceFrom != null) {
       return `Giá từ ${priceFrom.toLocaleString("vi-VN")}`;
