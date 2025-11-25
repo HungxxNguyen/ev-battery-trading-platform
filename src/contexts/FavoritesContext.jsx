@@ -3,9 +3,11 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
+  useMemo,
+  useCallback,
 } from "react";
+
 import { AuthContext } from "./AuthContext";
 import favouriteService from "../services/apis/favouriteApi";
 import { decodeToken } from "../utils/tokenUtils";
@@ -15,32 +17,31 @@ const FavoritesContext = createContext({
   toggleFavorite: () => {},
   isFavorite: () => false,
   clearFavorites: () => {},
+  reload: () => {},
+  loading: false,
 });
 
-// Normalize various listing/favourite shapes to UI-friendly item
+/* ---------------- Helper: sanitize listing/favourite object ---------------- */
 const sanitizeItem = (item) => {
   if (!item || typeof item !== "object") return null;
 
-  // Case 1: server favourite entry { id: favouriteId, listing: { ... } }
+  // Case from server: { id, listing: {...} }
   if (item.listing && typeof item.listing === "object") {
     const l = item.listing;
     const id = l.id ?? l.listingId;
-    if (!id && id !== 0) return null;
-    const rawStatus =
-      l.status ?? l.Status ?? l.listingStatus ?? item.status ?? "";
-    const status =
-      rawStatus && typeof rawStatus === "string"
-        ? rawStatus.toLowerCase()
-        : rawStatus
-        ? String(rawStatus).toLowerCase()
-        : "";
+    if (!id) return null;
+
+    const status = (l.status ?? l.Status ?? l.listingStatus ?? "")
+      .toString()
+      .toLowerCase();
+
     const image =
-      Array.isArray(l.listingImages) && l.listingImages.length > 0
-        ? l.listingImages[0]?.imageUrl
-        : l.image ||
-          l.thumbnail ||
-          l.images?.[0] ||
-          "https://placehold.co/200x140?text=Listing";
+      l.listingImages?.[0]?.imageUrl ||
+      l.image ||
+      l.thumbnail ||
+      l.images?.[0] ||
+      "https://placehold.co/200x140?text=Listing";
+
     return {
       id: String(id),
       title: l.title || "Tin đăng",
@@ -51,21 +52,20 @@ const sanitizeItem = (item) => {
     };
   }
 
-  // Case 2: client listing object used by UI
+  // Case from UI (Home)
   const baseId = item.id ?? item.listingId;
-  if (!baseId && baseId !== 0) return null;
-  const rawStatus =
+  if (!baseId) return null;
+
+  const status = (
     item.status ??
     item.Status ??
     item.listingStatus ??
     item.listing?.status ??
-    "";
-  const status =
-    rawStatus && typeof rawStatus === "string"
-      ? rawStatus.toLowerCase()
-      : rawStatus
-      ? String(rawStatus).toLowerCase()
-      : "";
+    ""
+  )
+    .toString()
+    .toLowerCase();
+
   return {
     id: String(baseId),
     title: item.title || "Tin đăng",
@@ -80,61 +80,64 @@ const sanitizeItem = (item) => {
   };
 };
 
+/* ---------------- Provider ---------------- */
 export const FavoritesProvider = ({ children }) => {
-  const auth = useContext(AuthContext) || {};
+  const auth = useContext(AuthContext);
   const currentUser = auth?.user || null;
-  // Derive userId from context or JWT token
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const token = localStorage.getItem("token");
   const tokenInfo = token ? decodeToken(token) : null;
+
   const userId = currentUser?.id || tokenInfo?.userId;
 
   const [favorites, setFavorites] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
 
-  const loadFavorites = async () => {
+  /* ---------------- Load API ---------------- */
+  const loadFavorites = useCallback(async () => {
     if (!userId) {
       setFavorites([]);
       setFavoriteIds(new Set());
       return;
     }
+
     setLoading(true);
     try {
       const res = await favouriteService.getFavourites(userId);
+
       if (res?.success) {
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map(sanitizeItem).filter(Boolean);
+
         setFavorites(mapped);
         setFavoriteIds(new Set(mapped.map((x) => String(x.id))));
       } else {
         setFavorites([]);
         setFavoriteIds(new Set());
       }
-    } catch (e) {
-      console.error("Failed to load favourites:", e);
+    } catch (err) {
+      console.error("Load favourites failed:", err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    // Sync when user changes or logs in/out
-    loadFavorites();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  useEffect(() => {
+    loadFavorites();
+  }, [loadFavorites]);
+
+  /* ---------------- Toggle Favorite ---------------- */
   const toggleFavorite = async (item) => {
     const formatted = sanitizeItem(item);
     if (!formatted) return;
+
     if (!userId) {
-      const current =
-        typeof window !== "undefined"
-          ? window.location.pathname +
-            window.location.search +
-            window.location.hash
-          : "/";
-      window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
+      const url =
+        window.location.pathname +
+        window.location.search +
+        window.location.hash;
+      window.location.href = `/login?redirect=${encodeURIComponent(url)}`;
       return;
     }
 
@@ -147,6 +150,7 @@ export const FavoritesProvider = ({ children }) => {
           userId,
           listingId,
         });
+
         if (res?.success) {
           setFavorites((prev) =>
             prev.filter((f) => String(f.id) !== String(listingId))
@@ -159,8 +163,8 @@ export const FavoritesProvider = ({ children }) => {
         }
       } else {
         const res = await favouriteService.addFavourite({ userId, listingId });
+
         if (res?.success) {
-          // Optimistically add from available item data
           setFavorites((prev) => {
             const exists = prev.some((f) => String(f.id) === String(listingId));
             return exists ? prev : [...prev, formatted];
@@ -168,45 +172,47 @@ export const FavoritesProvider = ({ children }) => {
           setFavoriteIds((prev) => new Set([...prev, String(listingId)]));
         }
       }
-    } catch (e) {
-      console.error("Toggle favourite failed:", e);
+    } catch (err) {
+      console.error("Toggle favourite failed:", err);
     }
   };
 
+  /* ---------------- Clear Favorites ---------------- */
   const clearFavorites = async () => {
-    if (!userId || favorites.length === 0) {
-      setFavorites([]);
-      setFavoriteIds(new Set());
-      return;
-    }
+    if (!userId || favorites.length === 0) return;
+
     try {
       await Promise.all(
         favorites.map((fav) =>
-          favouriteService.deleteFavourite({ userId, listingId: fav.id })
+          favouriteService.deleteFavourite({
+            userId,
+            listingId: fav.id,
+          })
         )
       );
-    } catch (e) {
-      console.error("Clear favourites encountered errors:", e);
-    } finally {
-      setFavorites([]);
-      setFavoriteIds(new Set());
+    } catch (err) {
+      console.error("Clear favourite failed:", err);
     }
+
+    setFavorites([]);
+    setFavoriteIds(new Set());
   };
 
-  const memoizedValue = useMemo(
+  /* ---------------- Context Value ---------------- */
+  const value = useMemo(
     () => ({
       favorites,
       toggleFavorite,
       isFavorite: (id) => favoriteIds.has(String(id)),
       clearFavorites,
-      loading,
       reload: loadFavorites,
+      loading,
     }),
-    [favorites, favoriteIds, loading]
+    [favorites, favoriteIds, loading, loadFavorites]
   );
 
   return (
-    <FavoritesContext.Provider value={memoizedValue}>
+    <FavoritesContext.Provider value={value}>
       {children}
     </FavoritesContext.Provider>
   );

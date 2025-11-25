@@ -21,7 +21,7 @@ import { decodeToken } from "../../utils/tokenUtils";
 const FALLBACK_AVATAR = "https://placehold.co/80x80?text=U";
 const PIN_PREFIX = "__PINNED_LISTING__:";
 const SOLD_NOTICE_TEXT =
-  "Sản phẩm thuộc bài đăng này đã được bán. Cuộc trò chuyện đã được đóng.";
+  "Sản phẩm thuộc bài đăng này đã được bán hoặc không còn được hiển thị. Cuộc trò chuyện đã được đóng.";
 const SOLD_NOTICE_ID = (threadId) => `__sold_notice__${threadId}`;
 
 const normalizeStatus = (status) => {
@@ -186,7 +186,9 @@ const Chat = () => {
   const tokenInfo = token ? decodeToken(token) : null;
   const currentUserId =
     user?.id?.toString?.() ||
-    (tokenInfo?.userId || tokenInfo?.id ? String(tokenInfo.userId || tokenInfo.id) : "");
+    (tokenInfo?.userId || tokenInfo?.id
+      ? String(tokenInfo.userId || tokenInfo.id)
+      : "");
   const participantIdFromRoute = location.state?.participantId?.toString?.();
   const listingFromRoute = location.state?.listingForChat;
 
@@ -332,6 +334,21 @@ const Chat = () => {
     });
   }, []);
 
+  const removeSoldNotice = useCallback((threadId) => {
+    if (!threadId) return;
+    setThreadsById((prev) => {
+      const t = prev.get(threadId);
+      if (!t) return prev;
+      const filtered = t.messages.filter(
+        (m) => m.id !== SOLD_NOTICE_ID(threadId)
+      );
+      if (filtered.length === t.messages.length) return prev;
+      const map = new Map(prev);
+      map.set(threadId, { ...t, messages: filtered });
+      return map;
+    });
+  }, []);
+
   const fetchListingStatus = useCallback(
     async (listingId, threadId) => {
       if (!listingId) return "";
@@ -363,14 +380,18 @@ const Chat = () => {
           };
           return next;
         });
-        if (status === "sold") ensureSoldNotice(threadId);
+        if (status === "active") {
+          removeSoldNotice(threadId);
+        } else {
+          ensureSoldNotice(threadId);
+        }
         return status;
       } catch (err) {
         console.error("Failed to fetch listing status", err);
         return "";
       }
     },
-    [ensureSoldNotice, toListingSummary]
+    [ensureSoldNotice, removeSoldNotice, toListingSummary]
   );
 
   // Load threads for current user
@@ -816,34 +837,41 @@ const Chat = () => {
   }, [selectedThread, threadListings, extractPinnedFromMessages]);
 
   const selectedListingStatus = normalizeStatus(selectedListing?.status);
-  const isSelectedListingSold = selectedListingStatus === "sold";
+  const isSelectedListingSold = selectedListingStatus !== "active";
 
   useEffect(() => {
     if (!selectedThread?.id) return;
     const listingId = selectedListing?.id;
-    if (isSelectedListingSold) {
+    if (!listingId) return;
+    fetchListingStatus(listingId, selectedThread.id);
+  }, [selectedThread?.id, selectedListing?.id, fetchListingStatus]);
+
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    if (!selectedListingStatus) return;
+    if (selectedListingStatus === "active") {
+      removeSoldNotice(selectedThread.id);
+    } else {
       ensureSoldNotice(selectedThread.id);
-      return;
-    }
-    if (listingId && !selectedListingStatus) {
-      fetchListingStatus(listingId, selectedThread.id);
     }
   }, [
-    selectedThread,
-    selectedListing,
+    selectedThread?.id,
     selectedListingStatus,
-    isSelectedListingSold,
     ensureSoldNotice,
-    fetchListingStatus,
+    removeSoldNotice,
   ]);
 
   useEffect(() => {
     Object.entries(threadListings || {}).forEach(([tid, snap]) => {
-      if (normalizeStatus(snap?.status) === "sold") {
+      const status = normalizeStatus(snap?.status);
+      if (!status) return;
+      if (status !== "active") {
         ensureSoldNotice(tid);
+      } else {
+        removeSoldNotice(tid);
       }
     });
-  }, [threadListings, ensureSoldNotice]);
+  }, [threadListings, ensureSoldNotice, removeSoldNotice]);
 
   // Backfill pinned listing cache if a meta message exists in the selected thread
   useEffect(() => {
@@ -919,7 +947,7 @@ const Chat = () => {
     if ((!status || status === "") && listingId) {
       status = await fetchListingStatus(listingId, selectedThread.id);
     }
-    if (normalizeStatus(status) === "sold") {
+    if (normalizeStatus(status) !== "active") {
       ensureSoldNotice(selectedThread.id);
       return;
     }
@@ -1121,7 +1149,7 @@ const Chat = () => {
                     })();
                     if (!pinned) return null;
                     const isPinnedSold =
-                      normalizeStatus(pinned.status) === "sold";
+                      normalizeStatus(pinned.status) !== "active";
                     const cardClasses =
                       "hidden sm:flex flex-1 max-w-xl items-center gap-4 ml-6 px-5 py-3 rounded-2xl bg-white/90 shadow-sm border border-gray-200";
                     if (isPinnedSold) {
@@ -1144,7 +1172,7 @@ const Chat = () => {
                             </p>
                             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                               <span className="inline-flex items-center rounded-full bg-red-50 text-red-600 px-2 py-0.5 border border-red-100">
-                                Đã Bán
+                                Đã bán hoặc không còn được hiển thị
                               </span>
                               <span>
                                 {typeof pinned.price === "number"
@@ -1257,7 +1285,7 @@ const Chat = () => {
                 <div className="px-6 py-4 border-t border-gray-100 bg-white">
                   {isSelectedListingSold && (
                     <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                      Sản phẩm thuộc bài đăng này đã được bán. Chat đã đóng.
+                      Chat đã đóng
                     </div>
                   )}
                   <div className="flex items-end gap-3">
@@ -1266,7 +1294,7 @@ const Chat = () => {
                       onChange={(e) => setInputValue(e.target.value)}
                       placeholder={
                         isSelectedListingSold
-                          ? "Sản phẩm đã bán, không thể nhận tin thêm."
+                          ? "Không thể nhận tin thêm."
                           : "Nhập tin nhắn của bạn..."
                       }
                       disabled={isSelectedListingSold}
