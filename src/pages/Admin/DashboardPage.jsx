@@ -241,10 +241,12 @@ async function safeGetAllListings() {
   // Fallback: gọi trực tiếp endpoint với phân trang
   const all = [];
   for (let page = 1; page <= 30; page++) {
-    const res = await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
-      method: "GET",
-      params: { pageIndex: page, pageSize: 200 },
-    });
+    const res = await performApiRequest(
+      API_ENDPOINTS_LISTING.GET_ALL(page, 200),
+      {
+        method: "GET",
+      }
+    );
     const items = extractItems(res);
     all.push(...items);
     if (!items || items.length < 200) break;
