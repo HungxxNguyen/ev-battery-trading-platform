@@ -6,11 +6,10 @@ import React, {
   useContext,
 } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { FiBell, FiHeart, FiMessageCircle } from "react-icons/fi";
+import { FiHeart, FiMessageCircle } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import logo3 from "./../../assets/logo3.png";
 import { AuthContext } from "../../contexts/AuthContext";
-import { useMessages } from "../../utils/useMessages";
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,8 +26,6 @@ export default function Header() {
 
   const { favorites } = useFavorites();
   const favoritesCount = favorites.length;
-  const { hasUnread, clearUnread } = useMessages();
-  const chatUnread = 0; // Giả sử chưa có tin nhắn chưa đọc
 
   const handleLogout = () => {
     logout();
@@ -274,14 +271,8 @@ export default function Header() {
           {/* Right actions (no admin) */}
           <div className="hidden lg:flex items-center gap-6">
             <div className="flex items-center gap-3">
-              <Link
-                to="/chat"
-                className={iconButtonClass}
-                aria-label="Mo chat"
-                onClick={clearUnread}
-              >
+              <Link to="/chat" className={iconButtonClass} aria-label="Mo chat">
                 <FiMessageCircle className="w-5 h-5" />
-                {hasUnread && <span className={badgeClass}>!</span>}
               </Link>
               <Link
                 to="/favorites"
@@ -417,15 +408,12 @@ export default function Header() {
             <div className="flex items-center gap-2">
               <Link
                 to="/chat"
-                onClick={clearUnread}
                 className="relative p-2 rounded-full bg-gray-800/70 hover:bg-gray-700 text-cyan-100"
               >
                 <FiMessageCircle className="w-5 h-5" />
-                {hasUnread && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] px-1 text-[10px] leading-4 font-semibold text-white bg-red-500 rounded-full text-center">
-                    !
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 min-w-[18px] px-1 text-[10px] leading-4 font-semibold text-white bg-red-500 rounded-full text-center">
+                  !
+                </span>
               </Link>
               <Link
                 to="/favorites"
@@ -516,16 +504,13 @@ export default function Header() {
               to="/chat"
               className="block text-sm hover:text-cyan-300 transition-all duration-200 py-2"
               onClick={() => {
-                clearUnread();
                 closeMobileMenu();
               }}
             >
               Chat{" "}
-              {hasUnread && (
-                <span className="ml-2 inline-block align-middle text-red-400">
-                  •
-                </span>
-              )}
+              <span className="ml-2 inline-block align-middle text-red-400">
+                •
+              </span>
             </Link>
             <Link
               to="/favorites"

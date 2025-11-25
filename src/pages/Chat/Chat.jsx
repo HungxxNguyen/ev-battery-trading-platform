@@ -12,12 +12,23 @@ import { FiSearch, FiSend, FiChevronRight } from "react-icons/fi";
 import MainLayout from "../../components/layout/MainLayout";
 import messageService from "../../services/apis/messageApi";
 import userService from "../../services/apis/userApi";
+import listingService from "../../services/apis/listingApi";
 import { useMessages } from "../../utils/useMessages";
 import { AuthContext } from "../../contexts/AuthContext";
 import { currency } from "../../utils/currency";
+import { decodeToken } from "../../utils/tokenUtils";
 
 const FALLBACK_AVATAR = "https://placehold.co/80x80?text=U";
 const PIN_PREFIX = "__PINNED_LISTING__:";
+const SOLD_NOTICE_TEXT =
+  "Sản phẩm thuộc bài đăng này đã được bán. Cuộc trò chuyện đã được đóng.";
+const SOLD_NOTICE_ID = (threadId) => `__sold_notice__${threadId}`;
+
+const normalizeStatus = (status) => {
+  if (status === null || status === undefined) return "";
+  const str = typeof status === "string" ? status : String(status);
+  return str.toLowerCase();
+};
 
 const generateGuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -98,24 +109,6 @@ const resolveCreatedAt = (msg) => {
   return null;
 };
 
-const LOCAL_SENT_AT_PREFIX = "chat:sentAt:";
-const getLocalSentAt = (id) => {
-  try {
-    if (!id) return null;
-    return localStorage.getItem(LOCAL_SENT_AT_PREFIX + String(id));
-  } catch {
-    return null;
-  }
-};
-const setLocalSentAt = (id, iso) => {
-  try {
-    if (!id || !iso) return;
-    localStorage.setItem(LOCAL_SENT_AT_PREFIX + String(id), String(iso));
-  } catch {
-    // ignore storage errors
-  }
-};
-
 const normalizeMessage = (msg) => {
   if (!msg || typeof msg !== "object") return null;
   const id = msg.id ?? msg.messageId ?? msg._id ?? null;
@@ -130,11 +123,6 @@ const normalizeMessage = (msg) => {
   const senderId = msg.senderId ?? msg.userId ?? msg.fromUserId ?? msg.ownerId;
   const messageText = msg.messageText ?? msg.message ?? msg.text ?? "";
   let createdAt = resolveCreatedAt(msg);
-  if (!createdAt && id) {
-    // Try restoring a locally saved send-time (only exists for our own sent messages)
-    const localTs = getLocalSentAt(id);
-    if (localTs) createdAt = toIso(localTs) || localTs;
-  }
   return {
     id,
     chatThreadId: chatThreadId ? String(chatThreadId) : "",
@@ -167,16 +155,7 @@ const parseThread = (t, myId) => {
     ? t.chatMessages
     : [];
   const messages = rawMessages
-    .map((m) => {
-      const n = normalizeMessage(m);
-      if (n && !n.createdAt && n.id) {
-        const localTs = getLocalSentAt(n.id);
-        if (localTs) {
-          return { ...n, createdAt: toIso(localTs) || localTs };
-        }
-      }
-      return n;
-    })
+    .map((m) => normalizeMessage(m))
     .filter(Boolean)
     .sort((a, b) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -202,8 +181,12 @@ const Chat = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useContext(AuthContext) || {};
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const tokenInfo = token ? decodeToken(token) : null;
   const currentUserId =
-    user?.id?.toString?.() || localStorage.getItem("userId") || "";
+    user?.id?.toString?.() ||
+    (tokenInfo?.userId || tokenInfo?.id ? String(tokenInfo.userId || tokenInfo.id) : "");
   const participantIdFromRoute = location.state?.participantId?.toString?.();
   const listingFromRoute = location.state?.listingForChat;
 
@@ -212,7 +195,6 @@ const Chat = () => {
     messages: hubMessages,
     connectionStatus,
     isConnected,
-    clearUnread,
   } = useMessages();
 
   const [threadsById, setThreadsById] = useState(new Map());
@@ -229,23 +211,7 @@ const Chat = () => {
   const fetchingPairs = useRef(new Set());
 
   // Persist mapping: chatThreadId -> listing snapshot {id,title,price,thumbnail}
-  const [threadListings, setThreadListings] = useState(() => {
-    try {
-      const raw = localStorage.getItem("chat.threadListings");
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        "chat.threadListings",
-        JSON.stringify(threadListings)
-      );
-    } catch {}
-  }, [threadListings]);
+  const [threadListings, setThreadListings] = useState({});
 
   const toListingSummary = useCallback((l) => {
     if (!l || typeof l !== "object") return null;
@@ -262,11 +228,15 @@ const Chat = () => {
       (Array.isArray(l.images) && l.images[0]) ||
       (Array.isArray(l.listingImages) && l.listingImages[0]?.imageUrl) ||
       "https://placehold.co/80x80?text=IMG";
+    const status = normalizeStatus(
+      l.status ?? l.Status ?? l.listingStatus ?? l.ListingStatus
+    );
     return {
       id: String(id),
       title: l.title || l.name || "Tin đăng",
       price,
       thumbnail: thumb,
+      status,
     };
   }, []);
 
@@ -276,9 +246,8 @@ const Chat = () => {
       if (!threadId || !snap) return;
       setThreadListings((prev) => {
         const next = { ...prev };
-        if (!next[threadId]) {
-          next[threadId] = snap;
-        }
+        const existing = next[threadId] || {};
+        next[threadId] = { ...existing, ...snap };
         return next;
       });
     },
@@ -337,14 +306,72 @@ const Chat = () => {
     }
   }, [currentUserId, navigate]);
 
-  // While on the chat screen, clear unread indicators
-  useEffect(() => {
-    clearUnread && clearUnread();
-  }, [clearUnread]);
+  const ensureSoldNotice = useCallback((threadId) => {
+    if (!threadId) return;
+    setThreadsById((prev) => {
+      const t = prev.get(threadId);
+      if (!t) return prev;
+      const exists = t.messages.some((m) => m.id === SOLD_NOTICE_ID(threadId));
+      if (exists) return prev;
+      const ts = new Date().toISOString();
+      const notice = {
+        id: SOLD_NOTICE_ID(threadId),
+        chatThreadId: String(threadId),
+        senderId: "system",
+        messageText: SOLD_NOTICE_TEXT,
+        createdAt: ts,
+      };
+      const updated = {
+        ...t,
+        messages: [...t.messages, notice],
+        lastActivity: t.lastActivity || ts,
+      };
+      const map = new Map(prev);
+      map.set(threadId, updated);
+      return map;
+    });
+  }, []);
 
-  useEffect(() => {
-    clearUnread && clearUnread();
-  }, [hubMessages, selectedThreadId, clearUnread]);
+  const fetchListingStatus = useCallback(
+    async (listingId, threadId) => {
+      if (!listingId) return "";
+      try {
+        const res = await listingService.getById(listingId);
+        const payload = res?.data;
+        const detail =
+          payload?.data &&
+          typeof payload.data === "object" &&
+          !Array.isArray(payload.data)
+            ? payload.data
+            : Array.isArray(payload)
+            ? payload[0] ?? null
+            : payload && typeof payload === "object"
+            ? payload
+            : null;
+        const status = normalizeStatus(
+          detail?.status ?? detail?.Status ?? detail?.listingStatus ?? ""
+        );
+        const snap = toListingSummary(detail);
+        setThreadListings((prev) => {
+          const next = { ...prev };
+          const existing = next[threadId] || { id: String(listingId) };
+          next[threadId] = {
+            ...existing,
+            ...(snap || {}),
+            id: existing.id || snap?.id || String(listingId),
+            status: status || existing.status || snap?.status || "",
+          };
+          return next;
+        });
+        if (status === "sold") ensureSoldNotice(threadId);
+        return status;
+      } catch (err) {
+        console.error("Failed to fetch listing status", err);
+        return "";
+      }
+    },
+    [ensureSoldNotice, toListingSummary]
+  );
 
   // Load threads for current user
   useEffect(() => {
@@ -519,11 +546,9 @@ const Chat = () => {
     let normalized = normalizeMessage(latest);
     if (!normalized || !normalized.chatThreadId) return;
     const threadId = String(normalized.chatThreadId);
-    // For real-time messages lacking timestamp, fallback to arrival time and persist
-    if (!normalized.createdAt && normalized.id) {
-      const ts = new Date().toISOString();
-      setLocalSentAt(normalized.id, ts);
-      normalized = { ...normalized, createdAt: ts };
+    // For real-time messages lacking timestamp, fallback to arrival time
+    if (!normalized.createdAt) {
+      normalized = { ...normalized, createdAt: new Date().toISOString() };
     }
     const hasThread = threadsById.has(threadId);
 
@@ -628,11 +653,9 @@ const Chat = () => {
     if (!normalized || normalized.chatThreadId) return; // handled in other effect
     const senderId = normalized.senderId;
     if (!senderId) return;
-    // For real-time messages lacking timestamp, fallback to arrival time and persist
-    if (!normalized.createdAt && normalized.id) {
-      const ts = new Date().toISOString();
-      setLocalSentAt(normalized.id, ts);
-      normalized = { ...normalized, createdAt: ts };
+    // For real-time messages lacking timestamp, fallback to arrival time
+    if (!normalized.createdAt) {
+      normalized = { ...normalized, createdAt: new Date().toISOString() };
     }
     // Ignore our own outbound messages without thread id to avoid creating self-threads
     if (String(senderId) === String(currentUserId)) return;
@@ -783,6 +806,45 @@ const Chat = () => {
     return threadsById.get(selectedThreadId) || null;
   }, [threadsById, selectedThreadId]);
 
+  const selectedListing = useMemo(() => {
+    if (!selectedThread?.id) return null;
+    const cached = threadListings[selectedThread.id];
+    if (cached) return cached;
+    const pinned = extractPinnedFromMessages(selectedThread.messages);
+    if (pinned) return pinned;
+    return null;
+  }, [selectedThread, threadListings, extractPinnedFromMessages]);
+
+  const selectedListingStatus = normalizeStatus(selectedListing?.status);
+  const isSelectedListingSold = selectedListingStatus === "sold";
+
+  useEffect(() => {
+    if (!selectedThread?.id) return;
+    const listingId = selectedListing?.id;
+    if (isSelectedListingSold) {
+      ensureSoldNotice(selectedThread.id);
+      return;
+    }
+    if (listingId && !selectedListingStatus) {
+      fetchListingStatus(listingId, selectedThread.id);
+    }
+  }, [
+    selectedThread,
+    selectedListing,
+    selectedListingStatus,
+    isSelectedListingSold,
+    ensureSoldNotice,
+    fetchListingStatus,
+  ]);
+
+  useEffect(() => {
+    Object.entries(threadListings || {}).forEach(([tid, snap]) => {
+      if (normalizeStatus(snap?.status) === "sold") {
+        ensureSoldNotice(tid);
+      }
+    });
+  }, [threadListings, ensureSoldNotice]);
+
   // Backfill pinned listing cache if a meta message exists in the selected thread
   useEffect(() => {
     if (!selectedThread?.id) return;
@@ -852,6 +914,15 @@ const Chat = () => {
   const handleSend = async () => {
     const text = inputValue.trim();
     if (!text || !selectedThread) return;
+    const listingId = selectedListing?.id;
+    let status = selectedListingStatus;
+    if ((!status || status === "") && listingId) {
+      status = await fetchListingStatus(listingId, selectedThread.id);
+    }
+    if (normalizeStatus(status) === "sold") {
+      ensureSoldNotice(selectedThread.id);
+      return;
+    }
     setInputValue("");
     const payload = {
       chatThreadId: selectedThread.id,
@@ -864,16 +935,12 @@ const Chat = () => {
       const serverNorm = normalizeMessage(serverMsg);
       let normalized;
       if (serverNorm) {
-        // If server didn't provide a usable timestamp, use local now and persist
+        // If server didn't provide a usable timestamp, use local now
         const ts = serverNorm.createdAt || new Date().toISOString();
-        if (!serverNorm.createdAt && serverNorm.id) {
-          setLocalSentAt(serverNorm.id, ts);
-        }
         normalized = { ...serverNorm, createdAt: ts };
       } else {
         const localId = serverMsg?.id || `local-${Date.now()}`;
         const ts = new Date().toISOString();
-        setLocalSentAt(localId, ts);
         normalized = {
           id: localId,
           chatThreadId: String(selectedThread.id),
@@ -1053,12 +1120,49 @@ const Chat = () => {
                       return null;
                     })();
                     if (!pinned) return null;
+                    const isPinnedSold =
+                      normalizeStatus(pinned.status) === "sold";
+                    const cardClasses =
+                      "hidden sm:flex flex-1 max-w-xl items-center gap-4 ml-6 px-5 py-3 rounded-2xl bg-white/90 shadow-sm border border-gray-200";
+                    if (isPinnedSold) {
+                      return (
+                        <div
+                          className={`${cardClasses} cursor-not-allowed opacity-80`}
+                          title="Bài đăng đã bán"
+                        >
+                          <img
+                            src={
+                              pinned.thumbnail ||
+                              "https://placehold.co/80x80?text=IMG"
+                            }
+                            alt={pinned.title}
+                            className="w-12 h-12 rounded-xl object-cover"
+                          />
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm sm:text-base font-semibold text-gray-700 truncate">
+                              {pinned.title}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+                              <span className="inline-flex items-center rounded-full bg-red-50 text-red-600 px-2 py-0.5 border border-red-100">
+                                Đã Bán
+                              </span>
+                              <span>
+                                {typeof pinned.price === "number"
+                                  ? currency(pinned.price)
+                                  : pinned.price || ""}
+                              </span>
+                            </div>
+                          </div>
+                          <FiChevronRight className="text-gray-300 shrink-0" />
+                        </div>
+                      );
+                    }
                     return (
                       <button
                         type="button"
                         onClick={() => navigate(`/listing/${pinned.id}`)}
                         title={pinned.title}
-                        className=" cursor-pointer hidden sm:flex flex-1 max-w-xl items-center gap-4 ml-6 px-5 py-3 rounded-2xl bg-white/90 hover:bg-white shadow-sm border border-gray-200 hover:border-blue-300 transition"
+                        className={`${cardClasses} cursor-pointer hover:bg-white hover:border-blue-300 transition`}
                       >
                         <img
                           src={
@@ -1091,7 +1195,7 @@ const Chat = () => {
                   <div className="space-y-4">
                     {selectedThread.messages.length === 0 ? (
                       <div className="text-center text-sm text-gray-500">
-                        Bắt đầu cuộc trò chuyện với người bạn.
+                        Bắt đầu cuộc trò chuyện với người bán.
                       </div>
                     ) : (
                       selectedThread.messages
@@ -1151,12 +1255,22 @@ const Chat = () => {
                 </div>
 
                 <div className="px-6 py-4 border-t border-gray-100 bg-white">
+                  {isSelectedListingSold && (
+                    <div className="mb-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      Sản phẩm thuộc bài đăng này đã được bán. Chat đã đóng.
+                    </div>
+                  )}
                   <div className="flex items-end gap-3">
                     <textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Nhập tin nhắn"
-                      className="flex-1 min-h-[60px] max-h-32 resize-none rounded-2xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm"
+                      placeholder={
+                        isSelectedListingSold
+                          ? "Sản phẩm đã bán, không thể nhận tin thêm."
+                          : "Nhập tin nhắn của bạn..."
+                      }
+                      disabled={isSelectedListingSold}
+                      className="flex-1 min-h-[60px] max-h-32 resize-none rounded-2xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200 text-sm disabled:bg-gray-100"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -1167,7 +1281,7 @@ const Chat = () => {
                     <button
                       onClick={handleSend}
                       className="h-12 w-12 flex items-center justify-center rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed transition"
-                      disabled={!inputValue.trim()}
+                      disabled={!inputValue.trim() || isSelectedListingSold}
                     >
                       <FiSend className="w-5 h-5" />
                     </button>
