@@ -202,6 +202,7 @@ const Home = () => {
                               price: listing.price,
                               location: listing.area,
                               area: listing.area,
+                              status: listing.listingStatus,
                               image: coverImage,
                             });
                           }}
@@ -210,7 +211,7 @@ const Home = () => {
                               ? "bg-white text-red-500"
                               : "bg-white/90 text-gray-500 hover:text-red-400"
                           }`}
-                          aria-label="Luu tin yeu thich"
+                          aria-label="Lưu tin yêu thích"
                         >
                           <FiHeart
                             className={`w-5 h-5 ${

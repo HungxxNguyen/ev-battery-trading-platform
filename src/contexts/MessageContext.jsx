@@ -59,25 +59,6 @@ export const MessageProvider = ({ children }) => {
   const seenMessageIdsRef = useRef(new Set());
   const seenMessageOrderRef = useRef([]);
 
-  // Cleanup legacy chat storage keys (including any stray userId) on mount
-  useEffect(() => {
-    try {
-      const keys = Object.keys(localStorage || {});
-      keys.forEach((k) => {
-        if (
-          k.startsWith("chat.threadListings") ||
-          k.startsWith("chat:sentAt") ||
-          k.startsWith("chat:lastSeenAt") ||
-          k === "userId"
-        ) {
-          localStorage.removeItem(k);
-        }
-      });
-    } catch {
-      // ignore storage access issues
-    }
-  }, []);
-
   const addMessage = useCallback((msg, envelope = null) => {
     const payload = unwrapMessagePayload(msg);
     if (!payload) return false;
