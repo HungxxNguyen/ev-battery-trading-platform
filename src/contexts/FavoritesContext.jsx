@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { AuthContext } from "./AuthContext";
 import favouriteService from "../services/apis/favouriteApi";
-import listingService from "../services/apis/listingApi";
 import { decodeToken } from "../utils/tokenUtils";
 
 const FavoritesContext = createContext({
@@ -27,6 +26,14 @@ const sanitizeItem = (item) => {
     const l = item.listing;
     const id = l.id ?? l.listingId;
     if (!id && id !== 0) return null;
+    const rawStatus =
+      l.status ?? l.Status ?? l.listingStatus ?? item.status ?? "";
+    const status =
+      rawStatus && typeof rawStatus === "string"
+        ? rawStatus.toLowerCase()
+        : rawStatus
+        ? String(rawStatus).toLowerCase()
+        : "";
     const image =
       Array.isArray(l.listingImages) && l.listingImages.length > 0
         ? l.listingImages[0]?.imageUrl
@@ -34,23 +41,11 @@ const sanitizeItem = (item) => {
           l.thumbnail ||
           l.images?.[0] ||
           "https://placehold.co/200x140?text=Listing";
-    // Prefer area like ListingDetail; mirror to location for compatibility
-    const area =
-      l.area ??
-      l.Area ??
-      l.location ??
-      l.address ??
-      l.Address ??
-      l.addressLine ??
-      l.city ??
-      "";
-    const location = area;
     return {
       id: String(id),
-      title: l.title || "Tin dang",
+      title: l.title || "Tin đăng",
       price: l.price ?? "",
-      location,
-      area,
+      status,
       image,
       savedAt: item.savedAt || new Date().toISOString(),
     };
@@ -59,22 +54,23 @@ const sanitizeItem = (item) => {
   // Case 2: client listing object used by UI
   const baseId = item.id ?? item.listingId;
   if (!baseId && baseId !== 0) return null;
-  // Client item: normalize area like ListingDetail, mirror to location
-  const area =
-    item.area ??
-    item.Area ??
-    item.location ??
-    item.address ??
-    item.Address ??
-    item.addressLine ??
-    item.city ??
+  const rawStatus =
+    item.status ??
+    item.Status ??
+    item.listingStatus ??
+    item.listing?.status ??
     "";
+  const status =
+    rawStatus && typeof rawStatus === "string"
+      ? rawStatus.toLowerCase()
+      : rawStatus
+      ? String(rawStatus).toLowerCase()
+      : "";
   return {
     id: String(baseId),
-    title: item.title || "Tin dang",
+    title: item.title || "Tin đăng",
     price: item.price || "",
-    location: area,
-    area,
+    status,
     image:
       item.image ||
       item.thumbnail ||
@@ -97,58 +93,6 @@ export const FavoritesProvider = ({ children }) => {
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
 
-  const extractArea = (obj) =>
-    obj?.area ??
-    obj?.Area ??
-    obj?.location ??
-    obj?.address ??
-    obj?.Address ??
-    obj?.addressLine ??
-    obj?.city ??
-    "";
-
-  const enrichMissingLocations = async (items) => {
-    const missing = items.filter((it) => !it?.area && !it?.location);
-    if (missing.length === 0) return items;
-    try {
-      const pairs = await Promise.all(
-        missing.map(async (it) => {
-          try {
-            let resp = await listingService.getById(it.id);
-
-            if (resp?.success) {
-              const payload = resp.data;
-              const detail =
-                payload?.data &&
-                typeof payload.data === "object" &&
-                !Array.isArray(payload.data)
-                  ? payload.data
-                  : Array.isArray(payload)
-                  ? payload[0] ?? null
-                  : payload && typeof payload === "object"
-                  ? payload
-                  : null;
-              const area = extractArea(detail);
-              return [String(it.id), { area }];
-            }
-          } catch {
-            // ignore individual failure
-          }
-          return [String(it.id), { area: "" }];
-        })
-      );
-      const byId = Object.fromEntries(pairs);
-      return items.map((it) => {
-        const enriched = byId[String(it.id)] || {};
-        const area = enriched.area || it.area || it.location || "";
-        const needsArea = area && (!it.area || !it.location);
-        return needsArea ? { ...it, area, location: area } : it;
-      });
-    } catch {
-      return items;
-    }
-  };
-
   const loadFavorites = async () => {
     if (!userId) {
       setFavorites([]);
@@ -161,9 +105,8 @@ export const FavoritesProvider = ({ children }) => {
       if (res?.success) {
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map(sanitizeItem).filter(Boolean);
-        const enriched = await enrichMissingLocations(mapped);
-        setFavorites(enriched);
-        setFavoriteIds(new Set(enriched.map((x) => String(x.id))));
+        setFavorites(mapped);
+        setFavoriteIds(new Set(mapped.map((x) => String(x.id))));
       } else {
         setFavorites([]);
         setFavoriteIds(new Set());
