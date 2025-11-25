@@ -29,10 +29,12 @@ const listingService = {
 
   // ✅ MỚI — lấy 1 trang GetAll với tham số phân trang rõ ràng
   async getListingsPage(pageIndex = 1, pageSize = 10) {
-    return await performApiRequest(API_ENDPOINTS_LISTING.GET_ALL, {
-      method: "get",
-      params: { pageIndex, pageSize },
-    });
+    return await performApiRequest(
+      API_ENDPOINTS_LISTING.GET_ALL(pageIndex, pageSize),
+      {
+        method: "get",
+      }
+    );
   },
 
   // ✅ MỚI — gom toàn bộ listing (lặp trang cho tới khi hết)
