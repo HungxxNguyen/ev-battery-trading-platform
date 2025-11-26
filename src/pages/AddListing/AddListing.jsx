@@ -91,7 +91,7 @@ const MAIN_FIELDS = [
   },
   { label: "Màu", name: "Color", fieldType: "text", icon: "FaCircle" },
   {
-    label: "Dung lượng pin (kWh)",
+    label: "Tình trạng pin còn lại (%)",
     name: "BatteryCapacity",
     fieldType: "number",
     icon: "FaChargingStation",
@@ -583,7 +583,9 @@ const AddListing = () => {
 
     if (selectedImages.length === 0) {
       showNotification("Vui lòng tải ít nhất 1 ảnh", "error");
-      setImageError("Bắt buộc: vui lòng tải ít nhất 1 ảnh.");
+      setImageError(
+        "Bắt buộc: vui lòng tải ít nhất 1 ảnh, ảnh phải cung cấp đủ Tình trạng pin còn lại (%), Odo (km)"
+      );
       return false;
     }
 
@@ -843,7 +845,8 @@ const AddListing = () => {
                   <p className="mt-2 text-sm text-red-600">{imageError}</p>
                 ) : selectedImages.length === 0 ? (
                   <p className="mt-2 text-sm text-red-600">
-                    Bắt buộc: vui lòng tải ít nhất 1 ảnh.
+                    Bắt buộc: vui lòng tải ít nhất 1 ảnh, ảnh phải cung cấp đủ
+                    Tình trạng pin còn lại (%), Odo (km)
                   </p>
                 ) : null}
               </div>

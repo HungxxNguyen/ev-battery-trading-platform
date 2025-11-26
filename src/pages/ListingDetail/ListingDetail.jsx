@@ -216,10 +216,8 @@ const ListingDetail = () => {
         icon: "📏",
       },
       {
-        label: "Dung lượng pin",
-        value: listing?.batteryCapacity
-          ? `${listing.batteryCapacity} kWh`
-          : null,
+        label: "Tình trạng pin còn lại (%)",
+        value: listing?.batteryCapacity ? `${listing.batteryCapacity} %` : null,
         icon: "🔋",
       },
       {
