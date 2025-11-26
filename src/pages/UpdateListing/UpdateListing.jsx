@@ -99,7 +99,7 @@ const BASE_MAIN_FIELDS = [
   },
   { label: "Màu", name: "Color", fieldType: "text", icon: "FaCircle" },
   {
-    label: "Dung lượng pin (kWh)",
+    label: "Tình trạng pin còn lại (%)",
     name: "BatteryCapacity",
     fieldType: "number",
     icon: "FaChargingStation",

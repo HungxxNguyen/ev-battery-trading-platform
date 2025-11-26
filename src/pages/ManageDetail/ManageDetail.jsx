@@ -366,7 +366,7 @@ const ManageDetail = () => {
       case "ElectricCar":
         return [
           { label: "Số km đã đi (Odo)", name: "odo" },
-          { label: "Dung lượng pin (kWh)", name: "batteryCapacity" },
+          { label: "Tình trạng pin còn lại (%)", name: "batteryCapacity" },
           { label: "Tầm hoạt động (km)", name: "actualOperatingRange" },
           { label: "Thời gian sạc (giờ)", name: "chargingTime" },
           { label: "Màu sắc", name: "color" },
@@ -376,7 +376,7 @@ const ManageDetail = () => {
       case "ElectricMotorbike":
         return [
           { label: "Số km đã đi (Odo)", name: "odo" },
-          { label: "Dung lượng pin", name: "batteryCapacity" },
+          { label: "Tình trạng pin còn lại (%)", name: "batteryCapacity" },
           { label: "Tầm hoạt động (km)", name: "actualOperatingRange" },
           { label: "Thời gian sạc (giờ)", name: "chargingTime" },
           { label: "Màu sắc", name: "color" },
@@ -385,7 +385,7 @@ const ManageDetail = () => {
         ];
       case "RemovableBattery":
         return [
-          { label: "Dung lượng pin", name: "batteryCapacity" },
+          { label: "Tình trạng pin còn lại (%)", name: "batteryCapacity" },
           { label: "Khối lượng (kg)", name: "mass" },
           { label: "Kích thước", name: "size" },
           { label: "Màu sắc", name: "color" },
@@ -393,7 +393,7 @@ const ManageDetail = () => {
       default:
         return [
           { label: "Số km đã đi (Odo)", name: "odo" },
-          { label: "Dung lượng pin", name: "batteryCapacity" },
+          { label: "Tình trạng pin còn lại (%)", name: "batteryCapacity" },
           { label: "Tầm hoạt động (km)", name: "actualOperatingRange" },
           { label: "Thời gian sạc (giờ)", name: "chargingTime" },
         ];

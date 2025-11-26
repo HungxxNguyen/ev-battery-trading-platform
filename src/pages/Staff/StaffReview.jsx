@@ -639,7 +639,7 @@ export default function StaffReview() {
                     </span>
                   </div>
                   <div>
-                    Dung lượng pin:{" "}
+                    Tình trạng pin còn lại (%):{" "}
                     <span className="font-medium">
                       {selected?.batteryCapacity || "-"}
                     </span>

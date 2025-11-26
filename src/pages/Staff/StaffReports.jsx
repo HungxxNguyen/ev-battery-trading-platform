@@ -366,7 +366,10 @@ function ReportListingDetail({ listing }) {
       case "ElectricMotorbike":
         return [
           { label: "Số km đã đi (Odo)", value: listing?.odo },
-          { label: "Dung lượng pin (kWh)", value: listing?.batteryCapacity },
+          {
+            label: "Tình trạng pin còn lại (%)",
+            value: listing?.batteryCapacity,
+          },
           { label: "Tầm hoạt động (km)", value: listing?.actualOperatingRange },
           { label: "Thời gian sạc (giờ)", value: listing?.chargingTime },
           { label: "Màu sắc", value: listing?.color },
@@ -375,7 +378,10 @@ function ReportListingDetail({ listing }) {
         ];
       case "RemovableBattery":
         return [
-          { label: "Dung lượng pin", value: listing?.batteryCapacity },
+          {
+            label: "Tình trạng pin còn lại (%)",
+            value: listing?.batteryCapacity,
+          },
           { label: "Khối lượng (kg)", value: listing?.mass },
           { label: "Kích thước", value: listing?.size },
           { label: "Màu sắc", value: listing?.color },
@@ -383,7 +389,10 @@ function ReportListingDetail({ listing }) {
       default:
         return [
           { label: "Số km đã đi (Odo)", value: listing?.odo },
-          { label: "Dung lượng pin (kWh)", value: listing?.batteryCapacity },
+          {
+            label: "Tình trạng pin còn lại (%)",
+            value: listing?.batteryCapacity,
+          },
           { label: "Tầm hoạt động (km)", value: listing?.actualOperatingRange },
           { label: "Thời gian sạc (giờ)", value: listing?.chargingTime },
         ];
