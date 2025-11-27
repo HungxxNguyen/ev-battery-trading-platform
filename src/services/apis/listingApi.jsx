@@ -127,6 +127,14 @@ const listingService = {
     });
   },
 
+  async buyListing(id) {
+    if (!id)
+      return { success: false, error: "Listing id is required", status: null };
+    return await performApiRequest(API_ENDPOINTS_LISTING.BUY_LISTING(id), {
+      method: "get",
+    });
+  },
+
   async getRepaymentUrl(id) {
     if (!id)
       return { success: false, error: "Listing id is required", status: null };

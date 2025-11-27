@@ -10,6 +10,7 @@ import {
   FiTag,
   FiMessageCircle,
   FiAlertCircle,
+  FiZap,
 } from "react-icons/fi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import MainLayout from "../../components/layout/MainLayout";
@@ -67,6 +68,7 @@ const ListingDetail = () => {
   const [error, setError] = useState("");
   const [currentImage, setCurrentImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [buying, setBuying] = useState(false);
 
   useEffect(() => {
     if (locationListing && String(locationListing.id) === String(id)) {
@@ -261,6 +263,50 @@ const ListingDetail = () => {
     null;
   const isSellerSelf =
     sellerId && currentUserId && String(sellerId) === String(currentUserId);
+
+  const handleBuyNow = async () => {
+    if (!listing?.id || buying) return;
+
+    if (!currentUserId) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search || ""}` },
+      });
+      return;
+    }
+
+    try {
+      setBuying(true);
+      const response = await listingService.buyListing(listing.id);
+      const paymentUrl =
+        response?.data?.data ||
+        response?.data?.url ||
+        response?.data?.paymentUrl;
+
+      if (response?.success && response?.data?.error === 0 && paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+
+      if (paymentUrl) {
+        window.location.href = paymentUrl;
+        return;
+      }
+
+      throw new Error(
+        response?.error ||
+          response?.data?.message ||
+          "Khong the tao duong dan thanh toan"
+      );
+    } catch (buyError) {
+      console.error("Buy now error:", buyError);
+      alert(
+        buyError?.message ||
+          "Khong the tao duong dan thanh toan. Vui long thu lai."
+      );
+    } finally {
+      setBuying(false);
+    }
+  };
 
   const handleChatWithSeller = () => {
     if (!sellerId || isSellerSelf) return;
@@ -486,6 +532,17 @@ const ListingDetail = () => {
 
             <div className="p-6 space-y-4">
               <div className="pt-4 space-y-3">
+                {!isSellerSelf && listing?.id && (
+                  <button
+                    type="button"
+                    onClick={handleBuyNow}
+                    disabled={buying}
+                    className="w-full px-6 py-3.5 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    <FiZap className="w-5 h-5" />
+                    {buying ? "Dang xu ly..." : "Mua hang ngay"}
+                  </button>
+                )}
                 {!isSellerSelf && sellerId && (
                   <button
                     type="button"
