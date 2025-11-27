@@ -34,6 +34,8 @@ export const API_ENDPOINTS_LISTING = {
   LISTING_VNPAY: (id) => `/api/Listing/VnpayUrl/${id}`,
   // Repayment URL for extending expired listings
   LISTING_REPAYMENT: (id) => `/api/Listing/Repayment/${id}`,
+  // Buy listing (direct payment)
+  BUY_LISTING: (id) => `/api/Listing/BuyListing/${id}`,
   DELETE_LISTING: (id) => `/api/Listing/Delete/${id}`,
 };
 
