@@ -62,7 +62,7 @@ export const API_ENDPOINTS_USER = {
   // Get user by id (per backend): /api/User/GetUserById?userId={id}
   GET_BY_ID: (id) => `/api/User/GetUserById?userId=${id}`,
 };
-
+// Các endpoint cho Brand
 export const API_ENDPOINTS_BRAND = {
   GET_BRANDS: "/api/Brand/GetAll",
   GET_BY_ID: (id) => `/api/Brand/GetById/id?id=${id}`,

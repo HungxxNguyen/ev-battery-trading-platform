@@ -9,11 +9,11 @@ import {
   CardTitle,
 } from "../../components/Card/card";
 
-import adminService from "../../services/apis/adminApi";
-import dashboardService from "../../services/apis/dashboardApi";
-import transactionService from "../../services/apis/transactionApi";
-import listingService from "../../services/apis/listingApi";
-import brandService from "../../services/apis/brandApi";
+import adminService from "../../services/apis/adminApi"; //Đếm user
+import dashboardService from "../../services/apis/dashboardApi"; 
+import transactionService from "../../services/apis/transactionApi"; //Lợi nhuận
+import listingService from "../../services/apis/listingApi"; // tất cả bài đăng
+import brandService from "../../services/apis/brandApi"; //Thương hiệu
 
 import { performApiRequest } from "../../utils/apiUtils";
 import { API_ENDPOINTS_LISTING } from "../../constants/apiEndPoint";
@@ -56,7 +56,7 @@ function formatVND(value) {
       maximumFractionDigits: 0,
     }).format(n);
   } catch {
-    return `${n}`;
+    return `${n}`; //Fallback nếu API fail
   }
 }
 
@@ -94,18 +94,22 @@ function extractItems(payload) {
   return [];
 }
 
+//Format dữ liệu date thành "YYYY-MM-DD"
 function ymd(d) {
   const yy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
+
+//Tính Quý(3 tháng) từ date
 function getQuarter(d) {
   return Math.floor(d.getMonth() / 3) + 1;
 }
 
 /* ===== Transaction helpers (field detection) ===== */
 function pickAmount(tx) {
+  //Backend k consistent về fieldname
   const cand = [
     "amount",
     "totalAmount",
@@ -135,8 +139,10 @@ function isSuccess(tx) {
   ];
 
   for (const s of candidates) {
+    //Check number
     if (typeof s === "number") return s === 1;
 
+    //Check string
     if (typeof s === "string") {
       const v = s.trim();
 
@@ -165,6 +171,7 @@ function pickDate(tx) {
   for (const k of cand) {
     if (tx?.[k]) {
       const d = new Date(tx[k]);
+      //Check valid date
       if (!isNaN(d.getTime())) return d;
     }
   }
@@ -185,6 +192,7 @@ const darkItem = { color: "#e5e7eb" };
 
 /* ===== Brand / Listing helpers ===== */
 function resolveBrandName(listing, brandIdToMeta) {
+  //Tìm brandID từ possible fields
   const brandId =
     listing?.brandId ??
     listing?.brandID ??
@@ -192,6 +200,7 @@ function resolveBrandName(listing, brandIdToMeta) {
     listing?.brand?.brandId ??
     listing?.brand?.Id;
 
+    //Tìm brand từ nhiều source
   const brandName =
     listing?.brand?.name ??
     listing?.brandName ??
@@ -200,6 +209,7 @@ function resolveBrandName(listing, brandIdToMeta) {
   return brandName || "Unknown";
 }
 function resolveBucketByCategory(listing, brandIdToMeta) {
+  // Check listing category/ type field
   const cat = String(listing?.category || listing?.type || "").toLowerCase();
   if (cat.includes("car")) return "car";
   if (cat.includes("bike")) return "motorbike";
@@ -221,8 +231,10 @@ function resolveBucketByCategory(listing, brandIdToMeta) {
   return null;
 }
 function top3WithOthers(data) {
+  //sort desc by count
   const sorted = [...data].sort((a, b) => b.count - a.count);
   const top3 = sorted.slice(0, 3);
+  //Cộng remaining items vào 'Others'
   const othersCount = sorted.slice(3).reduce((s, i) => s + (i.count || 0), 0);
   return othersCount > 0
     ? [...top3, { brand: "Others", count: othersCount }]
@@ -231,7 +243,7 @@ function top3WithOthers(data) {
 
 /* ===== Fallback fetchers ===== */
 async function safeGetAllListings() {
-  // Ưu tiên dùng listingService.getAllListingsAllPages nếu có
+  // Ưu tiên dùng service nếu có
   if (typeof listingService.getAllListingsAllPages === "function") {
     return listingService.getAllListingsAllPages({
       pageSize: 200,
@@ -240,6 +252,7 @@ async function safeGetAllListings() {
   }
   // Fallback: gọi trực tiếp endpoint với phân trang
   const all = [];
+  //Loop qua 30 pages (max 6000 listings)
   for (let page = 1; page <= 30; page++) {
     const res = await performApiRequest(
       API_ENDPOINTS_LISTING.GET_ALL(page, 200),
@@ -249,14 +262,18 @@ async function safeGetAllListings() {
     );
     const items = extractItems(res);
     all.push(...items);
+    //stop nếu hết data
     if (!items || items.length < 200) break;
   }
   return all;
 }
 async function safeGetBrandMap() {
+  //Pre-built method
   if (typeof brandService.getBrandsAsMap === "function") {
     return brandService.getBrandsAsMap();
   }
+  
+  //fallback - tự build Map
   const res = await brandService.getBrands();
   const items = extractItems(res);
   return new Map(
@@ -278,11 +295,15 @@ export default function DashboardPage() {
     (async () => {
       try {
         const res = await adminService.getCountUser();
+        //Tránh setState sau khi component unmount
         if (cancelled) return;
         const payload = res?.data ?? res;
         let total = 0;
+        // response là array -> count lenght
         if (Array.isArray(payload?.data)) total = payload.data.length;
+        // Nếu có field count
         else if (typeof payload?.count === "number") total = payload.count;
+        //Fallback: res.data là array
         else if (Array.isArray(res?.data)) total = res.data.length;
         setUserCount(Number(total) || 0);
       } catch {}
@@ -293,6 +314,7 @@ export default function DashboardPage() {
   }, []);
 
   /* ===== Listing dashboard (new/old counts) ===== */
+  //Sử đụng cho barchart
   const [dashStats, setDashStats] = useState(null);
   useEffect(() => {
     let cancelled = false;
@@ -318,7 +340,7 @@ export default function DashboardPage() {
   const [view, setView] = useState("day"); // "day" | "quarter" | "range"
   const [completedTransactions, setCompletedTransactions] = useState([]);
 
-  // Custom date range (default: first day of current month -> today)
+  // Custom khoảng ngày (default: ngày đầu tiên trong tháng -> hôm nay)
   const [rangeStart, setRangeStart] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -439,11 +461,13 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // Compute rangeRevenue whenever range or transactions change
+  // Tính toán phạm vi Doanh thu bất cứ khi nào phạm vi hoặc giao dịch thay đổi 
   useEffect(() => {
     try {
       const start = new Date(rangeStart);
       const end = new Date(rangeEnd);
+
+      //Validate
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         setRangeRevenue([]);
         return;
@@ -455,6 +479,7 @@ export default function DashboardPage() {
         s = end;
         e = start;
       }
+      //Tạo slot cho tưngf ngày trong khoảng
       const days = [];
       const dayMap = new Map();
       const cur = new Date(s);
@@ -467,7 +492,7 @@ export default function DashboardPage() {
         const obj = { key, label, revenue: 0 };
         days.push(obj);
         dayMap.set(key, obj);
-        cur.setDate(cur.getDate() + 1);
+        cur.setDate(cur.getDate() + 1); //Ngày tiếp theo
       }
       for (const t of completedTransactions) {
         const k = ymd(pickDate(t));
@@ -505,16 +530,18 @@ export default function DashboardPage() {
     (async () => {
       setBrandLoading(true);
       try {
+        // fetch data
         const [brandMap, listings] = await Promise.all([
           safeGetBrandMap(),
           safeGetAllListings(),
         ]);
-
+        //Create buckets
         const buckets = {
           car: new Map(),
           motorbike: new Map(),
           battery: new Map(),
         };
+        //Categorize mỗi listing
         for (const l of listings) {
           const bucket = resolveBucketByCategory(l, brandMap);
           if (!bucket) continue;
@@ -524,6 +551,7 @@ export default function DashboardPage() {
             (buckets[bucket].get(brandName) || 0) + 1
           );
         }
+        //covert map to array
         const toArr = (m) =>
           Array.from(m.entries())
             .map(([brand, count]) => ({ brand, count }))

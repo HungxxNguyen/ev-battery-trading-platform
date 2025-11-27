@@ -1,7 +1,7 @@
 import { API_ENDPOINTS_BRAND } from "../../constants/apiEndPoint";
 import { performApiRequest } from "../../utils/apiUtils";
 
-// Chuẩn hoá mảng items
+// Chuẩn hoá response từ API
 function extractItems(payload) {
   const p = payload?.data ?? payload;
   if (Array.isArray(p)) return p;
@@ -18,13 +18,13 @@ const brandService = {
     return await performApiRequest(API_ENDPOINTS_BRAND.GET_BRANDS, { method: "get" });
   },
 
-  // ✅ MỚI — trả về Map<id, {name,type}> để join nhanh với listing
+  // trả về dữ liệu về Map -> tăng performance join data
   async getBrandsAsMap() {
     const res = await this.getBrands();
     const items = extractItems(res);
     return new Map(
       items.map((b) => [
-        b?.id ?? b?.brandId ?? b?.Id,
+        b?.id ?? b?.brandId ?? b?.Id, //Key: brandId
         { name: b?.name ?? b?.brandName ?? "Unknown", type: b?.type ?? b?.category ?? "" },
       ])
     );
@@ -36,14 +36,19 @@ const brandService = {
   },
 
   async createBrand(name, type) {
+    //Validation
     if (!name || !name.trim()) throw new Error("Tên thương hiệu không hợp lệ");
+
+    //Chuẩn bị form Data
     const form = new FormData();
     form.append("Name", name.trim());
     form.append("Type", type);
+
+    //Gửi Post request
     return await performApiRequest(API_ENDPOINTS_BRAND.CREATE, {
       method: "post",
       data: form,
-      // headers: tự để axios set multipart boundary
+      // headers: axios tự động set
     });
   },
 

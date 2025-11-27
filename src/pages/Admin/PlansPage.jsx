@@ -28,15 +28,15 @@ const currency = (v) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 0, //Không hiển thị số lẻ
   }).format(v);
 
 export default function PlansPage() {
   const { showNotification } = useNotification();
   const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
+  const [loading, setLoading] = useState(false); //Loading khi fetch data
+  const [submitting, setSubmitting] = useState(false); //Loading khi submit form
+  const [deletingId, setDeletingId] = useState(null); 
 
   // form state (create only)
   const [openForm, setOpenForm] = useState(false);
@@ -46,11 +46,11 @@ export default function PlansPage() {
   const [description, setDescription] = useState("");
   const [packageType, setPackageType] = useState("ElectricCar");
   const [status, setStatus] = useState("Active");
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [generalError, setGeneralError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({}); //Lỗi từng field
+  const [generalError, setGeneralError] = useState(""); //Lỗi chung
   const isFree = packageType === "Free";
 
-  const typeOptions = useMemo(
+  const typeOptions = useMemo( //Tránh tạo lại Array mỗi lần re-render
     () => [
       { value: "ElectricCar", label: "Ô tô điện" },
       { value: "ElectricMotorbike", label: "Xe máy điện" },
@@ -76,11 +76,13 @@ export default function PlansPage() {
     setGeneralError("");
   };
 
+  //Transform data
   const loadPlans = async () => {
     setLoading(true);
     try {
       const res = await packageService.getAllPackages();
       if (res.success && res.data?.data) {
+        //Transform data từ backend format sang UI format
         const list = res.data.data.map((pkg) => ({
           id: pkg.id,
           name: pkg.name,
@@ -90,6 +92,7 @@ export default function PlansPage() {
           packageType: pkg.packageType,
           status: pkg.status,
         }));
+        //Update state
         setPlans(list);
       } else {
         const errMsg = res?.error || res?.data?.Message || res?.data?.message;
@@ -109,10 +112,11 @@ export default function PlansPage() {
 
   // CREATE ONLY
   const onSave = async () => {
+    //Reset eror
     setFieldErrors({});
     setGeneralError("");
 
-    // Frontend validation: require price > 0 for non-Free packages
+    // Frontend validation
     if (!isFree && (!price || price <= 0)) {
       setFieldErrors((prev) => ({
         ...prev,
@@ -121,7 +125,7 @@ export default function PlansPage() {
 
       return;
     }
-
+    // Form data
     const form = new FormData();
     form.append("Name", name.trim());
     // Enforce Free = 0 price, others use entered price
@@ -131,12 +135,16 @@ export default function PlansPage() {
     form.append("PackageType", packageType);
     form.append("Status", status);
 
+    // Call api
     setSubmitting(true);
     try {
+      //Backend trả về validation errors
       const res = await packageService.createPackage(form);
+      //Handle backend validation error
       if (!res.success) {
         const modelErrors = res?.data?.errors;
         if (modelErrors && typeof modelErrors === "object") {
+          //Map lỗi từ backend vào form fields
           const mapped = Object.keys(modelErrors).reduce((acc, key) => {
             const msgArr = modelErrors[key];
             if (Array.isArray(msgArr) && msgArr.length) acc[key] = msgArr[0];
@@ -158,6 +166,7 @@ export default function PlansPage() {
         return;
       }
 
+      //Thành công
       const successMsg = res?.data?.Message || res?.data?.message;
       if (successMsg) showNotification(successMsg, "success");
       await loadPlans();
@@ -169,19 +178,28 @@ export default function PlansPage() {
   };
 
   const removePlan = async (id) => {
+    //Validation
     if (!id) return;
+    //User xác nhận
     if (!confirm("Xóa gói này?")) return;
     try {
       setDeletingId(id);
+
+      //Call API
       const res = await packageService.deletePackage(id);
+
+      //Handle error
       if (!res.success) {
         const errMsgDel =
           res?.error || res?.data?.Message || res?.data?.message;
         if (errMsgDel) showNotification(errMsgDel, "error");
         return;
       }
+      //Thành công
       const msg = res?.data?.Message || res?.data?.message;
       if (msg) showNotification(msg, "success");
+
+      //Refresh danh sách
       await loadPlans();
     } catch (e) {
       showNotification(e?.error || e?.message || "Không thể xóa gói", "error");
@@ -237,6 +255,7 @@ export default function PlansPage() {
                   onChange={(e) => {
                     const v = e.target.value;
                     setName(v);
+                    //clear error khi user sửa
                     if (fieldErrors?.Name && v.trim()) {
                       const next = { ...fieldErrors };
                       delete next.Name;
@@ -257,10 +276,10 @@ export default function PlansPage() {
                 <input
                   type="number"
                   inputMode="numeric"
-                  value={days === 0 ? "" : days}
+                  value={days === 0 ? "" : days} //Hiển thị rỗng nếu nhập số 0
                   onChange={(e) => {
                     const raw = e.target.value;
-                    const cleaned = raw.replace(/^0+/, "");
+                    const cleaned = raw.replace(/^0+/, ""); //Bỏ đi số 0 đằng trước khi input
                     setDays(cleaned === "" ? 0 : parseInt(cleaned, 10));
                   }}
                   placeholder="Số ngày"
@@ -277,7 +296,7 @@ export default function PlansPage() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={price > 0 ? price.toLocaleString("de-DE") : ""}
+                  value={price > 0 ? price.toLocaleString("de-DE") : ""} //Format 50000 -> 50.000
                   onChange={(e) => {
                     const digitsOnly = e.target.value.replace(/[^\d]/g, "");
                     const cleaned = digitsOnly.replace(/^0+/, "");
@@ -285,7 +304,7 @@ export default function PlansPage() {
                   }}
                   placeholder="Số tiền (VND)"
                   className="w-full rounded-lg border border-slate-700/60 bg-slate-900/40 px-3 py-2 text-right text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-                  disabled={isFree}
+                  disabled={isFree} //disabled nếu là gói free
                 />
                 {fieldErrors?.Price && (
                   <p className="mt-1 text-xs text-rose-400">

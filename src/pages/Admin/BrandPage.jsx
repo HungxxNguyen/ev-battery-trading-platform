@@ -122,11 +122,11 @@ export default function BrandPage() {
     try {
       setSaving(true);
       if (editingId) {
-        await brandService.updateBrand(editingId, trimmed, type);
+        await brandService.updateBrand(editingId, trimmed);
       } else {
         await brandService.createBrand(trimmed, type);
       }
-      await fetchBrands();
+      await fetchBrands(); // Refresh danh sách
       reset();
     } catch (e) {
       console.error(e);
@@ -150,14 +150,14 @@ export default function BrandPage() {
 
   const remove = async (id) => {
     if (!id) return;
-    if (!confirm("Xóa thương hiệu này?")) return;
+    if (!confirm("Xóa thương hiệu này?")) return; //confirm xóa ở đây
     try {
       setDeletingId(id);
       await brandService.deleteBrand(id);
       await fetchBrands();
     } catch (e) {
       console.error(e);
-      alert(e?.error || e?.message || "Không thể xóa thương hiệu");
+      alert(e?.error || e?.message || "Không thể xóa thương hiệu"); //Error
     } finally {
       setDeletingId(null);
     }
